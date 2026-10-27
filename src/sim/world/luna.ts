@@ -1,17 +1,28 @@
 import { createTerrain } from '../../shared/terrain';
 import { LUNA_RADIUS } from '../../shared/scale';
 import { latLon } from '../../shared/vec3';
-import { placeDeposits, generatePlots, type PlotAccept } from './plots';
+import { placeDeposits, generatePlots } from './plots';
+import { GridSampler } from './roads';
 import { generateSections } from './sections';
 import type { RawGoodId, World } from './types';
 
 const SECTION_COUNT = 60;
 const FOUNDING_GOODS: RawGoodId[] = ['regolith', 'ilmenite', 'polarVolatiles'];
 
-export function generateLuna(seed: number, accept?: PlotAccept): World {
+export function generateLuna(seed: number): World {
   const terrain = createTerrain(seed, LUNA_RADIUS);
   const bare = generateSections(seed, SECTION_COUNT);
-  const { plots, hubPlotIds, ctx } = generatePlots(seed, terrain, bare, accept);
+  // Plots must be road-reachable from their hub; the sampler shares the road grid's passability rule.
+  const samplers = new Map<number, GridSampler>();
+  const worldLike = { radius: LUNA_RADIUS, terrain, sections: bare, plots: [] };
+  const { plots, hubPlotIds, ctx } = generatePlots(seed, terrain, bare, (sid, hub, c) => {
+    let sampler = samplers.get(sid);
+    if (!sampler) {
+      sampler = new GridSampler(worldLike, sid, hub);
+      samplers.set(sid, sampler);
+    }
+    return sampler.lineReachable(c);
+  });
   const sections = bare.map((s, i) => ({ ...s, hubPlotId: hubPlotIds[i]! }));
 
   // Founding charter: the south-polar section richest in ice, iron and dirt.
