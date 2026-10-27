@@ -15,6 +15,8 @@ export interface SimHostDeps {
   now(): number;
   saves: SaveStore;
   codec: SaveCodec;
+  /** Dev builds pass checkInvariants; violations are posted as errors. */
+  checkInvariants?: (state: GameState) => string[];
 }
 
 /** Gaps longer than this many ticks go through catch-up instead of fine ticks. */
@@ -98,6 +100,9 @@ export class SimHost {
       }
     }
     if (events.length) this.deps.post({ t: 'events', events });
+    for (const problem of this.deps.checkInvariants?.(this.state) ?? []) {
+      this.deps.post({ t: 'error', message: `Invariant: ${problem}` });
+    }
     this.postSnapshot();
     this.maybeAutosave();
   }

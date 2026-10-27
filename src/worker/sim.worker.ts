@@ -1,6 +1,7 @@
 import { createMemorySaveStore } from '../save/memoryStore';
 import { fromSaveFile, toSaveFile } from '../save/saveFile';
 import { createIdbSaveStore } from '../save/slots';
+import { checkInvariants } from '../sim/invariants';
 import type { FromWorker, ToWorker } from './protocol';
 import { SimHost } from './simHost';
 
@@ -23,6 +24,7 @@ const host = new SimHost({
       return res.ok ? { state: res.state, savedAtRealMs: res.savedAtRealMs } : null;
     },
   },
+  checkInvariants: import.meta.env.DEV ? checkInvariants : undefined,
 });
 
 scope.onmessage = (e) => {

@@ -14,11 +14,14 @@
       "companionId": "veteran"
     },
     "nextId": 1,
+    "ledger": {
+      "balances": {}
+    },
     "pendingEvents": [
       {
         "t": "founded"
       }
     ]
   },
-  "checksum": "6d3509a3cc86e"
+  "checksum": "13ad5825ae69a0"
 }

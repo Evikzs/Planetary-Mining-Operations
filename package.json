@@ -18,7 +18,8 @@
     "test:e2e": "playwright test",
     "bot": "vitest run --config vitest.bot.config.ts",
     "size": "node scripts/check-bundle-size.mjs",
-    "check": "npm run typecheck && npm run lint && npm run test"
+    "check": "npm run typecheck && npm run lint && npm run test",
+    "fixtures": "vitest run --config vitest.scripts.config.ts"
   },
   "dependencies": {
     "@fontsource-variable/jost": "5.3.0",

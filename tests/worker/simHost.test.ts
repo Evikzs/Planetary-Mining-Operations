@@ -146,6 +146,31 @@ describe('SimHost', () => {
     });
   });
 
+  it('posts invariant violations when a checker is given', async () => {
+    let now = 0;
+    const posted: FromWorker[] = [];
+    const host = new SimHost({
+      post: (m) => posted.push(m),
+      now: () => now,
+      saves: createMemorySaveStore(),
+      codec,
+      checkInvariants: () => ['player cash is negative'],
+    });
+    await host.handle({
+      t: 'init',
+      nowMs: 0,
+      debug: { timescale: 1, freeze: false, seed: 1, scene: 'none', noWebgl: false },
+    });
+    await host.handle({
+      t: 'command',
+      id: 1,
+      cmd: { t: 'foundCompany', name: 'Selene Rock Co', companionId: 'veteran' },
+    });
+    now = 1000;
+    host.pump();
+    expect(posted).toContainEqual({ t: 'error', message: 'Invariant: player cash is negative' });
+  });
+
   it('restores the latest save on init', async () => {
     const h = setup();
     await h.init();
