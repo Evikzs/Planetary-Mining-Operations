@@ -90,6 +90,18 @@ describe('SimHost', () => {
     expect(h.lastTick()).toBe(7381);
   });
 
+  it('a long gap posts catch-up progress and an away summary', async () => {
+    const h = setup();
+    await h.init();
+    await h.found();
+    h.setNow(600_000); // 10 game hours
+    h.host.pump();
+    expect(h.lastTick()).toBe(600);
+    expect(h.posted).toContainEqual({ t: 'catchUp', progress: 1 });
+    const away = h.posted.find((m) => m.t === 'away');
+    expect(away?.t === 'away' && away.summary.gameHours).toBe(10);
+  });
+
   it('timescale 60 runs 60 ticks per real second', async () => {
     const h = setup({ timescale: 60 });
     await h.init();

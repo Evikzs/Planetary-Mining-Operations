@@ -1,6 +1,8 @@
 import { formatGameDate } from '../sim/clock';
+import { OFFLINE } from '../data/balance';
 import { applyCommand, createGame, step } from '../sim/engine';
 import type { SimEvent } from '../sim/events';
+import { runCatchUp } from '../sim/offline';
 import type { GameState } from '../sim/state';
 import type { SaveFile, SaveStore } from '../save/types';
 import type { DebugFlags, FromWorker, ToWorker, UiSnapshot } from './protocol';
@@ -20,7 +22,7 @@ export interface SimHostDeps {
 }
 
 /** Gaps longer than this many ticks go through catch-up instead of fine ticks. */
-export const FINE_CATCH_UP_LIMIT = 300;
+export const FINE_CATCH_UP_LIMIT = OFFLINE.fineThresholdTicks;
 const PUMP_BUDGET_MS = 50;
 const AUTOSAVE_MS = 30_000;
 
@@ -74,7 +76,7 @@ export class SimHost {
     if (loaded) {
       this.state = loaded.state;
       this.reanchor();
-      if (this.state.company) this.catchUp(this.ticksFor(this.now() - loaded.savedAtRealMs));
+      if (this.state.company) this.catchUp(this.now() - loaded.savedAtRealMs);
     } else {
       this.state = createGame(debug.seed ?? nowMs >>> 0);
       this.reanchor();
@@ -92,7 +94,7 @@ export class SimHost {
     if (due <= 0) return this.maybeAutosave();
     const events: SimEvent[] = [];
     if (due > FINE_CATCH_UP_LIMIT) {
-      events.push(...this.catchUp(due));
+      this.catchUp(start - this.realMsOfTick());
     } else {
       while (due > 0 && this.now() - start < PUMP_BUDGET_MS) {
         events.push(...step(this.state, { mode: 'fine' }));
@@ -107,24 +109,18 @@ export class SimHost {
     this.maybeAutosave();
   }
 
-  /** M0 catch-up: fine ticks to the hour, coarse hours, then fine ticks; re-anchors the clock. */
-  private catchUp(ticks: number): SimEvent[] {
-    const events: SimEvent[] = [];
-    let left = Math.max(0, ticks);
-    while (left > 0 && this.state.tick % 60 !== 0) {
-      events.push(...step(this.state, { mode: 'fine' }));
-      left--;
-    }
-    while (left >= 60) {
-      events.push(...step(this.state, { mode: 'coarse' }));
-      left -= 60;
-    }
-    while (left > 0) {
-      events.push(...step(this.state, { mode: 'fine' }));
-      left--;
-    }
+  /** Runs the time away under offline rules, then re-anchors the clock to now. */
+  private catchUp(realMsAway: number): void {
+    const summary = runCatchUp(this.state, realMsAway, this.flags.timescale, (progress) =>
+      this.deps.post({ t: 'catchUp', progress }),
+    );
     this.reanchor();
-    return events;
+    if (summary.gameHours >= OFFLINE.awayScreenMinHours) this.deps.post({ t: 'away', summary });
+  }
+
+  /** The real time at which the current tick was due. */
+  private realMsOfTick(): number {
+    return this.anchorRealMs + ((this.state.tick - this.anchorTick) * 1000) / this.flags.timescale;
   }
 
   private ticksFor(realMs: number): number {
@@ -157,8 +153,6 @@ export class SimHost {
       date: formatGameDate(this.state.tick),
       company: this.state.company,
     };
-    const anchorRealMs =
-      this.anchorRealMs + ((this.state.tick - this.anchorTick) * 1000) / this.flags.timescale;
-    this.deps.post({ t: 'snapshot', tick: this.state.tick, anchorRealMs, ui });
+    this.deps.post({ t: 'snapshot', tick: this.state.tick, anchorRealMs: this.realMsOfTick(), ui });
   }
 }

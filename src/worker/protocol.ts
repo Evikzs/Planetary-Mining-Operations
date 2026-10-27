@@ -1,5 +1,6 @@
 import type { Command, CommandResult } from '../sim/commands';
 import type { SimEvent } from '../sim/events';
+import type { AwaySummary } from '../sim/offline';
 import type { Company } from '../sim/state';
 
 export interface DebugFlags {
@@ -28,4 +29,6 @@ export type FromWorker =
   | { t: 'snapshot'; tick: number; anchorRealMs: number; ui: UiSnapshot }
   | { t: 'events'; events: SimEvent[] }
   | { t: 'commandResult'; id: number; result: CommandResult }
-  | { t: 'error'; message: string };
+  | { t: 'error'; message: string }
+  | { t: 'catchUp'; progress: number }
+  | { t: 'away'; summary: AwaySummary };
