@@ -11,7 +11,14 @@ export type Command =
   | { t: 'setRecipe'; buildingId: number; recipeId: RecipeId }
   | { t: 'setPriority'; buildingId: number; priority: Priority }
   | { t: 'buySection'; sectionId: number }
-  | { t: 'setWageLevel'; skill: Skill; level: WageLevel };
+  | { t: 'setWageLevel'; skill: Skill; level: WageLevel }
+  | {
+      t: 'assignWorker';
+      workerId: number;
+      buildingId: number | null;
+      shift?: 0 | 1 | 2;
+      lock: boolean;
+    };
 
 export type CommandError =
   | 'ALREADY_FOUNDED'
@@ -31,7 +38,8 @@ export type CommandError =
   | 'ALREADY_OWNED'
   | 'INVALID_RECIPE'
   | 'BUSY'
-  | 'CANNOT_DEMOLISH';
+  | 'CANNOT_DEMOLISH'
+  | 'NO_OPEN_SLOT';
 
 export type CommandResult = { ok: true } | { ok: false; error: CommandError };
 

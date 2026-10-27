@@ -2,7 +2,11 @@ import { describe, expect, it } from 'vitest';
 import { applyCommand, createGame, step } from '../../../src/sim/engine';
 import { sectionState, storageCapKg } from '../../../src/sim/build/sections';
 import { totalKg } from '../../../src/sim/inventory';
+import type { Skill } from '../../../src/data/buildings';
+import { seatCurrentShift } from '../../../src/sim/people/commute';
+import { autoAssign, slotsPerShift, workforceProductivity } from '../../../src/sim/people/jobs';
 import { NEEDS } from '../../../src/sim/people/needs';
+import { addWorker, SKILL_CODE } from '../../../src/sim/people/store';
 import type { Building, GameState } from '../../../src/sim/state';
 import { worldOf } from '../../../src/sim/world/luna';
 
@@ -31,6 +35,22 @@ function ready(s: GameState, type: 'mine' | 'smelter'): Building {
   const b = s.buildings.find((x) => x.type === type)!;
   b.status = 'active';
   b.progress = 1;
+  // A settled crew: every slot filled and morale at its target, so productivity holds still.
+  const quarters = s.buildings.find((x) => x.type === 'crewQuarters')!.id;
+  for (const [skill, n] of Object.entries(slotsPerShift(b)) as [Skill, number][]) {
+    for (let k = 0; k < 3 * n; k++) {
+      addWorker(s.people, {
+        first: 0,
+        last: 0,
+        skill: SKILL_CODE[skill],
+        level: 1,
+        home: quarters,
+      });
+    }
+  }
+  s.people.morale.fill(90);
+  autoAssign(s);
+  seatCurrentShift(s);
   return b;
 }
 
@@ -40,20 +60,22 @@ const run = (s: GameState, n: number, mode: 'fine' | 'coarse' = 'fine', offlineE
 const produced = (s: GameState, g: 'ilmenite' | 'steel') => s.stats.producedKg[g] ?? 0;
 
 describe('production', () => {
-  it('a fully staffed L1 mine makes 6 t × richness in 60 ticks (±1 kg)', () => {
+  it('a fully staffed L1 mine makes 6 t × richness × crew productivity in 60 ticks (±1 kg)', () => {
     const s = founded();
-    ready(s, 'mine');
+    const mine = ready(s, 'mine');
+    const crew = workforceProductivity(s, mine);
     run(s, 60);
-    expect(Math.abs(produced(s, 'ilmenite') - 6000 * richness)).toBeLessThanOrEqual(1);
+    expect(Math.abs(produced(s, 'ilmenite') - 6000 * richness * crew)).toBeLessThanOrEqual(1);
   });
 
   it('a smelter turns 4 t ilmenite into 1.5 t steel per hour', () => {
     const s = founded();
     const smelter = ready(s, 'smelter');
+    const crew = workforceProductivity(s, smelter);
     smelter.input = { ilmenite: 8000 };
     sectionState(s, home)!.depot.ilmenite = 50_000;
     run(s, 60);
-    expect(Math.abs(produced(s, 'steel') - 1500)).toBeLessThanOrEqual(1);
+    expect(Math.abs(produced(s, 'steel') - 1500 * crew)).toBeLessThanOrEqual(1);
   });
 
   it('missing inputs scale output down proportionally', () => {

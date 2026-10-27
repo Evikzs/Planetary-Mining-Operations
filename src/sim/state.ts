@@ -8,6 +8,7 @@ import type { Inventory } from './inventory';
 import { createLedger, type Ledger } from './ledger';
 import { createRng, deriveSeed, type RngState } from './rng';
 import type { RoadNet } from './world/roads';
+import type { Trip } from '../shared/trips';
 import type { Need, NeedsMet } from './people/needs';
 import { createPeople, type People } from './people/store';
 
@@ -80,6 +81,12 @@ export interface GameState {
   people: People;
   wageLevel: Record<Skill, WageLevel>;
   payrollShortfall: boolean;
+  /** Bus runs on the road or waiting for a bus. */
+  trips: Trip[];
+  /** Per section: buses from its rover garages and when each is free again. */
+  buses: Record<number, { total: number; busyUntil: number[] }>;
+  /** Set when buildings or workers change, so jobs are filled before the next hourly pass. */
+  jobsDirty: boolean;
   /** Events raised by commands, delivered with the next step. */
   pendingEvents: SimEvent[];
 }
@@ -101,6 +108,9 @@ export function createInitialState(seed: number): GameState {
     people: createPeople(),
     wageLevel: { miner: 'standard', technician: 'standard', engineer: 'standard' },
     payrollShortfall: false,
+    trips: [],
+    buses: {},
+    jobsDirty: false,
     pendingEvents: [],
   };
 }

@@ -752,11 +752,11 @@
       },
       "job": {
         "$ta": "Int32Array",
-        "b64": "/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////w=="
+        "b64": "////////////////////////////////////////////////////////////////////////////////////////////////BQAAAAUAAAAFAAAABwAAAAcAAAAHAAAACQAAAAkAAAAJAAAA/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////w=="
       },
       "shift": {
         "$ta": "Uint8Array",
-        "b64": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=="
+        "b64": "AAAAAAAAAAAAAAAAAAAAAAAAAAECAAECAAECAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=="
       },
       "locked": {
         "$ta": "Uint8Array",
@@ -768,11 +768,11 @@
       },
       "present": {
         "$ta": "Uint8Array",
-        "b64": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=="
+        "b64": "AAAAAAAAAAAAAAAAAAAAAAAAAAABAAABAAABAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=="
       },
       "commuteMin": {
         "$ta": "Float32Array",
-        "b64": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=="
+        "b64": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAML+5QTC/uUEwv7lBbxOwQW8TsEFvE7BBHDLCQRwywkEcMsJBAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=="
       }
     },
     "wageLevel": {
@@ -781,11 +781,14 @@
       "engineer": "standard"
     },
     "payrollShortfall": false,
+    "trips": [],
+    "buses": {},
+    "jobsDirty": false,
     "pendingEvents": [
       {
         "t": "founded"
       }
     ]
   },
-  "checksum": "7e4bbf6619315"
+  "checksum": "37272378dab4d"
 }

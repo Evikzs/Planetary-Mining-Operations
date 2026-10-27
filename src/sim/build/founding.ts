@@ -5,6 +5,8 @@ import {
   START_WORKERS,
 } from '../../data/balance';
 import { SKILLS } from '../../data/buildings';
+import { seatCurrentShift } from '../people/commute';
+import { autoAssign } from '../people/jobs';
 import { addWorker, SKILL_CODE } from '../people/store';
 import { createRng, deriveSeed } from '../rng';
 import type { GoodId } from '../../data/goods';
@@ -54,4 +56,7 @@ export function grantCharter(state: GameState): void {
       });
     }
   }
+  // The night shift is already at work when the charter is granted at 05:00.
+  autoAssign(state);
+  seatCurrentShift(state);
 }

@@ -12,6 +12,8 @@ import { buySection } from './build/landOffice';
 import { powerSystem } from './build/power';
 import { productionSystem } from './build/production';
 import { shiftStartingAt } from './clock';
+import { commuteSystem } from './people/commute';
+import { assignWorker, jobsSystem } from './people/jobs';
 import { migrationSystem } from './people/migration';
 import { moraleSystem } from './people/morale';
 import { needsSystem } from './people/needs';
@@ -51,6 +53,9 @@ const clockSystem: System = {
 export const SYSTEMS: System[] = [
   clockSystem,
   constructionSystem,
+  // Crews first: power and production must see the same workers at work.
+  jobsSystem,
+  commuteSystem,
   powerSystem,
   needsSystem,
   moraleSystem,
@@ -87,6 +92,8 @@ export function applyCommand(state: GameState, cmd: Command): CommandResult {
       return setPriority(state, cmd.buildingId, cmd.priority);
     case 'buySection':
       return buySection(state, cmd.sectionId);
+    case 'assignWorker':
+      return assignWorker(state, cmd);
     case 'setWageLevel':
       if (!state.company) return fail('NOT_FOUNDED');
       state.wageLevel[cmd.skill] = cmd.level;

@@ -31,6 +31,10 @@ export function checkInvariants(state: GameState): string[] {
     const h = p.home[i]!;
     if (h !== -1 && !buildingIds.has(h))
       problems.push(`worker ${p.id[i]} lives in missing building ${h}`);
+    const j = p.job[i]!;
+    if (j !== -1 && !buildingIds.has(j))
+      problems.push(`worker ${p.id[i]} works at missing building ${j}`);
+    if (p.present[i]! > 2) problems.push(`worker ${p.id[i]} presence is invalid: ${p.present[i]}`);
   }
   return problems;
 }

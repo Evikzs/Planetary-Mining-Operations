@@ -39,7 +39,9 @@ function emigrate(state: GameState, ctx: StepContext): void {
       left++;
     }
   }
-  if (left) ctx.events.push({ t: 'emigration', count: left });
+  if (!left) return;
+  ctx.events.push({ t: 'emigration', count: left });
+  state.jobsDirty = true;
 }
 
 function arrive(state: GameState, ctx: StepContext): void {
@@ -73,7 +75,9 @@ function arrive(state: GameState, ctx: StepContext): void {
         home: home.id,
       });
     }
-    if (count > 0) ctx.events.push({ t: 'arrivals', sectionId: section.id, count });
+    if (count === 0) continue;
+    ctx.events.push({ t: 'arrivals', sectionId: section.id, count });
+    state.jobsDirty = true;
   }
 }
 

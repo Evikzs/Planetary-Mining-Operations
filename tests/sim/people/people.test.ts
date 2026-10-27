@@ -114,9 +114,10 @@ describe('strikes', () => {
   it('a crew under 25 morale for 6 hours strikes and returns at 35', () => {
     const s = founded();
     const garage = s.buildings.find((b) => b.type === 'roverGarage')!;
+    // The idle crew joins the garage; the solar crews keep the grid up.
     for (let i = 0; i < s.people.count; i++) {
-      s.people.morale[i] = 0;
-      s.people.job[i] = garage.id;
+      if (s.people.job[i] === -1) s.people.job[i] = garage.id;
+      if (s.people.job[i] === garage.id) s.people.morale[i] = 0;
     }
     expect(run(s, 360)).toContainEqual({ t: 'strike', buildingId: garage.id });
     expect(garage.status).toBe('striking');
