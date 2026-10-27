@@ -10,6 +10,7 @@ import {
 import { grantCharter } from './build/founding';
 import { buySection } from './build/landOffice';
 import { powerSystem } from './build/power';
+import { productionSystem } from './build/production';
 import { shiftStartingAt } from './clock';
 import { fail, isValidCompanyName, OK, type Command, type CommandResult } from './commands';
 import type { SimEvent } from './events';
@@ -43,7 +44,13 @@ const clockSystem: System = {
   },
 };
 
-export const SYSTEMS: System[] = [clockSystem, constructionSystem, powerSystem, beltsSystem];
+export const SYSTEMS: System[] = [
+  clockSystem,
+  constructionSystem,
+  powerSystem,
+  beltsSystem,
+  productionSystem,
+];
 
 export function createGame(seed: number): GameState {
   return createInitialState(seed);

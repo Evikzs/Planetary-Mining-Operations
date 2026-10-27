@@ -48,6 +48,13 @@ export interface SectionState {
   power: SectionPower;
 }
 
+export interface Stats {
+  producedKg: Partial<Record<GoodId, number>>;
+  soldKg: Partial<Record<GoodId, number>>;
+  boughtKg: Partial<Record<GoodId, number>>;
+  incomeCents: number;
+}
+
 export interface GameState {
   version: 1;
   seed: number;
@@ -60,6 +67,7 @@ export interface GameState {
   buildings: Building[];
   belts: Belt[];
   landPurchases: number;
+  stats: Stats;
   /** Events raised by commands, delivered with the next step. */
   pendingEvents: SimEvent[];
 }
@@ -77,6 +85,7 @@ export function createInitialState(seed: number): GameState {
     buildings: [],
     belts: [],
     landPurchases: 0,
+    stats: { producedKg: {}, soldKg: {}, boughtKg: {}, incomeCents: 0 },
     pendingEvents: [],
   };
 }

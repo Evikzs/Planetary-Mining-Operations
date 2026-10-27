@@ -699,11 +699,17 @@
     ],
     "belts": [],
     "landPurchases": 0,
+    "stats": {
+      "producedKg": {},
+      "soldKg": {},
+      "boughtKg": {},
+      "incomeCents": 0
+    },
     "pendingEvents": [
       {
         "t": "founded"
       }
     ]
   },
-  "checksum": "11fc46db099e"
+  "checksum": "1217ed9b26f83a"
 }

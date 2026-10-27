@@ -77,7 +77,7 @@ describe('belts', () => {
     expect(totalKg(depot)).toBe(storageCapKg(s, home));
   });
 
-  it('conserves goods across 500 ticks without production (fast-check)', () => {
+  it('conserves goods across 500 ticks: only production adds goods (fast-check)', () => {
     fc.assert(
       fc.property(
         fc.integer({ min: 0, max: 200_000 }),
@@ -88,7 +88,7 @@ describe('belts', () => {
           mine.input = inp ? { steel: inp } : {};
           const t0 = total(s, mine);
           for (let i = 0; i < 500; i++) step(s, { mode: 'fine' });
-          expect(total(s, mine)).toBe(t0);
+          expect(total(s, mine)).toBe(t0 + (s.stats.producedKg.ilmenite ?? 0));
         },
       ),
       { numRuns: 15 },

@@ -6,3 +6,10 @@ export function staffing(state: GameState, building: Building): number {
   void building;
   return 1;
 }
+
+/** Morale × commute productivity of a building's workers. Tasks 17 and 18 replace this stub. */
+export function workforceProductivity(state: GameState, building: Building): number {
+  void state;
+  void building;
+  return 1;
+}
