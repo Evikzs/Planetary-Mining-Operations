@@ -1,4 +1,5 @@
-import type { BuildingTypeId, RecipeId } from '../data/buildings';
+import type { BuildingTypeId, RecipeId, Skill } from '../data/buildings';
+import type { WageLevel } from '../data/balance';
 import type { GoodId } from '../data/goods';
 import type { Belt } from './build/belts';
 import type { SectionPower } from './build/power';
@@ -7,6 +8,8 @@ import type { Inventory } from './inventory';
 import { createLedger, type Ledger } from './ledger';
 import { createRng, deriveSeed, type RngState } from './rng';
 import type { RoadNet } from './world/roads';
+import type { Need, NeedsMet } from './people/needs';
+import { createPeople, type People } from './people/store';
 
 export type CompanionId = 'veteran' | 'shipAi' | 'coFounder' | 'pirate';
 
@@ -38,6 +41,9 @@ export interface Building {
   /** Fractional kg carried between ticks, never part of conservation. */
   remainders: Partial<Record<GoodId, number>>;
   beltId: number | null;
+  /** Minutes the crew's average morale has stayed below the strike line. */
+  lowMoraleMinutes: number;
+  strike: boolean;
 }
 
 /** A player-owned section. Sections without state belong to the Lunar Authority. */
@@ -46,6 +52,9 @@ export interface SectionState {
   depot: Inventory;
   roadNet: RoadNet | null;
   power: SectionPower;
+  needsMet: NeedsMet;
+  consumeRemainder: Partial<Record<GoodId, number>>;
+  shortageWarned: Partial<Record<Need, boolean>>;
 }
 
 export interface Stats {
@@ -68,6 +77,9 @@ export interface GameState {
   belts: Belt[];
   landPurchases: number;
   stats: Stats;
+  people: People;
+  wageLevel: Record<Skill, WageLevel>;
+  payrollShortfall: boolean;
   /** Events raised by commands, delivered with the next step. */
   pendingEvents: SimEvent[];
 }
@@ -86,6 +98,9 @@ export function createInitialState(seed: number): GameState {
     belts: [],
     landPurchases: 0,
     stats: { producedKg: {}, soldKg: {}, boughtKg: {}, incomeCents: 0 },
+    people: createPeople(),
+    wageLevel: { miner: 'standard', technician: 'standard', engineer: 'standard' },
+    payrollShortfall: false,
     pendingEvents: [],
   };
 }

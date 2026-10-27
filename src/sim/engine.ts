@@ -12,6 +12,10 @@ import { buySection } from './build/landOffice';
 import { powerSystem } from './build/power';
 import { productionSystem } from './build/production';
 import { shiftStartingAt } from './clock';
+import { migrationSystem } from './people/migration';
+import { moraleSystem } from './people/morale';
+import { needsSystem } from './people/needs';
+import { payrollSystem } from './people/payroll';
 import { fail, isValidCompanyName, OK, type Command, type CommandResult } from './commands';
 import type { SimEvent } from './events';
 import { rngFromState, type Rng } from './rng';
@@ -48,6 +52,10 @@ export const SYSTEMS: System[] = [
   clockSystem,
   constructionSystem,
   powerSystem,
+  needsSystem,
+  moraleSystem,
+  migrationSystem,
+  payrollSystem,
   beltsSystem,
   productionSystem,
 ];
@@ -79,6 +87,10 @@ export function applyCommand(state: GameState, cmd: Command): CommandResult {
       return setPriority(state, cmd.buildingId, cmd.priority);
     case 'buySection':
       return buySection(state, cmd.sectionId);
+    case 'setWageLevel':
+      if (!state.company) return fail('NOT_FOUNDED');
+      state.wageLevel[cmd.skill] = cmd.level;
+      return OK;
   }
 }
 

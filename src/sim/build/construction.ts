@@ -6,6 +6,7 @@ import type { System } from '../engine';
 import { add, take, totalKg, type Inventory } from '../inventory';
 import { balance, transfer } from '../ledger';
 import { newId, type Building, type GameState, type Priority } from '../state';
+import { evictResidents } from '../people/housing';
 import { worldOf } from '../world/luna';
 import { connectToNetwork } from '../world/roads';
 import { createBelt, removeBelt } from './belts';
@@ -101,6 +102,8 @@ export function demolish(state: GameState, buildingId: number): CommandResult {
   if (b.type === 'depot') return fail('CANNOT_DEMOLISH');
   flushBuffers(state, b);
   removeBelt(state, b);
+  const left = evictResidents(state, b);
+  if (left > 0) state.pendingEvents.push({ t: 'emigration', count: left });
   transfer(state.ledger, 'world', 'player', Math.round(BUILDINGS[b.type].cost.cents * 0.25));
   state.buildings = state.buildings.filter((x) => x.id !== b.id);
   return OK;

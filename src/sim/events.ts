@@ -6,4 +6,9 @@ export type SimEvent =
   | { t: 'buildingCompleted'; buildingId: number }
   | { t: 'sectionBought'; sectionId: number }
   | { t: 'brownout'; sectionId: number; factor: number }
-  | { t: 'beltJammed'; beltId: number };
+  | { t: 'beltJammed'; beltId: number }
+  | { t: 'shortage'; sectionId: number; need: 'air' | 'water' | 'food'; daysLeft: number }
+  | { t: 'arrivals'; sectionId: number; count: number }
+  | { t: 'emigration'; count: number }
+  | { t: 'strike'; buildingId: number }
+  | { t: 'strikeEnded'; buildingId: number };

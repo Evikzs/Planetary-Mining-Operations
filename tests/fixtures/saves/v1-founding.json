@@ -612,7 +612,15 @@
           "demandKw": 0,
           "factor": 1,
           "brownout": false
-        }
+        },
+        "needsMet": {
+          "air": 1,
+          "water": 1,
+          "food": 1,
+          "power": 1
+        },
+        "consumeRemainder": {},
+        "shortageWarned": {}
       }
     ],
     "buildings": [
@@ -630,7 +638,9 @@
         "input": {},
         "output": {},
         "remainders": {},
-        "beltId": null
+        "beltId": null,
+        "lowMoraleMinutes": 0,
+        "strike": false
       },
       {
         "id": 3,
@@ -646,7 +656,9 @@
         "input": {},
         "output": {},
         "remainders": {},
-        "beltId": null
+        "beltId": null,
+        "lowMoraleMinutes": 0,
+        "strike": false
       },
       {
         "id": 5,
@@ -662,7 +674,9 @@
         "input": {},
         "output": {},
         "remainders": {},
-        "beltId": null
+        "beltId": null,
+        "lowMoraleMinutes": 0,
+        "strike": false
       },
       {
         "id": 7,
@@ -678,7 +692,9 @@
         "input": {},
         "output": {},
         "remainders": {},
-        "beltId": null
+        "beltId": null,
+        "lowMoraleMinutes": 0,
+        "strike": false
       },
       {
         "id": 9,
@@ -694,7 +710,9 @@
         "input": {},
         "output": {},
         "remainders": {},
-        "beltId": null
+        "beltId": null,
+        "lowMoraleMinutes": 0,
+        "strike": false
       }
     ],
     "belts": [],
@@ -705,11 +723,69 @@
       "boughtKg": {},
       "incomeCents": 0
     },
+    "people": {
+      "count": 33,
+      "nextId": 34,
+      "id": {
+        "$ta": "Uint32Array",
+        "b64": "AQAAAAIAAAADAAAABAAAAAUAAAAGAAAABwAAAAgAAAAJAAAACgAAAAsAAAAMAAAADQAAAA4AAAAPAAAAEAAAABEAAAASAAAAEwAAABQAAAAVAAAAFgAAABcAAAAYAAAAGQAAABoAAAAbAAAAHAAAAB0AAAAeAAAAHwAAACAAAAAhAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=="
+      },
+      "first": {
+        "$ta": "Uint16Array",
+        "b64": "LQAXAC0AnABlADQAHgB4AIEAkQBZACoAAQAtAFQAWgCKAGMAZAA6AIoATQApAAwADQBfACcAZgBcAJAAQgBVAFgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
+      },
+      "last": {
+        "$ta": "Uint16Array",
+        "b64": "MQAIAJQAGQBxAC8AmwBcAEUAWwBVAAoAmAA0AIUAHwAkAB4AQAAuAGMAUABiAFIAZwBnABkASQAKAFMAQQBhAH4AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
+      },
+      "skill": {
+        "$ta": "Uint8Array",
+        "b64": "AAAAAAAAAAAAAAAAAAAAAAAAAQEBAQEBAQEBAQEBAgICAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=="
+      },
+      "level": {
+        "$ta": "Uint8Array",
+        "b64": "AQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=="
+      },
+      "home": {
+        "$ta": "Int32Array",
+        "b64": "AwAAAAMAAAADAAAAAwAAAAMAAAADAAAAAwAAAAMAAAADAAAAAwAAAAMAAAADAAAAAwAAAAMAAAADAAAAAwAAAAMAAAADAAAAAwAAAAMAAAADAAAAAwAAAAMAAAADAAAAAwAAAAMAAAADAAAAAwAAAAMAAAADAAAAAwAAAAMAAAADAAAA/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////w=="
+      },
+      "job": {
+        "$ta": "Int32Array",
+        "b64": "/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////w=="
+      },
+      "shift": {
+        "$ta": "Uint8Array",
+        "b64": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=="
+      },
+      "locked": {
+        "$ta": "Uint8Array",
+        "b64": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=="
+      },
+      "morale": {
+        "$ta": "Float32Array",
+        "b64": "AACWQgAAlkIAAJZCAACWQgAAlkIAAJZCAACWQgAAlkIAAJZCAACWQgAAlkIAAJZCAACWQgAAlkIAAJZCAACWQgAAlkIAAJZCAACWQgAAlkIAAJZCAACWQgAAlkIAAJZCAACWQgAAlkIAAJZCAACWQgAAlkIAAJZCAACWQgAAlkIAAJZCAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=="
+      },
+      "present": {
+        "$ta": "Uint8Array",
+        "b64": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=="
+      },
+      "commuteMin": {
+        "$ta": "Float32Array",
+        "b64": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=="
+      }
+    },
+    "wageLevel": {
+      "miner": "standard",
+      "technician": "standard",
+      "engineer": "standard"
+    },
+    "payrollShortfall": false,
     "pendingEvents": [
       {
         "t": "founded"
       }
     ]
   },
-  "checksum": "1217ed9b26f83a"
+  "checksum": "7e4bbf6619315"
 }

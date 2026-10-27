@@ -5,6 +5,7 @@ import type { SimEvent } from '../../../src/sim/events';
 import { beltCapacityKgPerTick } from '../../../src/sim/build/belts';
 import { sectionState, storageCapKg } from '../../../src/sim/build/sections';
 import { totalKg } from '../../../src/sim/inventory';
+import { NEEDS } from '../../../src/sim/people/needs';
 import type { Building, GameState } from '../../../src/sim/state';
 import { worldOf } from '../../../src/sim/world/luna';
 import { cratePositions } from '../../../src/shared/lanes';
@@ -31,6 +32,9 @@ const inTransit = (s: GameState) =>
   );
 const total = (s: GameState, mine: Building) =>
   totalKg(sectionState(s, home)!.depot) + totalKg(mine.output) + totalKg(mine.input) + inTransit(s);
+// Residents breathe, drink and eat from the depot; every other good is conserved.
+const needsKg = (s: GameState) =>
+  NEEDS.reduce((sum, n) => sum + (sectionState(s, home)!.depot[n.good] ?? 0), 0);
 
 describe('belts', () => {
   it('building a belt building creates a belt to the hub', () => {
@@ -86,9 +90,9 @@ describe('belts', () => {
           const { s, mine } = withMine();
           mine.output = out ? { ilmenite: out } : {};
           mine.input = inp ? { steel: inp } : {};
-          const t0 = total(s, mine);
+          const t0 = total(s, mine) - needsKg(s);
           for (let i = 0; i < 500; i++) step(s, { mode: 'fine' });
-          expect(total(s, mine)).toBe(t0 + (s.stats.producedKg.ilmenite ?? 0));
+          expect(total(s, mine) - needsKg(s)).toBe(t0 + (s.stats.producedKg.ilmenite ?? 0));
         },
       ),
       { numRuns: 15 },

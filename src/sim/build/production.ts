@@ -15,7 +15,7 @@ function speed(state: GameState, b: Building, ctx: StepContext): number {
   const deposit = worldOf(state).plots[b.plotId]?.deposit;
   const richness = BUILDINGS[b.type].extractTph > 0 ? (deposit?.richness ?? 0) : 1;
   const power = sectionState(state, b.sectionId)?.power.factor ?? 1;
-  const strike = b.status === 'striking' ? 0 : 1;
+  const strike = b.strike ? 0 : 1;
   return (
     richness *
     staffing(state, b) *
@@ -42,13 +42,13 @@ function emit(b: Building, g: GoodId, kgFloat: number): number {
   return Math.max(0, whole);
 }
 
-function stepBuilding(state: GameState, b: Building, ctx: StepContext): void {
+/** Runs one building's extraction or recipe. Returns true when full output buffers stopped it. */
+function produce(state: GameState, b: Building, ctx: StepContext): boolean {
   const nominal = nominalOutputTph(state, b);
   const goods = Object.keys(nominal) as GoodId[];
-  if (goods.length === 0) return;
+  if (goods.length === 0) return false;
   const hours = ctx.dtMinutes / 60;
   let scale = speed(state, b, ctx);
-  const staffed = staffing(state, b) > 0;
 
   // Inputs limit the scale (recipes only).
   const recipe = b.recipeId && BUILDINGS[b.type].extractTph === 0 ? RECIPES[b.recipeId] : null;
@@ -79,9 +79,14 @@ function stepBuilding(state: GameState, b: Building, ctx: StepContext): void {
     add(b.output, g, kg);
     state.stats.producedKg[g] = (state.stats.producedKg[g] ?? 0) + kg;
   }
+  return blocked;
+}
 
-  if (b.status === 'unpowered' || b.status === 'striking') return;
-  b.status = blocked ? 'blocked' : staffed ? 'active' : 'unstaffed';
+function stepBuilding(state: GameState, b: Building, ctx: StepContext): void {
+  const blocked = produce(state, b, ctx);
+  if (b.strike) b.status = 'striking';
+  else if (b.status !== 'unpowered')
+    b.status = blocked ? 'blocked' : staffing(state, b) > 0 ? 'active' : 'unstaffed';
 }
 
 export const productionSystem: System = {

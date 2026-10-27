@@ -1,4 +1,5 @@
-import type { BuildingTypeId, RecipeId } from '../data/buildings';
+import type { BuildingTypeId, RecipeId, Skill } from '../data/buildings';
+import type { WageLevel } from '../data/balance';
 import type { CompanionId, Priority } from './state';
 
 // Later tasks add members to these unions.
@@ -9,7 +10,8 @@ export type Command =
   | { t: 'demolish'; buildingId: number }
   | { t: 'setRecipe'; buildingId: number; recipeId: RecipeId }
   | { t: 'setPriority'; buildingId: number; priority: Priority }
-  | { t: 'buySection'; sectionId: number };
+  | { t: 'buySection'; sectionId: number }
+  | { t: 'setWageLevel'; skill: Skill; level: WageLevel };
 
 export type CommandError =
   | 'ALREADY_FOUNDED'

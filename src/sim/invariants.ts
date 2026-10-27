@@ -1,6 +1,6 @@
 import type { GameState } from './state';
 
-/** Debug checks run after every tick in dev builds. Later tasks add inventories, people, orders. */
+/** Debug checks run after every tick in dev builds. Later tasks add orders. */
 export function checkInvariants(state: GameState): string[] {
   const problems: string[] = [];
   let sum = 0;
@@ -22,6 +22,15 @@ export function checkInvariants(state: GameState): string[] {
     for (const [g, kg] of Object.entries(inv)) {
       if (!Number.isSafeInteger(kg) || kg < 0) problems.push(`${where} ${g} is invalid: ${kg}`);
     }
+  }
+  const p = state.people;
+  const buildingIds = new Set(state.buildings.map((b) => b.id));
+  for (let i = 0; i < p.count; i++) {
+    const m = p.morale[i]!;
+    if (!(m >= 0 && m <= 100)) problems.push(`worker ${p.id[i]} morale is invalid: ${m}`);
+    const h = p.home[i]!;
+    if (h !== -1 && !buildingIds.has(h))
+      problems.push(`worker ${p.id[i]} lives in missing building ${h}`);
   }
   return problems;
 }

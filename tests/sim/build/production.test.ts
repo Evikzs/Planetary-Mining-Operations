@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { applyCommand, createGame, step } from '../../../src/sim/engine';
 import { sectionState, storageCapKg } from '../../../src/sim/build/sections';
 import { totalKg } from '../../../src/sim/inventory';
+import { NEEDS } from '../../../src/sim/people/needs';
 import type { Building, GameState } from '../../../src/sim/state';
 import { worldOf } from '../../../src/sim/world/luna';
 
@@ -90,8 +91,10 @@ describe('production', () => {
     const mine = ready(s, 'mine');
     const depot = sectionState(s, home)!.depot;
     depot.regolith = storageCapKg(s, home) - totalKg(depot);
+    // Residents breathe, drink and eat from the depot; every other good is conserved.
     const total = () =>
-      totalKg(depot) +
+      totalKg(depot) -
+      NEEDS.reduce((sum, n) => sum + (depot[n.good] ?? 0), 0) +
       totalKg(mine.output) +
       s.belts.reduce((sum, b) => sum + b.out.batches.reduce((a, x) => a + x.kg, 0), 0);
     const start = total();
