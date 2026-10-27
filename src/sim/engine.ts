@@ -18,6 +18,7 @@ import {
   contractsSystem,
   deliverContract,
 } from './contracts/contracts';
+import { alertsSystem } from './alerts';
 import { marketSystem } from './market/market';
 import { cameraTaught, setHintMute, startStory, storyAck, storySystem } from './story/story';
 import { cancelOrder, placeOrder } from './market/orders';
@@ -75,6 +76,7 @@ export const SYSTEMS: System[] = [
   marketSystem,
   contractsSystem,
   storySystem,
+  alertsSystem,
 ];
 
 export function createGame(seed: number): GameState {

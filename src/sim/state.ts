@@ -11,6 +11,7 @@ import type { RoadNet } from './world/roads';
 import type { Trip } from '../shared/trips';
 import { COLONY } from '../data/balance';
 import { GOOD_IDS, GOODS } from '../data/goods';
+import type { Alert } from './alerts';
 import type { Contract } from './contracts/contracts';
 import { createStory, type StoryState } from './story/story';
 import type { GoodMarket, Order } from './market/orders';
@@ -104,6 +105,8 @@ export interface GameState {
   /** Finished infrastructure the colony now owns. */
   clientAssets: { plotId: number; asset: string }[];
   story: StoryState;
+  /** Latest alerts, newest first. */
+  alerts: Alert[];
   /** Events raised by commands, delivered with the next step. */
   pendingEvents: SimEvent[];
 }
@@ -146,6 +149,7 @@ export function createInitialState(seed: number): GameState {
     reputation: 20,
     clientAssets: [],
     story: createStory(),
+    alerts: [],
     pendingEvents: [],
   };
 }
