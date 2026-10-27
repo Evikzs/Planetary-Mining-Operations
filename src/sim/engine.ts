@@ -1,0 +1,72 @@
+import { shiftStartingAt } from './clock';
+import { fail, isValidCompanyName, OK, type Command, type CommandResult } from './commands';
+import type { SimEvent } from './events';
+import { rngFromState, type Rng } from './rng';
+import { createInitialState, type GameState } from './state';
+
+export type StepMode = 'fine' | 'coarse';
+
+export interface StepContext {
+  dtMinutes: number;
+  mode: StepMode;
+  offlineEfficiency: number;
+  events: SimEvent[];
+  rng: Rng;
+}
+
+export interface System {
+  id: string;
+  step(state: GameState, ctx: StepContext): void;
+}
+
+/** Advances the clock first, so later systems see the new tick. */
+const clockSystem: System = {
+  id: 'clock',
+  step(state, ctx) {
+    for (let t = state.tick + 1; t <= state.tick + ctx.dtMinutes; t++) {
+      const shift = shiftStartingAt(t);
+      if (shift !== null) ctx.events.push({ t: 'shiftChange', shift });
+    }
+    state.tick += ctx.dtMinutes;
+  },
+};
+
+export const SYSTEMS: System[] = [clockSystem];
+
+export function createGame(seed: number): GameState {
+  return createInitialState(seed);
+}
+
+export function applyCommand(state: GameState, cmd: Command): CommandResult {
+  switch (cmd.t) {
+    case 'foundCompany': {
+      if (state.company) return fail('ALREADY_FOUNDED');
+      if (!isValidCompanyName(cmd.name)) return fail('INVALID_NAME');
+      if (cmd.companionId !== 'veteran') return fail('COMPANION_UNAVAILABLE');
+      state.company = { name: cmd.name.trim(), companionId: cmd.companionId };
+      state.pendingEvents.push({ t: 'founded' });
+      return OK;
+    }
+  }
+}
+
+export function step(
+  state: GameState,
+  opts: { mode: StepMode; offlineEfficiency?: number },
+): SimEvent[] {
+  const dtMinutes = opts.mode === 'fine' ? 1 : 60;
+  if (opts.mode === 'coarse' && state.tick % 60 !== 0) {
+    throw new Error('coarse step must start on the hour');
+  }
+  const rng = rngFromState(state.rng);
+  const ctx: StepContext = {
+    dtMinutes,
+    mode: opts.mode,
+    offlineEfficiency: opts.offlineEfficiency ?? 1,
+    events: state.pendingEvents.splice(0),
+    rng,
+  };
+  for (const system of SYSTEMS) system.step(state, ctx);
+  state.rng = rng.getState();
+  return ctx.events;
+}
