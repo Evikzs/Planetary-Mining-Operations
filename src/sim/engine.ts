@@ -1,3 +1,13 @@
+import {
+  build,
+  constructionSystem,
+  demolish,
+  setPriority,
+  setRecipe,
+  upgrade,
+} from './build/construction';
+import { grantCharter } from './build/founding';
+import { buySection } from './build/landOffice';
 import { shiftStartingAt } from './clock';
 import { fail, isValidCompanyName, OK, type Command, type CommandResult } from './commands';
 import type { SimEvent } from './events';
@@ -31,7 +41,7 @@ const clockSystem: System = {
   },
 };
 
-export const SYSTEMS: System[] = [clockSystem];
+export const SYSTEMS: System[] = [clockSystem, constructionSystem];
 
 export function createGame(seed: number): GameState {
   return createInitialState(seed);
@@ -44,9 +54,22 @@ export function applyCommand(state: GameState, cmd: Command): CommandResult {
       if (!isValidCompanyName(cmd.name)) return fail('INVALID_NAME');
       if (cmd.companionId !== 'veteran') return fail('COMPANION_UNAVAILABLE');
       state.company = { name: cmd.name.trim(), companionId: cmd.companionId };
+      grantCharter(state);
       state.pendingEvents.push({ t: 'founded' });
       return OK;
     }
+    case 'build':
+      return build(state, cmd);
+    case 'upgrade':
+      return upgrade(state, cmd.buildingId);
+    case 'demolish':
+      return demolish(state, cmd.buildingId);
+    case 'setRecipe':
+      return setRecipe(state, cmd.buildingId, cmd.recipeId);
+    case 'setPriority':
+      return setPriority(state, cmd.buildingId, cmd.priority);
+    case 'buySection':
+      return buySection(state, cmd.sectionId);
   }
 }
 

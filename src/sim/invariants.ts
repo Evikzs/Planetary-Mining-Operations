@@ -11,5 +11,17 @@ export function checkInvariants(state: GameState): string[] {
     sum += cents;
   }
   if (sum !== 0) problems.push(`ledger does not balance: sum ${sum}`);
+  const stocks = [
+    ...state.sections.map((s) => [`depot ${s.id}`, s.depot] as const),
+    ...state.buildings.flatMap((b) => [
+      [`building ${b.id} input`, b.input] as const,
+      [`building ${b.id} output`, b.output] as const,
+    ]),
+  ];
+  for (const [where, inv] of stocks) {
+    for (const [g, kg] of Object.entries(inv)) {
+      if (!Number.isSafeInteger(kg) || kg < 0) problems.push(`${where} ${g} is invalid: ${kg}`);
+    }
+  }
   return problems;
 }

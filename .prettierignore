@@ -8,3 +8,4 @@ test-results
 e2e/**/*-snapshots
 playwright-report
 test-results
+tests/fixtures
