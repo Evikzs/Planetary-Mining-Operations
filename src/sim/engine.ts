@@ -8,6 +8,7 @@ import {
 } from './build/construction';
 import { grantCharter } from './build/founding';
 import { buySection } from './build/landOffice';
+import { powerSystem } from './build/power';
 import { shiftStartingAt } from './clock';
 import { fail, isValidCompanyName, OK, type Command, type CommandResult } from './commands';
 import type { SimEvent } from './events';
@@ -41,7 +42,7 @@ const clockSystem: System = {
   },
 };
 
-export const SYSTEMS: System[] = [clockSystem, constructionSystem];
+export const SYSTEMS: System[] = [clockSystem, constructionSystem, powerSystem];
 
 export function createGame(seed: number): GameState {
   return createInitialState(seed);

@@ -1,5 +1,6 @@
 import type { BuildingTypeId, RecipeId } from '../data/buildings';
 import type { GoodId } from '../data/goods';
+import type { SectionPower } from './build/power';
 import type { SimEvent } from './events';
 import type { Inventory } from './inventory';
 import { createLedger, type Ledger } from './ledger';
@@ -43,6 +44,7 @@ export interface SectionState {
   id: number;
   depot: Inventory;
   roadNet: RoadNet | null;
+  power: SectionPower;
 }
 
 export interface GameState {

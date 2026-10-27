@@ -606,6 +606,12 @@
               ]
             }
           ]
+        },
+        "power": {
+          "supplyKw": 0,
+          "demandKw": 0,
+          "factor": 1,
+          "brownout": false
         }
       }
     ],
@@ -698,5 +704,5 @@
       }
     ]
   },
-  "checksum": "461ebddf6ea59"
+  "checksum": "14057526a9b81e"
 }

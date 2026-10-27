@@ -10,6 +10,7 @@ import {
 } from '../state';
 import { worldOf } from '../world/luna';
 import { buildSectionGrid, createRoadNet, type SectionGrid } from '../world/roads';
+import { NO_POWER } from './power';
 import type { Plot } from '../world/types';
 
 export function sectionState(state: GameState, sectionId: number): SectionState | undefined {
@@ -70,6 +71,7 @@ export function ownSection(state: GameState, sectionId: number): SectionState {
     id: sectionId,
     depot: {},
     roadNet: createRoadNet(gridFor(state, sectionId)),
+    power: { ...NO_POWER },
   };
   state.sections.push(section);
   addBuilding(state, world.plots[world.sections[sectionId]!.hubPlotId]!, 'depot', 'active');
