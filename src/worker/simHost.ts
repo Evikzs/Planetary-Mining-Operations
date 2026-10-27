@@ -138,7 +138,12 @@ export class SimHost {
   private async save(): Promise<void> {
     if (!this.state.company) return;
     this.lastSaveMs = this.now();
-    await this.deps.saves.writeAuto(this.deps.codec.encode(this.state, this.lastSaveMs));
+    try {
+      await this.deps.saves.writeAuto(this.deps.codec.encode(this.state, this.lastSaveMs));
+    } catch (err) {
+      const reason = err instanceof Error ? err.message : String(err);
+      this.deps.post({ t: 'error', message: `Could not save the game: ${reason}` });
+    }
   }
 
   private postSnapshot(): void {

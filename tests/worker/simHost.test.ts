@@ -122,6 +122,30 @@ describe('SimHost', () => {
     expect(h.saves.writes).toBe(3);
   });
 
+  it('reports a failed save instead of dropping it', async () => {
+    const posted: FromWorker[] = [];
+    const saves = {
+      writeAuto: () => Promise.reject(new Error('quota exceeded')),
+      loadLatestValid: () => Promise.resolve(null),
+    };
+    const host = new SimHost({ post: (m) => posted.push(m), now: () => 0, saves, codec });
+    await host.handle({
+      t: 'init',
+      nowMs: 0,
+      debug: { timescale: 1, freeze: false, seed: 1, scene: 'none', noWebgl: false },
+    });
+    await host.handle({
+      t: 'command',
+      id: 1,
+      cmd: { t: 'foundCompany', name: 'Selene Rock Co', companionId: 'veteran' },
+    });
+    await host.handle({ t: 'saveNow' });
+    expect(posted).toContainEqual({
+      t: 'error',
+      message: 'Could not save the game: quota exceeded',
+    });
+  });
+
   it('restores the latest save on init', async () => {
     const h = setup();
     await h.init();

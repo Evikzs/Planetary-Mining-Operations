@@ -1,0 +1,24 @@
+{
+  "format": "pmo-save",
+  "version": 1,
+  "savedAtRealMs": 0,
+  "seed": 42,
+  "tick": 0,
+  "state": {
+    "version": 1,
+    "seed": 42,
+    "tick": 0,
+    "rng": [151638571, 3681559328, 1739219424, 3587888621],
+    "company": {
+      "name": "Selene Rock Co",
+      "companionId": "veteran"
+    },
+    "nextId": 1,
+    "pendingEvents": [
+      {
+        "t": "founded"
+      }
+    ]
+  },
+  "checksum": "6d3509a3cc86e"
+}

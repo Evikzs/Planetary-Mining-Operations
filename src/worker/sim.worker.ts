@@ -1,5 +1,6 @@
 import { createMemorySaveStore } from '../save/memoryStore';
-import type { GameState } from '../sim/state';
+import { fromSaveFile, toSaveFile } from '../save/saveFile';
+import { createIdbSaveStore } from '../save/slots';
 import type { FromWorker, ToWorker } from './protocol';
 import { SimHost } from './simHost';
 
@@ -10,22 +11,17 @@ interface WorkerScope {
 
 const scope = self as unknown as WorkerScope;
 
-// shortcut: in-memory saves and a plain codec until the save system (task 5) lands.
 const host = new SimHost({
   post: (msg, transfer) => scope.postMessage(msg, transfer ?? []),
   now: () => Date.now(),
-  saves: createMemorySaveStore(),
+  // Private modes without IndexedDB still play; they just cannot keep a save.
+  saves: typeof indexedDB === 'undefined' ? createMemorySaveStore() : createIdbSaveStore(),
   codec: {
-    encode: (state, savedAtRealMs) => ({
-      format: 'pmo-save',
-      version: 1,
-      savedAtRealMs,
-      seed: state.seed,
-      tick: state.tick,
-      state,
-      checksum: '',
-    }),
-    decode: (file) => ({ state: file.state as GameState, savedAtRealMs: file.savedAtRealMs }),
+    encode: toSaveFile,
+    decode: (file) => {
+      const res = fromSaveFile(file);
+      return res.ok ? { state: res.state, savedAtRealMs: res.savedAtRealMs } : null;
+    },
   },
 });
 
