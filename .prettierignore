@@ -1,0 +1,8 @@
+dist
+node_modules
+package-lock.json
+docs
+.superpowers
+playwright-report
+test-results
+e2e/**/*-snapshots
