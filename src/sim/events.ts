@@ -5,4 +5,5 @@ export type SimEvent =
   | { t: 'constructionStarted'; buildingId: number }
   | { t: 'buildingCompleted'; buildingId: number }
   | { t: 'sectionBought'; sectionId: number }
-  | { t: 'brownout'; sectionId: number; factor: number };
+  | { t: 'brownout'; sectionId: number; factor: number }
+  | { t: 'beltJammed'; beltId: number };

@@ -697,6 +697,7 @@
         "beltId": null
       }
     ],
+    "belts": [],
     "landPurchases": 0,
     "pendingEvents": [
       {
@@ -704,5 +705,5 @@
       }
     ]
   },
-  "checksum": "14057526a9b81e"
+  "checksum": "11fc46db099e"
 }

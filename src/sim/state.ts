@@ -1,5 +1,6 @@
 import type { BuildingTypeId, RecipeId } from '../data/buildings';
 import type { GoodId } from '../data/goods';
+import type { Belt } from './build/belts';
 import type { SectionPower } from './build/power';
 import type { SimEvent } from './events';
 import type { Inventory } from './inventory';
@@ -57,6 +58,7 @@ export interface GameState {
   ledger: Ledger;
   sections: SectionState[];
   buildings: Building[];
+  belts: Belt[];
   landPurchases: number;
   /** Events raised by commands, delivered with the next step. */
   pendingEvents: SimEvent[];
@@ -73,6 +75,7 @@ export function createInitialState(seed: number): GameState {
     ledger: createLedger(),
     sections: [],
     buildings: [],
+    belts: [],
     landPurchases: 0,
     pendingEvents: [],
   };

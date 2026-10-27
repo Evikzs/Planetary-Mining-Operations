@@ -8,6 +8,7 @@ import { balance, transfer } from '../ledger';
 import { newId, type Building, type GameState, type Priority } from '../state';
 import { worldOf } from '../world/luna';
 import { connectToNetwork } from '../world/roads';
+import { createBelt, removeBelt } from './belts';
 import { addBuilding, gridFor, sectionState, storageCapKg } from './sections';
 
 const kg = (t: number) => Math.round(t * 1000);
@@ -56,6 +57,7 @@ export function build(
   transfer(state.ledger, 'player', 'world', def.cost.cents);
   consume(section.depot, def.cost.materials);
   const building = addBuilding(state, plot, cmd.type, 'constructing', recipeId);
+  if (def.belt) createBelt(state, building);
   state.pendingEvents.push({ t: 'constructionStarted', buildingId: building.id });
   return OK;
 }
@@ -98,6 +100,7 @@ export function demolish(state: GameState, buildingId: number): CommandResult {
   if (!b) return fail('UNKNOWN_ID');
   if (b.type === 'depot') return fail('CANNOT_DEMOLISH');
   flushBuffers(state, b);
+  removeBelt(state, b);
   transfer(state.ledger, 'world', 'player', Math.round(BUILDINGS[b.type].cost.cents * 0.25));
   state.buildings = state.buildings.filter((x) => x.id !== b.id);
   return OK;

@@ -1,3 +1,4 @@
+import { beltsSystem } from './build/belts';
 import {
   build,
   constructionSystem,
@@ -42,7 +43,7 @@ const clockSystem: System = {
   },
 };
 
-export const SYSTEMS: System[] = [clockSystem, constructionSystem, powerSystem];
+export const SYSTEMS: System[] = [clockSystem, constructionSystem, powerSystem, beltsSystem];
 
 export function createGame(seed: number): GameState {
   return createInitialState(seed);
