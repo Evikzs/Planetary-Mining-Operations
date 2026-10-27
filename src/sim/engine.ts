@@ -12,6 +12,8 @@ import { buySection } from './build/landOffice';
 import { powerSystem } from './build/power';
 import { productionSystem } from './build/production';
 import { shiftStartingAt } from './clock';
+import { marketSystem } from './market/market';
+import { cancelOrder, placeOrder } from './market/orders';
 import { commuteSystem } from './people/commute';
 import { assignWorker, jobsSystem } from './people/jobs';
 import { migrationSystem } from './people/migration';
@@ -63,6 +65,7 @@ export const SYSTEMS: System[] = [
   payrollSystem,
   beltsSystem,
   productionSystem,
+  marketSystem,
 ];
 
 export function createGame(seed: number): GameState {
@@ -92,6 +95,10 @@ export function applyCommand(state: GameState, cmd: Command): CommandResult {
       return setPriority(state, cmd.buildingId, cmd.priority);
     case 'buySection':
       return buySection(state, cmd.sectionId);
+    case 'placeOrder':
+      return placeOrder(state, cmd);
+    case 'cancelOrder':
+      return cancelOrder(state, cmd.orderId);
     case 'assignWorker':
       return assignWorker(state, cmd);
     case 'setWageLevel':

@@ -1,6 +1,7 @@
+import { balance } from './ledger';
 import type { GameState } from './state';
 
-/** Debug checks run after every tick in dev builds. Later tasks add orders. */
+/** Debug checks run after every tick in dev builds. */
 export function checkInvariants(state: GameState): string[] {
   const problems: string[] = [];
   let sum = 0;
@@ -35,6 +36,12 @@ export function checkInvariants(state: GameState): string[] {
     if (j !== -1 && !buildingIds.has(j))
       problems.push(`worker ${p.id[i]} works at missing building ${j}`);
     if (p.present[i]! > 2) problems.push(`worker ${p.id[i]} presence is invalid: ${p.present[i]}`);
+  }
+  for (const o of state.orders) {
+    if (o.escrowCents !== balance(state.ledger, `escrow:${o.id}`))
+      problems.push(`order ${o.id} escrow ${o.escrowCents} does not match its account`);
+    if (!Number.isSafeInteger(o.escrowKg) || o.escrowKg < 0)
+      problems.push(`order ${o.id} holds invalid goods: ${o.escrowKg}`);
   }
   return problems;
 }

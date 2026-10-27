@@ -784,11 +784,169 @@
     "trips": [],
     "buses": {},
     "jobsDirty": false,
+    "market": {
+      "regolith": {
+        "goodId": "regolith",
+        "pRefCents": 1500,
+        "lastCents": 1500,
+        "history": [],
+        "volume24hKg": 2880000
+      },
+      "ilmenite": {
+        "goodId": "ilmenite",
+        "pRefCents": 6000,
+        "lastCents": 6000,
+        "history": [],
+        "volume24hKg": 960000
+      },
+      "anorthite": {
+        "goodId": "anorthite",
+        "pRefCents": 4500,
+        "lastCents": 4500,
+        "history": [],
+        "volume24hKg": 960000
+      },
+      "helium3": {
+        "goodId": "helium3",
+        "pRefCents": 6000000,
+        "lastCents": 6000000,
+        "history": [],
+        "volume24hKg": 1200
+      },
+      "kreep": {
+        "goodId": "kreep",
+        "pRefCents": 18000,
+        "lastCents": 18000,
+        "history": [],
+        "volume24hKg": 240000
+      },
+      "polarVolatiles": {
+        "goodId": "polarVolatiles",
+        "pRefCents": 12000,
+        "lastCents": 12000,
+        "history": [],
+        "volume24hKg": 360000
+      },
+      "steel": {
+        "goodId": "steel",
+        "pRefCents": 40000,
+        "lastCents": 40000,
+        "history": [],
+        "volume24hKg": 288000
+      },
+      "titaniumAlloy": {
+        "goodId": "titaniumAlloy",
+        "pRefCents": 240000,
+        "lastCents": 240000,
+        "history": [],
+        "volume24hKg": 36000
+      },
+      "aluminium": {
+        "goodId": "aluminium",
+        "pRefCents": 90000,
+        "lastCents": 90000,
+        "history": [],
+        "volume24hKg": 96000
+      },
+      "sinteredConcrete": {
+        "goodId": "sinteredConcrete",
+        "pRefCents": 8000,
+        "lastCents": 8000,
+        "history": [],
+        "volume24hKg": 720000
+      },
+      "glass": {
+        "goodId": "glass",
+        "pRefCents": 30000,
+        "lastCents": 30000,
+        "history": [],
+        "volume24hKg": 192000
+      },
+      "siliconWafers": {
+        "goodId": "siliconWafers",
+        "pRefCents": 600000,
+        "lastCents": 600000,
+        "history": [],
+        "volume24hKg": 9600
+      },
+      "rareEarthOxides": {
+        "goodId": "rareEarthOxides",
+        "pRefCents": 350000,
+        "lastCents": 350000,
+        "history": [],
+        "volume24hKg": 19200
+      },
+      "oxygen": {
+        "goodId": "oxygen",
+        "pRefCents": 35000,
+        "lastCents": 35000,
+        "history": [],
+        "volume24hKg": 144000
+      },
+      "potableWater": {
+        "goodId": "potableWater",
+        "pRefCents": 25000,
+        "lastCents": 25000,
+        "history": [],
+        "volume24hKg": 192000
+      },
+      "hydrogen": {
+        "goodId": "hydrogen",
+        "pRefCents": 180000,
+        "lastCents": 180000,
+        "history": [],
+        "volume24hKg": 28800
+      },
+      "fertiliser": {
+        "goodId": "fertiliser",
+        "pRefCents": 150000,
+        "lastCents": 150000,
+        "history": [],
+        "volume24hKg": 24000
+      },
+      "hydroponicProduce": {
+        "goodId": "hydroponicProduce",
+        "pRefCents": 400000,
+        "lastCents": 400000,
+        "history": [],
+        "volume24hKg": 14400
+      },
+      "electronics": {
+        "goodId": "electronics",
+        "pRefCents": 4500000,
+        "lastCents": 4500000,
+        "history": [],
+        "volume24hKg": 7200
+      },
+      "machinery": {
+        "goodId": "machinery",
+        "pRefCents": 1200000,
+        "lastCents": 1200000,
+        "history": [],
+        "volume24hKg": 36000
+      },
+      "prefabStructures": {
+        "goodId": "prefabStructures",
+        "pRefCents": 40000,
+        "lastCents": 40000,
+        "history": [],
+        "volume24hKg": 240000
+      },
+      "solarPanels": {
+        "goodId": "solarPanels",
+        "pRefCents": 900000,
+        "lastCents": 900000,
+        "history": [],
+        "volume24hKg": 14400
+      }
+    },
+    "orders": [],
+    "colonyPop": 1200,
     "pendingEvents": [
       {
         "t": "founded"
       }
     ]
   },
-  "checksum": "37272378dab4d"
+  "checksum": "e4faac4c48f59"
 }

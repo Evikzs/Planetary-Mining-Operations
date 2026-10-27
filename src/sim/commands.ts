@@ -1,5 +1,6 @@
 import type { BuildingTypeId, RecipeId, Skill } from '../data/buildings';
 import type { WageLevel } from '../data/balance';
+import type { GoodId } from '../data/goods';
 import type { CompanionId, Priority } from './state';
 
 // Later tasks add members to these unions.
@@ -18,7 +19,17 @@ export type Command =
       buildingId: number | null;
       shift?: 0 | 1 | 2;
       lock: boolean;
-    };
+    }
+  | {
+      t: 'placeOrder';
+      goodId: GoodId;
+      side: 'buy' | 'sell';
+      kind: 'market' | 'limit' | 'standing';
+      qtyKg: number;
+      limitCents?: number;
+      sectionId: number;
+    }
+  | { t: 'cancelOrder'; orderId: number };
 
 export type CommandError =
   | 'ALREADY_FOUNDED'
@@ -39,7 +50,10 @@ export type CommandError =
   | 'INVALID_RECIPE'
   | 'BUSY'
   | 'CANNOT_DEMOLISH'
-  | 'NO_OPEN_SLOT';
+  | 'NO_OPEN_SLOT'
+  | 'INSUFFICIENT_STOCK'
+  | 'INVALID_ORDER'
+  | 'STORAGE_FULL';
 
 export type CommandResult = { ok: true } | { ok: false; error: CommandError };
 

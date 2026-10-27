@@ -9,6 +9,9 @@ import { createLedger, type Ledger } from './ledger';
 import { createRng, deriveSeed, type RngState } from './rng';
 import type { RoadNet } from './world/roads';
 import type { Trip } from '../shared/trips';
+import { COLONY } from '../data/balance';
+import { GOOD_IDS, GOODS } from '../data/goods';
+import type { GoodMarket, Order } from './market/orders';
 import type { Need, NeedsMet } from './people/needs';
 import { createPeople, type People } from './people/store';
 
@@ -87,8 +90,23 @@ export interface GameState {
   buses: Record<number, { total: number; busyUntil: number[] }>;
   /** Set when buildings or workers change, so jobs are filled before the next hourly pass. */
   jobsDirty: boolean;
+  market: Record<GoodId, GoodMarket>;
+  orders: Order[];
+  /** People in the Lunar colony who buy what the market sells. */
+  colonyPop: number;
   /** Events raised by commands, delivered with the next step. */
   pendingEvents: SimEvent[];
+}
+
+/** Every good starts at its base price with a day of NPC volume. */
+function freshMarkets(): Record<GoodId, GoodMarket> {
+  const market = {} as Record<GoodId, GoodMarket>;
+  for (const g of GOOD_IDS) {
+    const p = GOODS[g].basePriceCents;
+    const day = GOODS[g].npc.volumeTph * 24_000;
+    market[g] = { goodId: g, pRefCents: p, lastCents: p, history: [], volume24hKg: day };
+  }
+  return market;
 }
 
 export function createInitialState(seed: number): GameState {
@@ -111,6 +129,9 @@ export function createInitialState(seed: number): GameState {
     trips: [],
     buses: {},
     jobsDirty: false,
+    market: freshMarkets(),
+    orders: [],
+    colonyPop: COLONY.startPop,
     pendingEvents: [],
   };
 }
