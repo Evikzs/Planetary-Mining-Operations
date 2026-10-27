@@ -1,0 +1,320 @@
+/* Printed matter over a live map: cream paper cards with an offset ink shadow on navy chrome. */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+  background: var(--c-navy);
+  color: var(--c-offBlack);
+  font: 15px/1.45 var(--font-text);
+  -webkit-font-smoothing: antialiased;
+  overscroll-behavior: none;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+
+:focus-visible {
+  outline: 2px solid var(--c-mustard);
+  outline-offset: 2px;
+}
+
+h1,
+h2,
+h3 {
+  font-family: var(--font-display);
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  margin: 0;
+}
+
+.num {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+[data-motion='reduced'] *,
+[data-motion='reduced'] *::before,
+[data-motion='reduced'] *::after {
+  transition: none !important;
+  animation: none !important;
+}
+
+/* Shell */
+.shell {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+}
+
+.map {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  touch-action: none;
+}
+
+.topbar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  gap: var(--space-5);
+  padding: 0 var(--space-4);
+  background: var(--c-navy);
+  color: var(--c-cream);
+  border-bottom: 2px solid var(--c-offBlack);
+  z-index: 3;
+}
+
+.topbar h1 {
+  font-size: 17px;
+  white-space: nowrap;
+}
+
+.topbar .slot {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  white-space: nowrap;
+}
+
+.topbar .slot-label {
+  color: var(--c-mustard);
+  font-family: var(--font-display);
+  font-size: 13px;
+}
+
+.shell[data-layout='phone'] .topbar {
+  height: 44px;
+  padding: 0 var(--space-3);
+  gap: var(--space-4);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.rail {
+  position: absolute;
+  top: 48px;
+  left: 0;
+  bottom: 28px;
+  width: 72px;
+  display: flex;
+  flex-direction: column;
+  background: var(--c-navy);
+  border-right: 2px solid var(--c-offBlack);
+  z-index: 3;
+}
+
+.rail button,
+.bottom-tabs button {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  border: 0;
+  background: transparent;
+  color: var(--c-cream);
+  font-family: var(--font-display);
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.rail button {
+  height: 64px;
+  border-left: 4px solid transparent;
+}
+
+.rail button[aria-pressed='true'] {
+  border-left-color: var(--c-mustard);
+  color: var(--c-mustard);
+}
+
+.bottom-tabs {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: calc(56px + env(safe-area-inset-bottom));
+  padding-bottom: env(safe-area-inset-bottom);
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  background: var(--c-navy);
+  border-top: 2px solid var(--c-offBlack);
+  z-index: 3;
+}
+
+.bottom-tabs button {
+  min-height: 56px;
+  min-width: 44px;
+  border-top: 3px solid transparent;
+}
+
+.bottom-tabs button[aria-pressed='true'] {
+  border-top-color: var(--c-mustard);
+  color: var(--c-mustard);
+}
+
+/* Paper card: cream stock, ink border, misregistered orange offset. */
+.card {
+  background: var(--c-cream);
+  border: 2px solid var(--c-offBlack);
+  border-radius: var(--radius-card);
+  box-shadow: 4px 4px 0 var(--c-burntOrange);
+}
+
+.panel {
+  position: absolute;
+  top: 60px;
+  left: 84px;
+  bottom: 40px;
+  width: 380px;
+  display: flex;
+  flex-direction: column;
+  z-index: 2;
+  transition: transform var(--motion-base) var(--ease-industrial);
+}
+
+.panel header,
+.sheet header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 2px solid var(--c-offBlack);
+}
+
+.panel h2,
+.sheet h2 {
+  font-size: 22px;
+}
+
+.panel .body,
+.sheet .body {
+  flex: 1;
+  overflow: auto;
+  padding: var(--space-4);
+}
+
+.icon-button {
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  background: transparent;
+}
+
+.context-panel {
+  position: absolute;
+  top: 60px;
+  right: 16px;
+  width: 340px;
+  max-height: calc(100% - 112px);
+  overflow: auto;
+  z-index: 2;
+}
+
+.ticker {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  padding: 0 var(--space-4);
+  background: var(--c-navy);
+  color: var(--c-mustard);
+  border-top: 2px solid var(--c-offBlack);
+  font-size: 13px;
+  white-space: nowrap;
+  overflow: hidden;
+  z-index: 3;
+}
+
+.sheet {
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  bottom: calc(64px + env(safe-area-inset-bottom));
+  display: flex;
+  flex-direction: column;
+  z-index: 2;
+  transition: height var(--motion-base) var(--ease-industrial);
+}
+
+.sheet[data-snap='half'] {
+  height: 50vh;
+}
+
+.sheet[data-snap='full'] {
+  height: calc(92vh - 64px);
+}
+
+.sheet .handle {
+  align-self: center;
+  width: 64px;
+  height: 24px;
+  border: 0;
+  background: transparent;
+  display: grid;
+  place-items: center;
+}
+
+.sheet .handle::after {
+  content: '';
+  width: 36px;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--c-offBlack);
+}
+
+.more-list {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.more-list button {
+  min-height: 48px;
+  border: 2px solid var(--c-offBlack);
+  background: var(--c-cream);
+  font-family: var(--font-display);
+  font-weight: 500;
+  text-align: left;
+  padding: 0 var(--space-4);
+}
+
+/* Phones keep the strip for live numbers; the title stays for screen readers only. */
+.shell[data-layout='phone'] .topbar h1 {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}

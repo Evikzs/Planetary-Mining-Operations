@@ -1,8 +1,23 @@
+import '@fontsource-variable/jost';
+import '@fontsource/ibm-plex-sans/400.css';
+import '@fontsource/ibm-plex-sans/500.css';
+import '@fontsource/ibm-plex-sans/600.css';
+import '@fontsource/ibm-plex-mono/400.css';
+import '@fontsource/ibm-plex-mono/500.css';
+import './ui/global.css';
 import { render } from 'preact';
 import { debugEnabled, parseDebugFlags } from './client/debugFlags';
 import { createSimClient } from './client/simClient';
 import { ui } from './client/store';
 import { App } from './ui/App';
+import { applyTokens } from './ui/tokens';
+
+const html = document.documentElement;
+applyTokens(html);
+const reduced = matchMedia('(prefers-reduced-motion: reduce)');
+const syncMotion = () => (html.dataset.motion = reduced.matches ? 'reduced' : 'full');
+syncMotion();
+reduced.addEventListener('change', syncMotion);
 
 const worker = new Worker(new URL('./worker/sim.worker.ts', import.meta.url), { type: 'module' });
 const client = createSimClient(worker);
