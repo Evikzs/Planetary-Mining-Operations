@@ -16,7 +16,7 @@ import { indexOfId, SKILL_CODE, SKILL_OF } from './store';
 /** Job slots per shift at the building's level. */
 export function slotsPerShift(b: Building): Partial<Record<Skill, number>> {
   const slots: Partial<Record<Skill, number>> = {};
-  for (const [skill, n] of Object.entries(BUILDINGS[b.type].jobs) as [Skill, number][]) {
+  for (const [skill, n] of Object.entries(b.jobs ?? BUILDINGS[b.type].jobs) as [Skill, number][]) {
     slots[skill] = levelJobs(b.level, n);
   }
   return slots;
@@ -62,6 +62,11 @@ function crews(state: GameState): Map<number, Crew> {
   return byBuilding;
 }
 
+/** Workers of each skill at work in a building this shift. */
+export function presentCrew(state: GameState, buildingId: number): Record<Skill, number> {
+  return crews(state).get(buildingId)?.bySkill ?? { miner: 0, technician: 0, engineer: 0 };
+}
+
 /** Share of this shift's job slots filled by workers at work, 0..1. A struck building has none. */
 export function staffing(state: GameState, building: Building): number {
   if (building.strike) return 0;
@@ -85,6 +90,8 @@ export function workforceProductivity(state: GameState, building: Building): num
 }
 
 const RANK: Record<Priority, number> = { high: 0, normal: 1, low: 2 };
+// Contract sites take workers after buildings of the same priority.
+const isSite = (b: Building) => (b.type === 'contractSite' ? 1 : 0);
 
 /**
  * Fills open slots with unemployed, unlocked workers of the same section: high priority first,
@@ -119,7 +126,7 @@ export function autoAssign(state: GameState): void {
 
   const order = state.buildings
     .filter((b) => b.status !== 'constructing')
-    .sort((a, b) => RANK[a.priority] - RANK[b.priority] || a.id - b.id);
+    .sort((a, b) => RANK[a.priority] - RANK[b.priority] || isSite(a) - isSite(b) || a.id - b.id);
   for (const b of order) {
     const f = fillOf(b.id);
     for (const [skill, n] of Object.entries(slotsPerShift(b)) as [Skill, number][]) {

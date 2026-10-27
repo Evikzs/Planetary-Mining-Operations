@@ -11,6 +11,7 @@ import type { RoadNet } from './world/roads';
 import type { Trip } from '../shared/trips';
 import { COLONY } from '../data/balance';
 import { GOOD_IDS, GOODS } from '../data/goods';
+import type { Contract } from './contracts/contracts';
 import type { GoodMarket, Order } from './market/orders';
 import type { Need, NeedsMet } from './people/needs';
 import { createPeople, type People } from './people/store';
@@ -48,6 +49,8 @@ export interface Building {
   /** Minutes the crew's average morale has stayed below the strike line. */
   lowMoraleMinutes: number;
   strike: boolean;
+  /** Job slots that replace the type's own, as on a contract site. */
+  jobs?: Partial<Record<Skill, number>>;
 }
 
 /** A player-owned section. Sections without state belong to the Lunar Authority. */
@@ -94,6 +97,11 @@ export interface GameState {
   orders: Order[];
   /** People in the Lunar colony who buy what the market sells. */
   colonyPop: number;
+  contracts: Contract[];
+  /** 0..100. */
+  reputation: number;
+  /** Finished infrastructure the colony now owns. */
+  clientAssets: { plotId: number; asset: string }[];
   /** Events raised by commands, delivered with the next step. */
   pendingEvents: SimEvent[];
 }
@@ -132,6 +140,9 @@ export function createInitialState(seed: number): GameState {
     market: freshMarkets(),
     orders: [],
     colonyPop: COLONY.startPop,
+    contracts: [],
+    reputation: 20,
+    clientAssets: [],
     pendingEvents: [],
   };
 }

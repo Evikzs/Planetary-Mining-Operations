@@ -44,7 +44,9 @@ export function build(
   const section = sectionState(state, plot.sectionId);
   if (!section) return fail('NOT_OWNED');
   if (plotOccupied(state, plot.id)) return fail('PLOT_OCCUPIED');
-  if (def.plot === 'hub' || def.plot !== plot.kind) return fail('WRONG_PLOT_KIND');
+  if (def.plot === 'hub' || def.plot === 'public' || def.plot !== plot.kind) {
+    return fail('WRONG_PLOT_KIND');
+  }
   if (def.plot === 'deposit' && !def.depositGoods.includes(plot.deposit!.goodId)) {
     return fail('NO_DEPOSIT_MATCH');
   }
@@ -100,7 +102,7 @@ export function demolish(state: GameState, buildingId: number): CommandResult {
   if (!state.company) return fail('NOT_FOUNDED');
   const b = findBuilding(state, buildingId);
   if (!b) return fail('UNKNOWN_ID');
-  if (b.type === 'depot') return fail('CANNOT_DEMOLISH');
+  if (b.type === 'depot' || b.type === 'contractSite') return fail('CANNOT_DEMOLISH');
   flushBuffers(state, b);
   removeBelt(state, b);
   releaseWorkers(state, b.id);

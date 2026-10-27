@@ -47,12 +47,14 @@ export type BuildingTypeId =
   | 'crewQuarters'
   | 'habitatDome'
   | 'warehouse'
-  | 'roverGarage';
+  | 'roverGarage'
+  | 'contractSite';
 
 export interface BuildingDef {
   id: BuildingTypeId;
   name: string;
-  plot: 'hub' | 'deposit' | 'build';
+  /** Hub and public-plot buildings are placed by the game, not built by the player. */
+  plot: 'hub' | 'deposit' | 'build' | 'public';
   depositGoods: RawGoodId[];
   extractTph: number;
   /** Extraction multiplier per deposit good (default 1). */
@@ -353,6 +355,14 @@ export const BUILDINGS: Record<BuildingTypeId, BuildingDef> = {
     buses: 4,
     cost: cost(6000, { prefabStructures: 20, machinery: 3 }),
     buildHours: 4,
+  }),
+  // Work site of an infrastructure contract: its job slots follow the contract's stage.
+  contractSite: def({
+    id: 'contractSite',
+    name: 'Contract site',
+    plot: 'public',
+    powerKw: 0,
+    cost: cost(0, {}),
   }),
 };
 

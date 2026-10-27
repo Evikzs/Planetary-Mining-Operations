@@ -29,7 +29,10 @@ export type Command =
       limitCents?: number;
       sectionId: number;
     }
-  | { t: 'cancelOrder'; orderId: number };
+  | { t: 'cancelOrder'; orderId: number }
+  | { t: 'acceptContract'; contractId: number }
+  | { t: 'deliverContract'; contractId: number; sectionId: number }
+  | { t: 'abandonContract'; contractId: number };
 
 export type CommandError =
   | 'ALREADY_FOUNDED'
@@ -53,7 +56,9 @@ export type CommandError =
   | 'NO_OPEN_SLOT'
   | 'INSUFFICIENT_STOCK'
   | 'INVALID_ORDER'
-  | 'STORAGE_FULL';
+  | 'STORAGE_FULL'
+  | 'CONTRACT_LIMIT'
+  | 'NOT_ACTIVE';
 
 export type CommandResult = { ok: true } | { ok: false; error: CommandError };
 

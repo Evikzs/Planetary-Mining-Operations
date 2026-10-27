@@ -16,4 +16,5 @@ export type SimEvent =
   | { t: 'strikeEnded'; buildingId: number }
   | { t: 'trade'; orderId: number; goodId: GoodId; side: 'buy' | 'sell'; kg: number; cents: number }
   | { t: 'income'; plotId: number | null; cents: number; source: 'trade' | 'contract' }
-  | { t: 'priceMove'; goodId: GoodId; pct24h: number };
+  | { t: 'priceMove'; goodId: GoodId; pct24h: number }
+  | { t: 'contractOffered' | 'contractCompleted' | 'contractFailed'; contractId: number };

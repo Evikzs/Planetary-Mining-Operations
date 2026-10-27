@@ -12,6 +12,12 @@ import { buySection } from './build/landOffice';
 import { powerSystem } from './build/power';
 import { productionSystem } from './build/production';
 import { shiftStartingAt } from './clock';
+import {
+  abandonContract,
+  acceptContract,
+  contractsSystem,
+  deliverContract,
+} from './contracts/contracts';
 import { marketSystem } from './market/market';
 import { cancelOrder, placeOrder } from './market/orders';
 import { commuteSystem } from './people/commute';
@@ -66,6 +72,7 @@ export const SYSTEMS: System[] = [
   beltsSystem,
   productionSystem,
   marketSystem,
+  contractsSystem,
 ];
 
 export function createGame(seed: number): GameState {
@@ -95,6 +102,12 @@ export function applyCommand(state: GameState, cmd: Command): CommandResult {
       return setPriority(state, cmd.buildingId, cmd.priority);
     case 'buySection':
       return buySection(state, cmd.sectionId);
+    case 'acceptContract':
+      return acceptContract(state, cmd.contractId);
+    case 'deliverContract':
+      return deliverContract(state, cmd.contractId, cmd.sectionId);
+    case 'abandonContract':
+      return abandonContract(state, cmd.contractId);
     case 'placeOrder':
       return placeOrder(state, cmd);
     case 'cancelOrder':

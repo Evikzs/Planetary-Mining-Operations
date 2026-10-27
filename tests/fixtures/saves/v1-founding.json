@@ -942,11 +942,14 @@
     },
     "orders": [],
     "colonyPop": 1200,
+    "contracts": [],
+    "reputation": 20,
+    "clientAssets": [],
     "pendingEvents": [
       {
         "t": "founded"
       }
     ]
   },
-  "checksum": "e4faac4c48f59"
+  "checksum": "ae916449eef9"
 }
