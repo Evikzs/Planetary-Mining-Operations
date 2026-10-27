@@ -19,6 +19,7 @@ import {
   deliverContract,
 } from './contracts/contracts';
 import { marketSystem } from './market/market';
+import { cameraTaught, setHintMute, startStory, storyAck, storySystem } from './story/story';
 import { cancelOrder, placeOrder } from './market/orders';
 import { commuteSystem } from './people/commute';
 import { assignWorker, jobsSystem } from './people/jobs';
@@ -73,6 +74,7 @@ export const SYSTEMS: System[] = [
   productionSystem,
   marketSystem,
   contractsSystem,
+  storySystem,
 ];
 
 export function createGame(seed: number): GameState {
@@ -87,6 +89,7 @@ export function applyCommand(state: GameState, cmd: Command): CommandResult {
       if (cmd.companionId !== 'veteran') return fail('COMPANION_UNAVAILABLE');
       state.company = { name: cmd.name.trim(), companionId: cmd.companionId };
       grantCharter(state);
+      startStory(state);
       state.pendingEvents.push({ t: 'founded' });
       return OK;
     }
@@ -102,6 +105,12 @@ export function applyCommand(state: GameState, cmd: Command): CommandResult {
       return setPriority(state, cmd.buildingId, cmd.priority);
     case 'buySection':
       return buySection(state, cmd.sectionId);
+    case 'storyAck':
+      return storyAck(state, cmd.beatId);
+    case 'setHintMute':
+      return setHintMute(state, cmd.category, cmd.muted);
+    case 'cameraTaught':
+      return cameraTaught(state, cmd.panned, cmd.zoomed);
     case 'acceptContract':
       return acceptContract(state, cmd.contractId);
     case 'deliverContract':

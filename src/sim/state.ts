@@ -12,6 +12,7 @@ import type { Trip } from '../shared/trips';
 import { COLONY } from '../data/balance';
 import { GOOD_IDS, GOODS } from '../data/goods';
 import type { Contract } from './contracts/contracts';
+import { createStory, type StoryState } from './story/story';
 import type { GoodMarket, Order } from './market/orders';
 import type { Need, NeedsMet } from './people/needs';
 import { createPeople, type People } from './people/store';
@@ -102,6 +103,7 @@ export interface GameState {
   reputation: number;
   /** Finished infrastructure the colony now owns. */
   clientAssets: { plotId: number; asset: string }[];
+  story: StoryState;
   /** Events raised by commands, delivered with the next step. */
   pendingEvents: SimEvent[];
 }
@@ -143,6 +145,7 @@ export function createInitialState(seed: number): GameState {
     contracts: [],
     reputation: 20,
     clientAssets: [],
+    story: createStory(),
     pendingEvents: [],
   };
 }

@@ -945,11 +945,55 @@
     "contracts": [],
     "reputation": 20,
     "clientAssets": [],
+    "story": {
+      "seen": [
+        "ch1.founding"
+      ],
+      "done": [],
+      "queue": [
+        "ch1.founding"
+      ],
+      "muted": [],
+      "codex": [
+        "mech.sections",
+        "mech.plots",
+        "good.glass",
+        "good.oxygen",
+        "good.potableWater",
+        "good.hydroponicProduce",
+        "good.electronics",
+        "good.machinery",
+        "good.prefabStructures",
+        "good.solarPanels",
+        "building.regolithScoop",
+        "building.mine",
+        "building.iceDrill",
+        "building.he3Harvester",
+        "building.smelter",
+        "building.waferFab",
+        "building.chemicalRefinery",
+        "building.electrolysisPlant",
+        "building.airPlant",
+        "building.waterPlant",
+        "building.hydroponicsFarm",
+        "building.assemblyWorks",
+        "building.solarArray",
+        "building.crewQuarters",
+        "building.habitatDome",
+        "building.warehouse",
+        "building.roverGarage"
+      ],
+      "cameraTaught": {
+        "panned": false,
+        "zoomed": false
+      },
+      "lastAt": {}
+    },
     "pendingEvents": [
       {
         "t": "founded"
       }
     ]
   },
-  "checksum": "ae916449eef9"
+  "checksum": "1dd866b55892a4"
 }

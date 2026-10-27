@@ -1,6 +1,7 @@
 import type { BuildingTypeId, RecipeId, Skill } from '../data/buildings';
 import type { WageLevel } from '../data/balance';
 import type { GoodId } from '../data/goods';
+import type { BeatId, HintCategory } from './story/beats';
 import type { CompanionId, Priority } from './state';
 
 // Later tasks add members to these unions.
@@ -32,7 +33,10 @@ export type Command =
   | { t: 'cancelOrder'; orderId: number }
   | { t: 'acceptContract'; contractId: number }
   | { t: 'deliverContract'; contractId: number; sectionId: number }
-  | { t: 'abandonContract'; contractId: number };
+  | { t: 'abandonContract'; contractId: number }
+  | { t: 'storyAck'; beatId: BeatId }
+  | { t: 'setHintMute'; category: HintCategory; muted: boolean }
+  | { t: 'cameraTaught'; panned?: boolean; zoomed?: boolean };
 
 export type CommandError =
   | 'ALREADY_FOUNDED'
