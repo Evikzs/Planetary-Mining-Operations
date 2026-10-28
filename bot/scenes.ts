@@ -49,6 +49,8 @@ export function makeDemoState(seed: number): GameState {
     ['smelter', 'steel'],
     ['waterPlant'],
     ['crewQuarters'],
+    ['solarArray'],
+    ['solarArray'],
   ] as const) {
     applyCommand(s, { t: 'build', plotId: freePlots(s, home, 'build')[0]!.id, type, recipeId });
   }

@@ -100,6 +100,7 @@ export interface UiSnapshot {
     progress: number;
     staffing: number;
     powerFactor: number;
+    /** Workers' average morale; for housing, the residents'. */
     avgMorale: number;
     outputTph: Partial<Record<GoodId, number>>;
     recipeId: RecipeId | null;
@@ -226,19 +227,24 @@ export function buildUiSnapshot(state: GameState): UiSnapshot {
     technician: { total: 0, employed: 0 },
     engineer: { total: 0, employed: 0 },
   };
+  // Morale by workplace, and by home for housing.
   const moraleAt = new Map<number, { sum: number; n: number }>();
+  const tally = (building: number, morale: number): void => {
+    const m = moraleAt.get(building) ?? { sum: 0, n: 0 };
+    m.sum += morale;
+    m.n++;
+    moraleAt.set(building, m);
+  };
   let employed = 0;
   for (let i = 0; i < p.count; i++) {
     const skill = bySkill[SKILL_OF[p.skill[i]!]!];
     skill.total++;
+    if (p.home[i]! >= 0) tally(p.home[i]!, p.morale[i]!);
     const job = p.job[i]!;
     if (job < 0) continue;
     employed++;
     skill.employed++;
-    const m = moraleAt.get(job) ?? { sum: 0, n: 0 };
-    m.sum += p.morale[i]!;
-    m.n++;
-    moraleAt.set(job, m);
+    tally(job, p.morale[i]!);
   }
   const residents = residentsBySection(state);
   const factor = new Map(state.sections.map((s) => [s.id, s.power.factor]));

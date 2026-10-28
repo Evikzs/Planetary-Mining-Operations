@@ -16,6 +16,8 @@ export interface TestApi {
   camera(): GlobeCameraState | null;
   /** Degrees; heading clockwise from north. A heading of 0 locks north. */
   setCamera(lat: number, lon: number, alt: number, heading: number): void;
+  /** Where a plot's pick sphere shows on screen, in CSS pixels; null when out of sight. */
+  project(plotId: number): { x: number; y: number } | null;
 }
 
 declare global {
@@ -37,6 +39,10 @@ export function installTestApi(client: SimClient): void {
     setCamera(lat, lon, alt, heading) {
       const s = createCameraState(fromLatLon(rad(lat), rad(lon)), alt);
       gameRenderer.value?.setCamera(heading ? rotate(s, rad(heading)) : s);
+    },
+    project(plotId) {
+      const plot = world.value?.plots.find((p) => p.id === plotId);
+      return (plot && gameRenderer.value?.project(plot.dir, 0.2)) ?? null;
     },
   };
 }

@@ -113,6 +113,24 @@ describe('views', () => {
     });
   });
 
+  it('housing reports the average morale of its residents', () => {
+    const s = founded();
+    const p = s.people;
+    for (let i = 0; i < p.count; i++) p.morale[i] = i % 2 ? 40 : 80;
+    const quarters = s.buildings.find((b) => b.type === 'crewQuarters')!;
+    const row = buildUiSnapshot(s).buildings.find((b) => b.id === quarters.id)!;
+    let sum = 0;
+    let n = 0;
+    for (let i = 0; i < p.count; i++) {
+      if (p.home[i] === quarters.id) {
+        sum += p.morale[i]!;
+        n++;
+      }
+    }
+    expect(n).toBeGreaterThan(0);
+    expect(row.avgMorale).toBeCloseTo(sum / n, 9);
+  });
+
   it('queryPeople pages and filters workers', () => {
     const s = founded();
     const all = queryPeople(s, {}, 0, 10);

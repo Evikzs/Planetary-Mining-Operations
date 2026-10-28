@@ -13,7 +13,7 @@ import {
 import { LUNA_RADIUS } from '../shared/scale';
 import { createTerrain } from '../shared/terrain';
 import { normalize, type Vec3 } from '../shared/vec3';
-import type { MotionView, WorldView } from '../sim/views';
+import type { MotionView, UiSnapshot, WorldView } from '../sim/views';
 import { sectionAt } from '../sim/world/sections';
 import { palette } from '../ui/tokens';
 import { createCameraController } from './camera/controller';
@@ -23,6 +23,9 @@ import { ChunkStreamer } from './globe/chunkStreamer';
 import { bandsTexture } from './materials';
 import type { MapFilter } from './overlays/filters';
 import { SectionOverlay } from './overlays/sectionOverlay';
+import { BuildingLayer } from './world/buildingLayer';
+import { PlotPicker } from './world/picking';
+import { PlotLayer } from './world/plotLayer';
 import { createSky } from './sky';
 
 export interface RenderStats {
@@ -53,6 +56,8 @@ export interface GameRenderer {
   camera(): GlobeCameraState;
   setCamera(s: GlobeCameraState): void;
   setFilter(f: MapFilter): void;
+  /** Live building status, progress, power and morale, which the world view leaves out. */
+  setUi(ui: UiSnapshot): void;
   dispose(): void;
 }
 
@@ -98,7 +103,8 @@ export function createRenderer(canvas: HTMLCanvasElement, opts: RendererOptions)
   const sky = createSky(opts.seed, FOV);
   const layers: Layer[] = [];
 
-  const terrainMaterial = new MeshToonMaterial({ vertexColors: true, gradientMap: bandsTexture() });
+  const bands = bandsTexture();
+  const terrainMaterial = new MeshToonMaterial({ vertexColors: true, gradientMap: bands });
   const globe = new ChunkStreamer(scene, {
     seed: opts.seed,
     radius,
@@ -110,16 +116,20 @@ export function createRenderer(canvas: HTMLCanvasElement, opts: RendererOptions)
     update: (_time, cam) => globe.update(cam),
     dispose: () => {
       globe.dispose();
-      terrainMaterial.gradientMap?.dispose();
       terrainMaterial.dispose();
     },
   });
 
   const overlay = new SectionOverlay(scene, terrain, radius);
-  layers.push({
-    update: (_time, _cam, view) => overlay.update(view),
-    dispose: () => overlay.dispose(),
-  });
+  const buildings = new BuildingLayer(scene, terrain, radius, bands, opts.reducedMotion);
+  const plots = new PlotLayer(scene, terrain, radius);
+  const picker = new PlotPicker(terrain, radius);
+  layers.push(
+    { update: (_time, _cam, view) => overlay.update(view), dispose: () => overlay.dispose() },
+    { update: (_time, _cam, view) => buildings.update(view), dispose: () => buildings.dispose() },
+    { update: (_time, _cam, view) => plots.update(view), dispose: () => plots.dispose() },
+    { update: () => undefined, dispose: () => picker.dispose() },
+  );
 
   const controller = createCameraController(canvas, createCameraState(START_DIR, START_ALTITUDE), {
     radius,
@@ -204,6 +214,8 @@ export function createRenderer(canvas: HTMLCanvasElement, opts: RendererOptions)
   function pick(x: number, y: number): MapPick | null {
     if (!world || width === 0 || height === 0) return null;
     raycaster.setFromCamera(new Vector2((x / width) * 2 - 1, 1 - (y / height) * 2), camera);
+    const onPlot = picker.pick(raycaster);
+    if (onPlot) return onPlot;
     const hit = raycaster.ray.intersectSphere(surface, new Vector3());
     if (!hit) return null;
     const section = world.sections[sectionAt(world.sections, normalize([hit.x, hit.y, hit.z]))];
@@ -214,6 +226,12 @@ export function createRenderer(canvas: HTMLCanvasElement, opts: RendererOptions)
     setWorld(w) {
       world = w;
       overlay.setWorld(w);
+      buildings.setWorld(w);
+      plots.setWorld(w);
+      picker.setWorld(w);
+    },
+    setUi(ui) {
+      buildings.setUi(ui);
     },
     setMotion(view, anchorRealMs, timescale) {
       motion = { view, anchorRealMs, timescale };
@@ -248,6 +266,7 @@ export function createRenderer(canvas: HTMLCanvasElement, opts: RendererOptions)
     },
     setFilter(f) {
       overlay.setFilter(f);
+      buildings.setFilter(f);
     },
     dispose() {
       cancelAnimationFrame(raf);
@@ -255,6 +274,7 @@ export function createRenderer(canvas: HTMLCanvasElement, opts: RendererOptions)
       document.removeEventListener('visibilitychange', onVisibility);
       for (const layer of layers) layer.dispose();
       sky.dispose();
+      bands.dispose();
       gl.dispose();
       gl.forceContextLoss();
     },

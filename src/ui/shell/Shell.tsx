@@ -1,5 +1,6 @@
 import type { ComponentChildren } from 'preact';
 import { useEffect } from 'preact/hooks';
+import { selection } from '../../client/store';
 import type { DebugFlags } from '../../worker/protocol';
 import { Icon } from '../icons';
 import { BottomTabs, moreOpen } from './BottomTabs';
@@ -38,6 +39,7 @@ function useShortcuts() {
       else if (e.key === 'Escape') {
         activeTab.value = null;
         moreOpen.value = false;
+        selection.value = null;
       }
     };
     window.addEventListener('keydown', onKey);

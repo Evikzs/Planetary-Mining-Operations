@@ -1,6 +1,6 @@
 import { signal } from '@preact/signals';
 import { DEFAULT_FILTER, type MapFilter } from '../render/overlays/filters';
-import type { GameRenderer } from '../render/renderer';
+import type { GameRenderer, MapPick } from '../render/renderer';
 import type { AwaySummary } from '../sim/offline';
 import type { SimClient } from './simClient';
 import type { MotionView, UiSnapshot, WorldView } from '../sim/views';
@@ -18,3 +18,5 @@ export const compass = signal({ heading: 0, lockNorth: true });
 export const mapFilter = signal<MapFilter>(DEFAULT_FILTER);
 /** Planetary filters show from altitude 30 up; local filters below. */
 export const mapLevel = signal<'planetary' | 'local'>('planetary');
+/** What the player last tapped on the map. */
+export const selection = signal<MapPick | null>(null);

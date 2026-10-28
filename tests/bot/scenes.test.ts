@@ -36,6 +36,8 @@ describe('scenes', () => {
     for (const type of ['mine', 'iceDrill', 'smelter', 'waterPlant'] as const) {
       expect(demo.buildings.find((b) => b.type === type)?.status, type).not.toBe('constructing');
     }
+    // A showcase: the grid carries the whole base.
+    expect(demo.sections[0]!.power.factor).toBe(1);
     expect(checkInvariants(demo)).toEqual([]);
   });
 });

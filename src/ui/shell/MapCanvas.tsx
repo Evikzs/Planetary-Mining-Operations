@@ -6,6 +6,7 @@ import {
   mapFilter,
   mapLevel,
   motion,
+  selection,
   simClient,
   ui,
   world,
@@ -26,6 +27,7 @@ export function MapCanvas({ flags }: { flags: DebugFlags }) {
     const r = createRenderer(canvas.current, {
       seed,
       reducedMotion: document.documentElement.dataset.motion === 'reduced',
+      onPick: (pick) => (selection.value = pick),
       onCamera(s) {
         const h = heading(s);
         const shown = compass.value;
@@ -47,6 +49,9 @@ export function MapCanvas({ flags }: { flags: DebugFlags }) {
       if (world.value) r.setWorld(world.value);
     });
     const stopFilter = effect(() => r.setFilter(mapFilter.value));
+    const stopUi = effect(() => {
+      if (ui.value) r.setUi(ui.value);
+    });
     const stopMotion = effect(() => {
       const m = motion.value;
       if (!m) return;
@@ -56,6 +61,7 @@ export function MapCanvas({ flags }: { flags: DebugFlags }) {
     return () => {
       stopWorld();
       stopFilter();
+      stopUi();
       stopMotion();
       r.dispose();
       gameRenderer.value = null;
