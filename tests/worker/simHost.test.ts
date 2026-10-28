@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { FromWorker } from '../../src/worker/protocol';
 import { SimHost } from '../../src/worker/simHost';
 import { createMemorySaveStore } from '../../src/save/memoryStore';
+import { applyCommand, createGame } from '../../src/sim/engine';
 import type { GameState } from '../../src/sim/state';
 import type { SaveFile } from '../../src/save/types';
 
@@ -251,6 +252,32 @@ describe('SimHost', () => {
     now = 1000;
     host.pump();
     expect(posted).toContainEqual({ t: 'error', message: 'Invariant: player cash is negative' });
+  });
+
+  it('builds a debug scene through the loader instead of loading the save', async () => {
+    const saves = createMemorySaveStore();
+    await saves.writeAuto(codec.encode(createGame(1), 0));
+    const posted: FromWorker[] = [];
+    const asked: string[] = [];
+    const host = new SimHost({
+      post: (m) => posted.push(m),
+      now: () => 0,
+      saves,
+      codec,
+      loadScene: (scene, seed) => {
+        asked.push(`${scene}:${seed}`);
+        const s = createGame(seed);
+        applyCommand(s, { t: 'foundCompany', name: 'Scene Rock Co', companionId: 'veteran' });
+        return Promise.resolve(s);
+      },
+    });
+    await host.handle({
+      t: 'init',
+      nowMs: 0,
+      debug: { timescale: 1, freeze: false, seed: 42, scene: 'demo', noWebgl: false },
+    });
+    expect(asked).toEqual(['demo:42']);
+    expect(posted[0]).toEqual({ t: 'ready', founded: true });
   });
 
   it('restores the latest save on init', async () => {

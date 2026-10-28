@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { makeBenchState } from '../../bot/scenes';
 import { applyCommand, createGame, step } from '../../src/sim/engine';
 import {
   buildMotionView,
@@ -126,5 +127,17 @@ describe('views', () => {
     expect(queryPeople(s, { morale: 'lt25' }, 0, 50).total).toBe(0);
   });
 
-  it.todo('ui snapshot for the bench state is < 200 KB JSON and builds in < 2 ms');
+  it('ui snapshot for the bench state is < 200 KB JSON and builds in < 2 ms', () => {
+    const s = makeBenchState(42);
+    step(s, { mode: 'fine' });
+    const times: number[] = [];
+    for (let k = 0; k < 21; k++) {
+      const start = performance.now();
+      buildUiSnapshot(s);
+      times.push(performance.now() - start);
+    }
+    times.sort((a, b) => a - b);
+    expect(times[10]).toBeLessThan(2);
+    expect(JSON.stringify(buildUiSnapshot(s)).length).toBeLessThan(200_000);
+  });
 });

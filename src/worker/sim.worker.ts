@@ -1,3 +1,4 @@
+import { debugEnabled } from '../client/debugFlags';
 import { decodeExportCode, encodeExportCode } from '../save/exportCode';
 import { createMemorySaveStore } from '../save/memoryStore';
 import { fromSaveFile, toSaveFile } from '../save/saveFile';
@@ -31,6 +32,12 @@ const host = new SimHost({
     },
   },
   checkInvariants: import.meta.env.DEV ? checkInvariants : undefined,
+  loadScene: debugEnabled()
+    ? async (scene, seed) => {
+        const { makeBenchState, makeDemoState } = await import('../../bot/scenes');
+        return scene === 'demo' ? makeDemoState(seed) : makeBenchState(seed);
+      }
+    : undefined,
 });
 
 scope.onmessage = (e) => {

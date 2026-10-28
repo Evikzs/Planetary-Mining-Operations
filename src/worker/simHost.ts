@@ -30,6 +30,8 @@ export interface SimHostDeps {
   codec: SaveCodec;
   /** Dev builds pass checkInvariants; violations are posted as errors. */
   checkInvariants?: (state: GameState) => string[];
+  /** Dev and e2e builds pass the demo and bench scene builders. */
+  loadScene?: (scene: 'demo' | 'bench', seed: number) => Promise<GameState>;
 }
 
 /** Gaps longer than this many ticks go through catch-up instead of fine ticks. */
@@ -149,14 +151,18 @@ export class SimHost {
 
   private async init(nowMs: number, debug: DebugFlags): Promise<void> {
     this.flags = debug;
+    const seed = debug.seed ?? nowMs >>> 0;
     const file = await this.deps.saves.loadLatestValid();
     const loaded = file ? this.deps.codec.decode(file) : null;
-    if (loaded) {
+    if (debug.scene !== 'none' && this.deps.loadScene) {
+      this.state = await this.deps.loadScene(debug.scene, seed);
+      this.reanchor();
+    } else if (loaded) {
       this.state = loaded.state;
       this.reanchor();
       if (this.state.company) this.catchUp(this.now() - loaded.savedAtRealMs);
     } else {
-      this.state = createGame(debug.seed ?? nowMs >>> 0);
+      this.state = createGame(seed);
       this.reanchor();
     }
     this.lastSaveMs = this.now();
