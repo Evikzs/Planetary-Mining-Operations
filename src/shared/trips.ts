@@ -45,6 +45,18 @@ export function stopTimes(trip: Pick<Trip, 'departTick' | 'stops' | 'speed'>): n
   });
 }
 
+/** Riders still on the bus at a game time, and the next stop it reaches; riders leave at their stop. */
+export function busLoad(
+  trip: Pick<Trip, 'departTick' | 'stops' | 'speed'>,
+  gameTime: number,
+): { aboard: number; next: number | null; nextAt: number | null } {
+  const times = stopTimes(trip);
+  const next = times.findIndex((at) => at > gameTime);
+  if (next < 0) return { aboard: 0, next: null, nextAt: null };
+  const aboard = trip.stops.slice(next).reduce((sum, stop) => sum + stop.workerIds.length, 0);
+  return { aboard, next, nextAt: times[next]! };
+}
+
 export function tripState(
   trip: Pick<Trip, 'departTick' | 'cum' | 'stops' | 'speed'>,
   gameTime: number,

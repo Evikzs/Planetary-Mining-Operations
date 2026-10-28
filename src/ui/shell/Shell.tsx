@@ -3,6 +3,7 @@ import { useEffect } from 'preact/hooks';
 import { selection } from '../../client/store';
 import type { DebugFlags } from '../../worker/protocol';
 import { Icon } from '../icons';
+import { AlertsList, alertsOpen } from './Alerts';
 import { BottomTabs, moreOpen } from './BottomTabs';
 import { Compass } from './Compass';
 import { ContextPanel } from './ContextPanel';
@@ -39,6 +40,7 @@ function useShortcuts() {
       else if (e.key === 'Escape') {
         activeTab.value = null;
         moreOpen.value = false;
+        alertsOpen.value = false;
         selection.value = null;
       }
     };
@@ -104,6 +106,7 @@ export function Shell({ flags }: { flags: DebugFlags }) {
       {desktop ? <TabRail /> : <BottomTabs />}
       <TabPanel desktop={desktop} />
       <ContextPanel />
+      <AlertsList />
       {desktop && <NewsTicker />}
     </div>
   );

@@ -89,6 +89,8 @@ const FOV = 50;
 // The first view hangs over the southern latitudes, where companies are founded.
 const START_DIR = normalize([0, -0.6, 0.8]);
 const START_ALTITUDE = 200;
+/** A bus is small: a tap this close to one, in CSS pixels, picks it. */
+const BUS_REACH_PX = 22;
 
 export function createRenderer(canvas: HTMLCanvasElement, opts: RendererOptions): GameRenderer {
   const radius = LUNA_RADIUS;
@@ -228,11 +230,26 @@ export function createRenderer(canvas: HTMLCanvasElement, opts: RendererOptions)
   if (!document.hidden) raf = requestAnimationFrame(frame);
 
   const point = new Vector3();
+  const spot = new Vector3();
   const raycaster = new Raycaster();
   const surface = new Sphere(new Vector3(), radius);
 
+  /** Where a world point shows on the canvas, in CSS pixels; null when out of sight. */
+  function screenOf(at: Vector3): { x: number; y: number } | null {
+    // Behind the globe: the camera is below this point's horizon.
+    if (camera.position.dot(at) <= at.lengthSq()) return null;
+    point.copy(at).project(camera);
+    if (point.z > 1) return null;
+    return { x: ((point.x + 1) / 2) * width, y: ((1 - point.y) / 2) * height };
+  }
+
   function pick(x: number, y: number): MapPick | null {
     if (!world || width === 0 || height === 0) return null;
+    const bus = rovers.nearest((at) => {
+      const p = screenOf(at);
+      return p ? Math.hypot(p.x - x, p.y - y) : Infinity;
+    }, BUS_REACH_PX);
+    if (bus !== null) return { kind: 'rover', id: bus };
     raycaster.setFromCamera(new Vector2((x / width) * 2 - 1, 1 - (y / height) * 2), camera);
     const onPlot = picker.pick(raycaster);
     if (onPlot) return onPlot;
@@ -274,12 +291,7 @@ export function createRenderer(canvas: HTMLCanvasElement, opts: RendererOptions)
     },
     project(dir, lift = 0) {
       const r = radius + terrain.height(dir) + lift;
-      point.set(dir[0] * r, dir[1] * r, dir[2] * r);
-      // Behind the globe: the camera is below this point's horizon.
-      if (camera.position.dot(point) <= point.lengthSq()) return null;
-      point.project(camera);
-      if (point.z > 1) return null;
-      return { x: ((point.x + 1) / 2) * width, y: ((1 - point.y) / 2) * height };
+      return screenOf(spot.set(dir[0] * r, dir[1] * r, dir[2] * r));
     },
     pick,
     stats: () => ({

@@ -1,4 +1,5 @@
 import { signal } from '@preact/signals';
+import type { GoodId } from '../data/goods';
 import { DEFAULT_FILTER, type MapFilter } from '../render/overlays/filters';
 import type { GameRenderer, MapPick } from '../render/renderer';
 import type { AwaySummary } from '../sim/offline';
@@ -20,3 +21,11 @@ export const mapFilter = signal<MapFilter>(DEFAULT_FILTER);
 export const mapLevel = signal<'planetary' | 'local'>('planetary');
 /** What the player last tapped on the map. */
 export const selection = signal<MapPick | null>(null);
+/** Goods whose stock the top bar shows, for the selected section or else the founding one. */
+export const pinnedGoods = signal<GoodId[]>([
+  'oxygen',
+  'potableWater',
+  'hydroponicProduce',
+  'ilmenite',
+  'steel',
+]);

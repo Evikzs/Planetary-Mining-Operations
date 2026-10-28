@@ -128,6 +128,17 @@ describe('views', () => {
     });
   });
 
+  it('ui snapshot shows each crew on the current shift and the buffers', () => {
+    const s = founded();
+    const array = s.buildings.find((b) => b.type === 'solarArray')!;
+    const row = buildUiSnapshot(s).buildings.find((b) => b.id === array.id)!;
+    expect(row.jobs).toEqual({ technician: { filled: 1, slots: 1 } });
+    array.input.ilmenite = 5;
+    array.output.steel = 7;
+    const again = buildUiSnapshot(s).buildings.find((b) => b.id === array.id)!;
+    expect([again.input, again.output]).toEqual([{ ilmenite: 5 }, { steel: 7 }]);
+  });
+
   it('housing reports the average morale of its residents', () => {
     const s = founded();
     const p = s.people;

@@ -73,6 +73,7 @@ export function applyTokens(root: HTMLElement): void {
   set('--font-mono', font.mono);
   space.forEach((v, i) => set(`--space-${i}`, `${v}px`));
   set('--radius-card', `${radius.card}px`);
+  set('--radius-pill', `${radius.pill}px`);
   set('--motion-fast', `${motion.fastMs}ms`);
   set('--motion-base', `${motion.baseMs}ms`);
   set('--motion-slow', `${motion.slowMs}ms`);

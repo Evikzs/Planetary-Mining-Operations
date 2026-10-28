@@ -59,6 +59,8 @@ export class RoverLayer {
   private readonly fwd = new Vector3();
   private readonly up = new Vector3();
   private readonly side = new Vector3();
+  /** The trip and world position of each bus drawn last frame, by instance. */
+  private readonly drawn: { tripId: number; at: Vector3 }[] = [];
   shown = 0;
 
   constructor(
@@ -95,15 +97,31 @@ export class RoverLayer {
         this.side.crossVectors(this.fwd, this.up);
         this.fwd.crossVectors(this.up, this.side).normalize();
         this.side.normalize();
-        this.m
-          .makeBasis(this.fwd, this.up, this.side)
-          .setPosition(pos[0] * r, pos[1] * r, pos[2] * r);
+        const bus = (this.drawn[k] ??= { tripId: 0, at: new Vector3() });
+        bus.tripId = trip.id;
+        bus.at.set(pos[0] * r, pos[1] * r, pos[2] * r);
+        this.m.makeBasis(this.fwd, this.up, this.side).setPosition(bus.at);
         this.mesh.setMatrixAt(k++, this.m);
       }
     }
     this.mesh.count = k;
     this.mesh.instanceMatrix.needsUpdate = true;
     this.shown = k;
+  }
+
+  /** The trip of the drawn bus nearest a tap, when one lies within reach. */
+  nearest(distance: (at: Vector3) => number, within: number): number | null {
+    let best: number | null = null;
+    let reach = within;
+    for (let k = 0; k < this.shown; k++) {
+      const bus = this.drawn[k]!;
+      const d = distance(bus.at);
+      if (d < reach) {
+        reach = d;
+        best = bus.tripId;
+      }
+    }
+    return best;
   }
 
   dispose(): void {

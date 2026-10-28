@@ -1,6 +1,12 @@
 import { NARRATOR_LINES } from '../data/companions/narrator';
 import { VETERAN_LINES } from '../data/companions/veteran';
-import { BUILDINGS, type BuildingTypeId, type RecipeId, type Skill } from '../data/buildings';
+import {
+  BUILDINGS,
+  SKILLS,
+  type BuildingTypeId,
+  type RecipeId,
+  type Skill,
+} from '../data/buildings';
 import { GOOD_IDS, type GoodId } from '../data/goods';
 import type { Trip } from '../shared/trips';
 import type { Vec3 } from '../shared/vec3';
@@ -8,14 +14,14 @@ import type { Alert } from './alerts';
 import { buyableSections, landPrice } from './build/landOffice';
 import { productionRateTph } from './build/production';
 import { storageCapKg } from './build/sections';
-import { formatGameDate } from './clock';
+import { formatGameDate, shiftAt } from './clock';
 import type { Contract } from './contracts/contracts';
 import { totalKg, type Inventory } from './inventory';
 import { balance } from './ledger';
 import type { Order } from './market/orders';
 import { housingCapacity } from './people/housing';
-import { staffing } from './people/jobs';
-import { indexOfId, SKILL_OF, workerName } from './people/store';
+import { slotsPerShift, staffing } from './people/jobs';
+import { indexOfId, SKILL_CODE, SKILL_OF, workerName } from './people/store';
 import type { Building, BuildingStatus, Company, GameState, Priority } from './state';
 import type { BeatId, HintCategory } from './story/beats';
 import { currentLine } from './story/story';
@@ -102,6 +108,10 @@ export interface UiSnapshot {
     powerFactor: number;
     /** Workers' average morale; for housing, the residents'. */
     avgMorale: number;
+    /** Per skill, the workers assigned to the current shift against its slots. */
+    jobs: Partial<Record<Skill, { filled: number; slots: number }>>;
+    input: Inventory;
+    output: Inventory;
     outputTph: Partial<Record<GoodId, number>>;
     recipeId: RecipeId | null;
     priority: Priority;
@@ -236,6 +246,9 @@ export function buildUiSnapshot(state: GameState): UiSnapshot {
   // Morale summed by workplace, and by home for housing; a home's count is its residents.
   const moraleSum = new Float64Array(state.nextId);
   const heads = new Uint32Array(state.nextId);
+  // Workers on the current shift by workplace and skill.
+  const shift = shiftAt(state.tick);
+  const onShift = new Uint32Array(state.nextId * 3);
   let employed = 0;
   for (let i = 0; i < p.count; i++) {
     const skill = bySkill[SKILL_OF[p.skill[i]!]!];
@@ -252,6 +265,7 @@ export function buildUiSnapshot(state: GameState): UiSnapshot {
     skill.employed++;
     moraleSum[job]! += morale;
     heads[job]!++;
+    if (p.shift[i] === shift) onShift[job * 3 + p.skill[i]!]!++;
   }
   const residents = new Map<number, number>();
   const housingCap = new Map<number, number>();
@@ -262,6 +276,15 @@ export function buildUiSnapshot(state: GameState): UiSnapshot {
     residents.set(b.sectionId, (residents.get(b.sectionId) ?? 0) + heads[b.id]!);
   }
   const factor = new Map(state.sections.map((s) => [s.id, s.power.factor]));
+  const crewOf = (b: Building): UiSnapshot['buildings'][number]['jobs'] => {
+    const slots = slotsPerShift(b);
+    const jobs: UiSnapshot['buildings'][number]['jobs'] = {};
+    for (const skill of SKILLS) {
+      const n = slots[skill];
+      if (n) jobs[skill] = { filled: onShift[b.id * 3 + SKILL_CODE[skill]]!, slots: n };
+    }
+    return jobs;
+  };
   return {
     tick: state.tick,
     date: formatGameDate(state.tick),
@@ -294,6 +317,9 @@ export function buildUiSnapshot(state: GameState): UiSnapshot {
           staffing: staffing(state, b),
           powerFactor: factor.get(b.sectionId) ?? 1,
           avgMorale: heads[b.id] ? moraleSum[b.id]! / heads[b.id]! : 0,
+          jobs: crewOf(b),
+          input: { ...b.input },
+          output: { ...b.output },
           outputTph: productionRateTph(state, b),
           recipeId: b.recipeId,
           priority: b.priority,

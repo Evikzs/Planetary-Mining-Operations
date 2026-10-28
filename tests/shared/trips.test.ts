@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { pointAt, stopTimes, tripDuration, tripState, type Trip } from '../../src/shared/trips';
+import {
+  busLoad,
+  pointAt,
+  stopTimes,
+  tripDuration,
+  tripState,
+  type Trip,
+} from '../../src/shared/trips';
 import { len, normalize, sub, type Vec3 } from '../../src/shared/vec3';
 
 // A straight run along a meridian: 0.06 rad apart at radius 100 is about 6 units.
@@ -40,6 +47,12 @@ describe('trips', () => {
     expect(tripState(trip, 105)!.s).toBeGreaterThan(1.5);
   });
 
+  it('busLoad counts the riders still aboard and names the next stop', () => {
+    // The bus reaches its stops at 110 and 121; riders leave at their stop.
+    expect(busLoad(trip, 100)).toEqual({ aboard: 2, next: 0, nextAt: 110 });
+    expect(busLoad(trip, 110.5)).toEqual({ aboard: 1, next: 1, nextAt: 121 });
+    expect(busLoad(trip, 121)).toEqual({ aboard: 0, next: null, nextAt: null });
+  });
   it('stopTimes gives when the bus reaches each stop', () => {
     expect(stopTimes(trip)).toEqual([110, 121]);
   });
