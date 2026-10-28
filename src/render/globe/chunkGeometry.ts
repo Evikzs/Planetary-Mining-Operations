@@ -64,17 +64,18 @@ function surfaceNormal(terrain: Terrain, dir: Vec3, radius: number): Vec3 {
 }
 
 /**
- * The class colour; between highland and maria it blends on the maria mask,
- * so the shoreline does not follow the grid cells in steps.
+ * The class colour; between highland and maria it blends on the maria mask over about
+ * two grid cells, so the shoreline neither steps along the cells far away nor blurs up close.
  */
 function surfaceColor(
   terrain: Terrain,
   dir: Vec3,
   colors: Record<SurfaceClass, readonly [number, number, number]>,
+  band: number,
 ): readonly [number, number, number] {
   const cls = terrain.surfaceClass(dir);
   if (cls > 1) return colors[cls];
-  const x = Math.min(1, Math.max(0, (terrain.mariaMask(dir) - 0.25) / 0.5));
+  const x = Math.min(1, Math.max(0, (terrain.mariaMask(dir) - 0.5) / band + 0.5));
   const t = x * x * (3 - 2 * x);
   const [a, b] = [colors[0], colors[1]];
   return [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t];
@@ -93,6 +94,9 @@ export function buildChunk(
   const normals = new Float32Array(VERTS * 3);
   const rgb = new Float32Array(VERTS * 3);
   const dirs: Vec3[] = [];
+  // The mask changes by about 15 per radian at a shoreline: 30 × the cell angle spans two cells.
+  const cellAngle = Math.PI / 2 / 2 ** key.level / CHUNK_RES;
+  const band = Math.min(0.5, Math.max(0.004, 30 * cellAngle));
   for (let j = 0; j < SIDE; j++) {
     for (let i = 0; i < SIDE; i++) {
       const at = (j * SIDE + i) * 3;
@@ -103,7 +107,7 @@ export function buildChunk(
       dirs.push(dir);
       positions.set(sub(p, center), at);
       normals.set(surfaceNormal(terrain, dir, radius), at);
-      rgb.set(surfaceColor(terrain, dir, colors), at);
+      rgb.set(surfaceColor(terrain, dir, colors, band), at);
     }
   }
   const depth = Math.max(0.05, 0.5 * nodeSize(key.level, radius));

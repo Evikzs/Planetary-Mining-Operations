@@ -8,7 +8,7 @@ import './ui/global.css';
 import { render } from 'preact';
 import { debugEnabled, parseDebugFlags } from './client/debugFlags';
 import { createSimClient } from './client/simClient';
-import { away, catchUpProgress, motion, ui, world } from './client/store';
+import { away, catchUpProgress, motion, simClient, ui, world } from './client/store';
 import { installTestApi } from './client/testApi';
 import { isWebGL2Available } from './render/webgl';
 import { App } from './ui/App';
@@ -23,6 +23,7 @@ reduced.addEventListener('change', syncMotion);
 
 const worker = new Worker(new URL('./worker/sim.worker.ts', import.meta.url), { type: 'module' });
 const client = createSimClient(worker);
+simClient.value = client;
 client.on('snapshot', (msg) => (ui.value = msg.ui));
 client.on('world', (msg) => (world.value = msg.world));
 client.on('motion', (msg) => (motion.value = { view: msg.motion, anchorRealMs: msg.anchorRealMs }));

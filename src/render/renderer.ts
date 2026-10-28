@@ -16,6 +16,8 @@ import { normalize, type Vec3 } from '../shared/vec3';
 import type { MotionView, WorldView } from '../sim/views';
 import { sectionAt } from '../sim/world/sections';
 import { palette } from '../ui/tokens';
+import { createCameraController } from './camera/controller';
+import { cameraPose, createCameraState, type GlobeCameraState } from './camera/globeCamera';
 import { clipPlanes, createDprController, gameTimeAt } from './frame';
 import { ChunkStreamer } from './globe/chunkStreamer';
 import { bandsTexture } from './materials';
@@ -46,7 +48,19 @@ export interface GameRenderer {
   project(dir: Vec3, lift?: number): { x: number; y: number } | null;
   pick(x: number, y: number): MapPick | null;
   stats(): RenderStats;
+  camera(): GlobeCameraState;
+  setCamera(s: GlobeCameraState): void;
   dispose(): void;
+}
+
+export interface RendererOptions {
+  seed: number;
+  reducedMotion: boolean;
+  /** A tap on the map, with what it hit. */
+  onPick?(pick: MapPick | null): void;
+  /** The camera moved, turned, zoomed or changed lock north. */
+  onCamera?(s: GlobeCameraState): void;
+  onGesture?(kind: 'panned' | 'zoomed'): void;
 }
 
 /** Something drawn that moves with game time or the camera; the globe and world layers are layers. */
@@ -56,14 +70,11 @@ export interface Layer {
 }
 
 const FOV = 50;
-// Until the globe camera arrives (task 27), the view hangs over the southern latitudes.
+// The first view hangs over the southern latitudes, where companies are founded.
 const START_DIR = normalize([0, -0.6, 0.8]);
 const START_ALTITUDE = 200;
 
-export function createRenderer(
-  canvas: HTMLCanvasElement,
-  opts: { seed: number; reducedMotion: boolean },
-): GameRenderer {
+export function createRenderer(canvas: HTMLCanvasElement, opts: RendererOptions): GameRenderer {
   const radius = LUNA_RADIUS;
   const terrain = createTerrain(opts.seed);
   const gl = new WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
@@ -101,10 +112,12 @@ export function createRenderer(
     },
   });
 
-  camera.position.set(
-    ...(START_DIR.map((v) => v * (radius + START_ALTITUDE)) as [number, number, number]),
-  );
-  camera.lookAt(0, 0, 0);
+  const controller = createCameraController(canvas, createCameraState(START_DIR, START_ALTITUDE), {
+    radius,
+    reducedMotion: opts.reducedMotion,
+    onTap: (x, y) => opts.onPick?.(pick(x, y)),
+    onGesture: (kind) => opts.onGesture?.(kind),
+  });
 
   let width = 0;
   let height = 0;
@@ -120,7 +133,12 @@ export function createRenderer(
   }
 
   function updateCamera(): void {
-    const { near, far } = clipPlanes(camera.position.length() - radius, radius);
+    const s = controller.state;
+    const pose = cameraPose(s, radius, terrain.height(s.pos));
+    camera.position.set(...pose.position);
+    camera.up.set(...pose.up);
+    camera.lookAt(...pose.target);
+    const { near, far } = clipPlanes(s.altitude, radius);
     camera.near = near;
     camera.far = far;
     camera.updateProjectionMatrix();
@@ -142,6 +160,7 @@ export function createRenderer(
       const ratio = dpr.update(t - last);
       if (ratio !== null) gl.setPixelRatio(ratio);
     }
+    if (controller.update(last > 0 ? t - last : 0)) opts.onCamera?.(controller.state);
     last = t;
     resize();
     updateCamera();
@@ -173,6 +192,15 @@ export function createRenderer(
   const raycaster = new Raycaster();
   const surface = new Sphere(new Vector3(), radius);
 
+  function pick(x: number, y: number): MapPick | null {
+    if (!world || width === 0 || height === 0) return null;
+    raycaster.setFromCamera(new Vector2((x / width) * 2 - 1, 1 - (y / height) * 2), camera);
+    const hit = raycaster.ray.intersectSphere(surface, new Vector3());
+    if (!hit) return null;
+    const section = world.sections[sectionAt(world.sections, normalize([hit.x, hit.y, hit.z]))];
+    return section ? { kind: 'section', id: section.id } : null;
+  }
+
   return {
     setWorld(w) {
       world = w;
@@ -192,14 +220,7 @@ export function createRenderer(
       if (point.z > 1) return null;
       return { x: ((point.x + 1) / 2) * width, y: ((1 - point.y) / 2) * height };
     },
-    pick(x, y) {
-      if (!world || width === 0 || height === 0) return null;
-      raycaster.setFromCamera(new Vector2((x / width) * 2 - 1, 1 - (y / height) * 2), camera);
-      const hit = raycaster.ray.intersectSphere(surface, new Vector3());
-      if (!hit) return null;
-      const section = world.sections[sectionAt(world.sections, normalize([hit.x, hit.y, hit.z]))];
-      return section ? { kind: 'section', id: section.id } : null;
-    },
+    pick,
     stats: () => ({
       drawCalls: gl.info.render.calls,
       triangles: gl.info.render.triangles,
@@ -211,8 +232,13 @@ export function createRenderer(
       crates: 0,
       walkers: 0,
     }),
+    camera: () => controller.state,
+    setCamera(s) {
+      controller.set(s);
+    },
     dispose() {
       cancelAnimationFrame(raf);
+      controller.dispose();
       document.removeEventListener('visibilitychange', onVisibility);
       for (const layer of layers) layer.dispose();
       sky.dispose();

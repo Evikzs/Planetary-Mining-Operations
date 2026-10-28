@@ -3,6 +3,7 @@ import { useEffect } from 'preact/hooks';
 import type { DebugFlags } from '../../worker/protocol';
 import { Icon } from '../icons';
 import { BottomTabs, moreOpen } from './BottomTabs';
+import { Compass } from './Compass';
 import { ContextPanel } from './ContextPanel';
 import { NewsTicker } from './NewsTicker';
 import { MapCanvas } from './MapCanvas';
@@ -94,6 +95,7 @@ export function Shell({ flags }: { flags: DebugFlags }) {
   return (
     <div class="shell" data-testid="app" data-layout={desktop ? 'desktop' : 'phone'}>
       <MapCanvas flags={flags} />
+      <Compass />
       <TopBar />
       {desktop ? <TabRail /> : <BottomTabs />}
       <TabPanel desktop={desktop} />

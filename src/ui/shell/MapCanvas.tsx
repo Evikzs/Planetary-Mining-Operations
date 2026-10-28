@@ -1,6 +1,7 @@
 import { effect } from '@preact/signals';
 import { useEffect, useRef } from 'preact/hooks';
-import { gameRenderer, motion, world } from '../../client/store';
+import { compass, gameRenderer, motion, simClient, ui, world } from '../../client/store';
+import { heading } from '../../render/camera/globeCamera';
 import { createRenderer } from '../../render/renderer';
 import type { DebugFlags } from '../../worker/protocol';
 
@@ -10,8 +11,26 @@ export function MapCanvas({ flags }: { flags: DebugFlags }) {
   const seed = world.value?.seed;
   useEffect(() => {
     if (!canvas.current || seed === undefined) return;
-    const reducedMotion = document.documentElement.dataset.motion === 'reduced';
-    const r = createRenderer(canvas.current, { seed, reducedMotion });
+    // The camera beat of the tutorial ends once the player has panned and zoomed.
+    const taught = { panned: false, zoomed: false };
+    const r = createRenderer(canvas.current, {
+      seed,
+      reducedMotion: document.documentElement.dataset.motion === 'reduced',
+      onCamera(s) {
+        const h = heading(s);
+        const shown = compass.value;
+        if (Math.abs(h - shown.heading) > 0.005 || s.lockNorth !== shown.lockNorth) {
+          compass.value = { heading: h, lockNorth: s.lockNorth };
+        }
+      },
+      onGesture(kind) {
+        if (taught[kind] || !ui.value?.company || !simClient.value) return;
+        taught[kind] = true;
+        void simClient.value.send({ t: 'cameraTaught', [kind]: true }).then((res) => {
+          if (!res.ok) taught[kind] = false;
+        });
+      },
+    });
     gameRenderer.value = r;
     const stopWorld = effect(() => {
       if (world.value) r.setWorld(world.value);

@@ -234,7 +234,7 @@ h3 {
   top: 60px;
   right: 16px;
   width: 340px;
-  max-height: calc(100% - 112px);
+  max-height: calc(100% - 164px);
   overflow: auto;
   z-index: 2;
 }
@@ -343,4 +343,42 @@ h3 {
   max-width: 36ch;
   font-size: 1.125rem;
   line-height: 1.5;
+}
+
+/* Map compass: the rust half of the needle points north. Pressed means north is locked. */
+.compass {
+  position: absolute;
+  right: 16px;
+  bottom: 44px;
+  width: 44px;
+  height: 44px;
+  padding: 6px;
+  border: 2px solid var(--c-offBlack);
+  border-radius: 50%;
+  background: var(--c-cream);
+  box-shadow: 2px 2px 0 var(--c-burntOrange);
+  z-index: 1;
+}
+
+.compass[aria-pressed='true'] {
+  background: var(--c-mustard);
+}
+
+.compass svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.compass .north {
+  fill: var(--c-rust);
+}
+
+.compass .south {
+  fill: var(--c-offBlack);
+}
+
+.shell[data-layout='phone'] .compass {
+  right: 12px;
+  bottom: calc(68px + env(safe-area-inset-bottom));
 }
