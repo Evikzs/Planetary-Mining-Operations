@@ -122,11 +122,12 @@ describe('offline catch-up', () => {
     ]);
   });
 
+  // Building the bench comes before the timed part, so the test as a whole gets longer than 10 s.
   it('catch-up of 480 game hours with 10,000 workers takes < 10 s', () => {
     const s = makeBenchState(42);
     const start = performance.now();
     const summary = runCatchUp(s, OFFLINE.capMs, 1);
     expect(summary.gameHours).toBe(480);
     expect(performance.now() - start).toBeLessThan(10_000);
-  });
+  }, 30_000);
 });

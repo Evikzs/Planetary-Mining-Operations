@@ -13,7 +13,7 @@ import type { Contract } from './contracts/contracts';
 import { totalKg, type Inventory } from './inventory';
 import { balance } from './ledger';
 import type { Order } from './market/orders';
-import { housingCapacity, residentsBySection } from './people/housing';
+import { housingCapacity } from './people/housing';
 import { staffing } from './people/jobs';
 import { indexOfId, SKILL_OF, workerName } from './people/store';
 import type { Building, BuildingStatus, Company, GameState, Priority } from './state';
@@ -233,26 +233,34 @@ export function buildUiSnapshot(state: GameState): UiSnapshot {
     technician: { total: 0, employed: 0 },
     engineer: { total: 0, employed: 0 },
   };
-  // Morale by workplace, and by home for housing.
-  const moraleAt = new Map<number, { sum: number; n: number }>();
-  const tally = (building: number, morale: number): void => {
-    const m = moraleAt.get(building) ?? { sum: 0, n: 0 };
-    m.sum += morale;
-    m.n++;
-    moraleAt.set(building, m);
-  };
+  // Morale summed by workplace, and by home for housing; a home's count is its residents.
+  const moraleSum = new Float64Array(state.nextId);
+  const heads = new Uint32Array(state.nextId);
   let employed = 0;
   for (let i = 0; i < p.count; i++) {
     const skill = bySkill[SKILL_OF[p.skill[i]!]!];
     skill.total++;
-    if (p.home[i]! >= 0) tally(p.home[i]!, p.morale[i]!);
+    const morale = p.morale[i]!;
+    const home = p.home[i]!;
+    if (home >= 0) {
+      moraleSum[home]! += morale;
+      heads[home]!++;
+    }
     const job = p.job[i]!;
     if (job < 0) continue;
     employed++;
     skill.employed++;
-    tally(job, p.morale[i]!);
+    moraleSum[job]! += morale;
+    heads[job]!++;
   }
-  const residents = residentsBySection(state);
+  const residents = new Map<number, number>();
+  const housingCap = new Map<number, number>();
+  for (const b of state.buildings) {
+    const cap = housingCapacity(b);
+    if (cap === 0) continue;
+    housingCap.set(b.sectionId, (housingCap.get(b.sectionId) ?? 0) + cap);
+    residents.set(b.sectionId, (residents.get(b.sectionId) ?? 0) + heads[b.id]!);
+  }
   const factor = new Map(state.sections.map((s) => [s.id, s.power.factor]));
   return {
     tick: state.tick,
@@ -267,9 +275,7 @@ export function buildUiSnapshot(state: GameState): UiSnapshot {
       powerSupplyKw: s.power.supplyKw,
       powerDemandKw: s.power.demandKw,
       residents: residents.get(s.id) ?? 0,
-      housingCap: state.buildings
-        .filter((b) => b.sectionId === s.id)
-        .reduce((sum, b) => sum + housingCapacity(b), 0),
+      housingCap: housingCap.get(s.id) ?? 0,
       stockKg: { ...s.depot },
       storageUsedKg: totalKg(s.depot),
       storageCapKg: storageCapKg(state, s.id),
@@ -279,7 +285,6 @@ export function buildUiSnapshot(state: GameState): UiSnapshot {
     buildings: state.buildings
       .filter((b) => !isSite(b))
       .map((b) => {
-        const m = moraleAt.get(b.id);
         return {
           id: b.id,
           type: b.type,
@@ -288,7 +293,7 @@ export function buildUiSnapshot(state: GameState): UiSnapshot {
           progress: b.progress,
           staffing: staffing(state, b),
           powerFactor: factor.get(b.sectionId) ?? 1,
-          avgMorale: m ? m.sum / m.n : 0,
+          avgMorale: heads[b.id] ? moraleSum[b.id]! / heads[b.id]! : 0,
           outputTph: productionRateTph(state, b),
           recipeId: b.recipeId,
           priority: b.priority,
