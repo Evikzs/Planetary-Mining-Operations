@@ -23,6 +23,7 @@ import { ChunkStreamer } from './globe/chunkStreamer';
 import { bandsTexture } from './materials';
 import type { MapFilter } from './overlays/filters';
 import { SectionOverlay } from './overlays/sectionOverlay';
+import { createPosterComposer } from './post/posterPass';
 import { BeltLayer } from './world/beltLayer';
 import { BuildingLayer } from './world/buildingLayer';
 import { PlotPicker } from './world/picking';
@@ -69,6 +70,8 @@ export interface GameRenderer {
 export interface RendererOptions {
   seed: number;
   reducedMotion: boolean;
+  /** Keeps the pixel ratio still, so frozen screenshots do not depend on frame speed. */
+  fixedPixelRatio?: boolean;
   /** A tap on the map, with what it hit. */
   onPick?(pick: MapPick | null): void;
   /** The camera moved, turned, zoomed or changed lock north. */
@@ -106,6 +109,7 @@ export function createRenderer(canvas: HTMLCanvasElement, opts: RendererOptions)
   camera.add(key, key.target);
   scene.add(new AmbientLight(palette.cream, 0.35));
   const sky = createSky(opts.seed, FOV);
+  const composer = createPosterComposer(gl, scene, camera, (r) => sky.render(r, camera));
   const layers: Layer[] = [];
 
   const bands = bandsTexture();
@@ -162,6 +166,7 @@ export function createRenderer(canvas: HTMLCanvasElement, opts: RendererOptions)
     width = w;
     height = h;
     gl.setSize(w, h, false);
+    composer.setSize(w, h, gl.getPixelRatio());
     camera.aspect = w / Math.max(1, h);
     sky.setAspect(camera.aspect);
   }
@@ -190,9 +195,12 @@ export function createRenderer(canvas: HTMLCanvasElement, opts: RendererOptions)
   let last = 0;
   function frame(t: number): void {
     raf = requestAnimationFrame(frame);
-    if (last > 0) {
+    if (last > 0 && !opts.fixedPixelRatio) {
       const ratio = dpr.update(t - last);
-      if (ratio !== null) gl.setPixelRatio(ratio);
+      if (ratio !== null) {
+        gl.setPixelRatio(ratio);
+        composer.setSize(width, height, ratio);
+      }
     }
     if (controller.update(last > 0 ? t - last : 0)) opts.onCamera?.(controller.state);
     last = t;
@@ -201,10 +209,7 @@ export function createRenderer(canvas: HTMLCanvasElement, opts: RendererOptions)
     const time = gameTime();
     for (const layer of layers) layer.update(time, camera, controller.state);
     gl.info.reset();
-    gl.clear();
-    sky.render(gl, camera);
-    gl.clearDepth();
-    gl.render(scene, camera);
+    composer.render();
   }
 
   // A hidden tab draws nothing.
@@ -303,6 +308,7 @@ export function createRenderer(canvas: HTMLCanvasElement, opts: RendererOptions)
       document.removeEventListener('visibilitychange', onVisibility);
       for (const layer of layers) layer.dispose();
       sky.dispose();
+      composer.dispose();
       bands.dispose();
       gl.dispose();
       gl.forceContextLoss();

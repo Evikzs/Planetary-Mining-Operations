@@ -27,6 +27,7 @@ export function MapCanvas({ flags }: { flags: DebugFlags }) {
     const r = createRenderer(canvas.current, {
       seed,
       reducedMotion: document.documentElement.dataset.motion === 'reduced',
+      fixedPixelRatio: flags.freeze,
       onPick: (pick) => (selection.value = pick),
       onCamera(s) {
         const h = heading(s);

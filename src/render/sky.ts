@@ -1,5 +1,6 @@
 import {
   BufferGeometry,
+  Color,
   Float32BufferAttribute,
   PerspectiveCamera,
   Points,
@@ -39,6 +40,8 @@ export interface Sky {
  */
 export function createSky(seed: number, fov: number): Sky {
   const scene = new Scene();
+  // A colour background makes three clear in the target's own colour space.
+  scene.background = new Color(palette.navy);
   const camera = new PerspectiveCamera(fov, 1, 1, STAR_RADIUS * 2);
   const geometry = new BufferGeometry();
   geometry.setAttribute('position', new Float32BufferAttribute(starPositions(seed), 3));
