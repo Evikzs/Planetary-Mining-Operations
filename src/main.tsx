@@ -10,6 +10,7 @@ import { debugEnabled, parseDebugFlags } from './client/debugFlags';
 import { createSimClient } from './client/simClient';
 import { away, catchUpProgress, motion, ui, world } from './client/store';
 import { installTestApi } from './client/testApi';
+import { isWebGL2Available } from './render/webgl';
 import { App } from './ui/App';
 import { applyTokens } from './ui/tokens';
 
@@ -28,14 +29,12 @@ client.on('motion', (msg) => (motion.value = { view: msg.motion, anchorRealMs: m
 client.on('away', (msg) => (away.value = msg.summary));
 client.on('catchUp', (msg) => (catchUpProgress.value = msg.progress < 1 ? msg.progress : null));
 if (debugEnabled()) installTestApi(client);
-client.post({
-  t: 'init',
-  nowMs: Date.now(),
-  debug: parseDebugFlags(location.search, debugEnabled()),
-});
+const flags = parseDebugFlags(location.search, debugEnabled());
+client.post({ t: 'init', nowMs: Date.now(), debug: flags });
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'hidden') client.saveNow();
 });
 
 const root = document.getElementById('app');
-if (root) render(<App />, root);
+const webgl = !flags.noWebgl && isWebGL2Available();
+if (root) render(<App flags={flags} webgl={webgl} />, root);

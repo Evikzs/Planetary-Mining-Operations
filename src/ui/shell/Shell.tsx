@@ -1,9 +1,11 @@
 import type { ComponentChildren } from 'preact';
 import { useEffect } from 'preact/hooks';
+import type { DebugFlags } from '../../worker/protocol';
 import { Icon } from '../icons';
 import { BottomTabs, moreOpen } from './BottomTabs';
 import { ContextPanel } from './ContextPanel';
 import { NewsTicker } from './NewsTicker';
+import { MapCanvas } from './MapCanvas';
 import { Sheet } from './Sheet';
 import { TabRail } from './TabRail';
 import { activeTab, TABS, toggleTab, type TabId } from './tabs';
@@ -86,12 +88,12 @@ function TabPanel({ desktop }: { desktop: boolean }) {
   );
 }
 
-export function Shell() {
+export function Shell({ flags }: { flags: DebugFlags }) {
   useShortcuts();
   const desktop = isDesktop.value;
   return (
     <div class="shell" data-testid="app" data-layout={desktop ? 'desktop' : 'phone'}>
-      <canvas class="map" data-testid="map-canvas" aria-label="Map of your operations" />
+      <MapCanvas flags={flags} />
       <TopBar />
       {desktop ? <TabRail /> : <BottomTabs />}
       <TabPanel desktop={desktop} />
