@@ -8,7 +8,8 @@ import './ui/global.css';
 import { render } from 'preact';
 import { debugEnabled, parseDebugFlags } from './client/debugFlags';
 import { createSimClient } from './client/simClient';
-import { ui } from './client/store';
+import { away, catchUpProgress, motion, ui, world } from './client/store';
+import { installTestApi } from './client/testApi';
 import { App } from './ui/App';
 import { applyTokens } from './ui/tokens';
 
@@ -22,6 +23,11 @@ reduced.addEventListener('change', syncMotion);
 const worker = new Worker(new URL('./worker/sim.worker.ts', import.meta.url), { type: 'module' });
 const client = createSimClient(worker);
 client.on('snapshot', (msg) => (ui.value = msg.ui));
+client.on('world', (msg) => (world.value = msg.world));
+client.on('motion', (msg) => (motion.value = { view: msg.motion, anchorRealMs: msg.anchorRealMs }));
+client.on('away', (msg) => (away.value = msg.summary));
+client.on('catchUp', (msg) => (catchUpProgress.value = msg.progress < 1 ? msg.progress : null));
+if (debugEnabled()) installTestApi(client);
 client.post({
   t: 'init',
   nowMs: Date.now(),

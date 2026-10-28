@@ -1,3 +1,4 @@
+import { decodeExportCode, encodeExportCode } from '../save/exportCode';
 import { createMemorySaveStore } from '../save/memoryStore';
 import { fromSaveFile, toSaveFile } from '../save/saveFile';
 import { createIdbSaveStore } from '../save/slots';
@@ -22,6 +23,11 @@ const host = new SimHost({
     decode: (file) => {
       const res = fromSaveFile(file);
       return res.ok ? { state: res.state, savedAtRealMs: res.savedAtRealMs } : null;
+    },
+    exportCode: encodeExportCode,
+    importCode: async (code) => {
+      const res = await decodeExportCode(code);
+      return res.ok ? res.file : null;
     },
   },
   checkInvariants: import.meta.env.DEV ? checkInvariants : undefined,

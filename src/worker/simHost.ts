@@ -1,15 +1,26 @@
-import { formatGameDate } from '../sim/clock';
 import { OFFLINE } from '../data/balance';
 import { applyCommand, createGame, step } from '../sim/engine';
 import type { SimEvent } from '../sim/events';
+import { quote } from '../sim/market/market';
 import { runCatchUp } from '../sim/offline';
 import type { GameState } from '../sim/state';
+import { unlockCodex } from '../sim/story/codex';
+import {
+  buildMotionView,
+  buildUiSnapshot,
+  buildWorldView,
+  queryPeople,
+  worldSignature,
+} from '../sim/views';
 import type { SaveFile, SaveStore } from '../save/types';
-import type { DebugFlags, FromWorker, ToWorker, UiSnapshot } from './protocol';
+import type { DebugFlags, FromWorker, ToWorker } from './protocol';
 
 export interface SaveCodec {
   encode(state: GameState, savedAtRealMs: number): SaveFile;
   decode(file: SaveFile): { state: GameState; savedAtRealMs: number } | null;
+  /** A save as a 'PMO1.' code the player can copy. */
+  exportCode(file: SaveFile): Promise<string>;
+  importCode(code: string): Promise<SaveFile | null>;
 }
 
 export interface SimHostDeps {
@@ -41,6 +52,8 @@ export class SimHost {
   private anchorTick = 0;
   private anchorRealMs = 0;
   private lastSaveMs = 0;
+  private worldVersion = 0;
+  private worldSig = '';
 
   constructor(private readonly deps: SimHostDeps) {}
 
@@ -57,7 +70,7 @@ export class SimHost {
         const result = applyCommand(this.state, msg.cmd);
         if (result.ok && msg.cmd.t === 'foundCompany') this.reanchor();
         this.deps.post({ t: 'commandResult', id: msg.id, result });
-        this.postSnapshot();
+        this.postViews(false);
         return;
       }
       case 'saveNow':
@@ -66,6 +79,71 @@ export class SimHost {
       case 'advanceRealMs':
         this.offsetMs += msg.ms;
         return;
+      case 'queryPeople': {
+        const page = queryPeople(this.state, msg.filter, msg.offset, msg.limit);
+        this.deps.post({ t: 'peoplePage', id: msg.id, ...page });
+        return;
+      }
+      case 'quote':
+        unlockCodex(this.state, `good.${msg.goodId}`);
+        this.deps.post({
+          t: 'quoteResult',
+          id: msg.id,
+          ...quote(this.state, msg.goodId, msg.side, msg.kg),
+        });
+        return;
+      case 'exportSave': {
+        const code = await this.deps.codec.exportCode(
+          this.deps.codec.encode(this.state, this.now()),
+        );
+        this.deps.post({ t: 'exportResult', id: msg.id, code });
+        return;
+      }
+      case 'importSave': {
+        const file = await this.deps.codec.importCode(msg.code);
+        const loaded = file ? this.deps.codec.decode(file) : null;
+        if (!loaded) {
+          this.deps.post({
+            t: 'importResult',
+            id: msg.id,
+            ok: false,
+            error: 'That code is not a valid save.',
+          });
+          return;
+        }
+        this.deps.post({ t: 'importResult', id: msg.id, ok: true });
+        this.replaceState(loaded.state);
+        await this.save();
+        return;
+      }
+      case 'newGame':
+        this.replaceState(createGame(msg.seed >>> 0));
+        // Saved at once, so a reload does not bring the old company back.
+        await this.save(true);
+        return;
+      case 'manualSave':
+        try {
+          if (!this.deps.saves.writeManual) throw new Error('this browser cannot keep save slots');
+          await this.deps.saves.writeManual(
+            msg.slot,
+            this.deps.codec.encode(this.state, this.now()),
+          );
+        } catch (err) {
+          this.reportSaveError(err);
+        }
+        return;
+      case 'manualLoad': {
+        const file = await this.deps.saves.readManual?.(msg.slot);
+        const loaded = file ? this.deps.codec.decode(file) : null;
+        if (!file || !loaded) {
+          const message = file ? 'That save could not be read.' : 'That save slot is empty.';
+          this.deps.post({ t: 'error', message });
+          return;
+        }
+        this.replaceState(loaded.state);
+        await this.save();
+        return;
+      }
     }
   }
 
@@ -83,7 +161,15 @@ export class SimHost {
     }
     this.lastSaveMs = this.now();
     this.deps.post({ t: 'ready', founded: this.state.company !== null });
-    this.postSnapshot();
+    this.postViews(true);
+  }
+
+  private replaceState(state: GameState): void {
+    this.state = state;
+    this.reanchor();
+    this.worldSig = '';
+    this.deps.post({ t: 'ready', founded: state.company !== null });
+    this.postViews(true);
   }
 
   pump(): void {
@@ -105,7 +191,7 @@ export class SimHost {
     for (const problem of this.deps.checkInvariants?.(this.state) ?? []) {
       this.deps.post({ t: 'error', message: `Invariant: ${problem}` });
     }
-    this.postSnapshot();
+    this.postViews(true);
     this.maybeAutosave();
   }
 
@@ -136,23 +222,33 @@ export class SimHost {
     if (this.now() - this.lastSaveMs >= AUTOSAVE_MS) void this.save();
   }
 
-  private async save(): Promise<void> {
-    if (!this.state.company) return;
+  private async save(evenUnfounded = false): Promise<void> {
+    if (!this.state.company && !evenUnfounded) return;
     this.lastSaveMs = this.now();
     try {
       await this.deps.saves.writeAuto(this.deps.codec.encode(this.state, this.lastSaveMs));
     } catch (err) {
-      const reason = err instanceof Error ? err.message : String(err);
-      this.deps.post({ t: 'error', message: `Could not save the game: ${reason}` });
+      this.reportSaveError(err);
     }
   }
 
-  private postSnapshot(): void {
-    const ui: UiSnapshot = {
-      tick: this.state.tick,
-      date: formatGameDate(this.state.tick),
-      company: this.state.company,
-    };
-    this.deps.post({ t: 'snapshot', tick: this.state.tick, anchorRealMs: this.realMsOfTick(), ui });
+  private reportSaveError(err: unknown): void {
+    const reason = err instanceof Error ? err.message : String(err);
+    this.deps.post({ t: 'error', message: `Could not save the game: ${reason}` });
+  }
+
+  /** The world when it changed, what moves when time moved, and always the UI snapshot. */
+  private postViews(withMotion: boolean): void {
+    const signature = worldSignature(this.state);
+    if (signature !== this.worldSig) {
+      this.worldSig = signature;
+      this.deps.post({ t: 'world', world: buildWorldView(this.state, ++this.worldVersion) });
+    }
+    const anchorRealMs = this.realMsOfTick();
+    if (withMotion) {
+      this.deps.post({ t: 'motion', motion: buildMotionView(this.state), anchorRealMs });
+    }
+    const ui = buildUiSnapshot(this.state);
+    this.deps.post({ t: 'snapshot', tick: this.state.tick, anchorRealMs, ui });
   }
 }

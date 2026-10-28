@@ -1,4 +1,10 @@
 import { signal } from '@preact/signals';
-import type { UiSnapshot } from '../worker/protocol';
+import type { AwaySummary } from '../sim/offline';
+import type { MotionView, UiSnapshot, WorldView } from '../sim/views';
 
 export const ui = signal<UiSnapshot | null>(null);
+export const world = signal<WorldView | null>(null);
+export const motion = signal<{ view: MotionView; anchorRealMs: number } | null>(null);
+export const away = signal<AwaySummary | null>(null);
+/** 0..1 while the game catches up on time away; null otherwise. */
+export const catchUpProgress = signal<number | null>(null);

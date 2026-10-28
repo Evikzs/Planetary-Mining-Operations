@@ -6,6 +6,9 @@ import type { GameState } from '../../src/sim/state';
 import type { SaveFile } from '../../src/save/types';
 
 const codec = {
+  exportCode: (file: SaveFile) => Promise.resolve(`PMO1.${JSON.stringify(file)}`),
+  importCode: (code: string) =>
+    Promise.resolve(code.startsWith('PMO1.') ? (JSON.parse(code.slice(5)) as SaveFile) : null),
   encode: (state: GameState, savedAtRealMs: number): SaveFile => ({
     format: 'pmo-save',
     version: 1,
@@ -70,7 +73,7 @@ describe('SimHost', () => {
     await h.init();
     h.posted.length = 0;
     await h.found();
-    expect(h.posted.map((m) => m.t)).toEqual(['commandResult', 'snapshot']);
+    expect(h.posted.map((m) => m.t)).toEqual(['commandResult', 'world', 'snapshot']);
     const res = h.posted[0];
     expect(res?.t === 'commandResult' && res.result).toEqual({ ok: true });
   });
@@ -88,6 +91,73 @@ describe('SimHost', () => {
     h.setNow(180_000 + 7_200_000 + 1000);
     h.host.pump();
     expect(h.lastTick()).toBe(7381);
+  });
+
+  it('posts the world on init and again only when it changes', async () => {
+    const h = setup();
+    await h.init();
+    const worlds = () => h.posted.filter((m) => m.t === 'world').length;
+    expect(worlds()).toBe(1);
+    await h.found();
+    expect(worlds()).toBe(2);
+    h.setNow(5000);
+    h.host.pump();
+    expect(worlds()).toBe(2);
+    expect(h.posted.some((m) => m.t === 'motion')).toBe(true);
+  });
+
+  it('answers people queries and quotes', async () => {
+    const h = setup();
+    await h.init();
+    await h.found();
+    await h.host.handle({
+      t: 'queryPeople',
+      id: 7,
+      filter: { skill: 'engineer' },
+      offset: 0,
+      limit: 5,
+    });
+    const page = h.posted.find((m) => m.t === 'peoplePage');
+    expect(page?.t === 'peoplePage' && [page.id, page.total]).toEqual([7, 3]);
+    await h.host.handle({ t: 'quote', id: 8, goodId: 'ilmenite', side: 'sell', kg: 1000 });
+    const quote = h.posted.find((m) => m.t === 'quoteResult');
+    expect(quote?.t === 'quoteResult' && quote.id === 8 && quote.filledKg).toBe(1000);
+  });
+
+  it('export, new game and import bring the company back', async () => {
+    const h = setup();
+    await h.init();
+    await h.found();
+    await h.host.handle({ t: 'exportSave', id: 1 });
+    const exported = h.posted.find((m) => m.t === 'exportResult');
+    const code = exported?.t === 'exportResult' ? exported.code : '';
+    expect(code.startsWith('PMO1.')).toBe(true);
+    await h.host.handle({ t: 'newGame', seed: 9 });
+    expect(h.posted).toContainEqual({ t: 'ready', founded: false });
+    await h.host.handle({ t: 'importSave', id: 2, code: 'nonsense' });
+    expect(h.posted).toContainEqual({
+      t: 'importResult',
+      id: 2,
+      ok: false,
+      error: 'That code is not a valid save.',
+    });
+    await h.host.handle({ t: 'importSave', id: 3, code });
+    expect(h.posted).toContainEqual({ t: 'importResult', id: 3, ok: true });
+    const snaps = h.posted.filter((m) => m.t === 'snapshot');
+    const last = snaps[snaps.length - 1];
+    expect(last?.t === 'snapshot' && last.ui.company?.name).toBe('Selene Rock Co');
+  });
+
+  it('saves to and loads from a manual slot', async () => {
+    const h = setup();
+    await h.init();
+    await h.found();
+    await h.host.handle({ t: 'manualSave', slot: 2 });
+    await h.host.handle({ t: 'newGame', seed: 9 });
+    await h.host.handle({ t: 'manualLoad', slot: 2 });
+    expect(h.posted.filter((m) => m.t === 'ready').at(-1)).toEqual({ t: 'ready', founded: true });
+    await h.host.handle({ t: 'manualLoad', slot: 4 });
+    expect(h.posted).toContainEqual({ t: 'error', message: 'That save slot is empty.' });
   });
 
   it('a long gap posts catch-up progress and an away summary', async () => {
