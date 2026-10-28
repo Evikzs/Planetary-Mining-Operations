@@ -1,5 +1,8 @@
 import type { Alert } from '../sim/alerts';
 import type { CommandError } from '../sim/commands';
+import type { BuildingStatus, Priority } from '../sim/state';
+import type { PlotKind } from '../sim/world/types';
+import type { Skill } from './buildings';
 import { GOODS } from './goods';
 
 export const ERROR_COPY: Record<CommandError, string> = {
@@ -27,6 +30,36 @@ export const ERROR_COPY: Record<CommandError, string> = {
   ALREADY_OWNED: 'You already own this section.',
   CANNOT_DEMOLISH: 'This building cannot be demolished.',
   NO_OPEN_SLOT: 'This building has no open job for this worker.',
+};
+
+export const BUILDING_STATUS: Record<BuildingStatus, string> = {
+  constructing: 'Under construction',
+  upgrading: 'Upgrading',
+  active: 'Working',
+  blocked: 'Stopped: no room for its output',
+  unpowered: 'Short of power',
+  unstaffed: 'No workers on shift',
+  striking: 'On strike',
+};
+
+export const PLOT_KIND_NAMES: Record<PlotKind, string> = {
+  hub: 'Hub plot',
+  build: 'Build plot',
+  deposit: 'Deposit',
+  public: 'Public plot',
+};
+
+/** Plural, as in 'Technicians 1/1'; the skill id is the singular. */
+export const SKILL_NAMES: Record<Skill, string> = {
+  miner: 'Miners',
+  technician: 'Technicians',
+  engineer: 'Engineers',
+};
+
+export const PRIORITY_NAMES: Record<Priority, string> = {
+  high: 'High',
+  normal: 'Normal',
+  low: 'Low',
 };
 
 const NEED_NAME = { air: 'Oxygen', water: 'Water', food: 'Food' } as const;

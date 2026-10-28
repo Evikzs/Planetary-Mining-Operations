@@ -58,10 +58,11 @@ h3 {
 }
 
 /* Shell */
+/* clip, not hidden: a hidden box still scrolls when focus or scrollIntoView reaches inside it. */
 .shell {
   position: fixed;
   inset: 0;
-  overflow: hidden;
+  overflow: clip;
 }
 
 .map {
@@ -524,13 +525,15 @@ h3 {
   text-align: right;
 }
 
-.context-panel .error {
-  margin: var(--space-2) 0 0;
+/* Command errors; the line stays in the page, empty, so screen readers hear new text. */
+.error {
+  margin: 0;
   color: var(--c-rust);
+  font-weight: 600;
 }
 
-.context-panel .error:empty {
-  display: none;
+.error:not(:empty) {
+  margin-top: var(--space-2);
 }
 
 /* The one thing to do here: a printed stamp of a button. */
@@ -582,6 +585,141 @@ h3 {
 
 .alerts .when {
   font-size: 12px;
+}
+
+/* Build tab */
+.build-tab h3 {
+  margin: var(--space-4) 0 var(--space-2);
+  font-size: 17px;
+}
+
+.build-tab h4 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.build-tab p {
+  margin: var(--space-1) 0 0;
+}
+
+.build-tab .where {
+  margin: 0;
+  font-family: var(--font-display);
+  font-weight: 500;
+}
+
+.build-tab .focus {
+  scroll-margin-top: var(--space-4);
+}
+
+.plot-list {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.plot-list button {
+  width: 100%;
+  min-height: 44px;
+  padding: var(--space-1) var(--space-3);
+  border: 2px solid var(--c-offBlack);
+  background: var(--c-cream);
+  text-align: left;
+}
+
+.plot-list button[aria-pressed='true'] {
+  background: var(--c-mustard);
+}
+
+.options {
+  display: grid;
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.option {
+  margin-top: var(--space-2);
+  padding: var(--space-3);
+  border: 2px solid var(--c-offBlack);
+}
+
+.options .option {
+  margin-top: 0;
+}
+
+.option-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.needs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 var(--space-3);
+}
+
+.short {
+  color: var(--c-rust);
+  font-weight: 600;
+}
+
+.meta {
+  font-size: 13px;
+}
+
+.action.small {
+  width: auto;
+  padding: 0 var(--space-4);
+}
+
+.action.quiet {
+  margin-top: var(--space-3);
+  background: var(--c-cream);
+}
+
+.action.danger {
+  margin-top: var(--space-2);
+  background: var(--c-rust);
+  color: var(--c-cream);
+}
+
+.confirm {
+  margin-top: var(--space-3);
+}
+
+.field {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-top: var(--space-3);
+  font-family: var(--font-display);
+  font-weight: 500;
+}
+
+.field select {
+  min-height: 44px;
+  padding: 0 var(--space-2);
+  border: 2px solid var(--c-offBlack);
+  background: var(--c-cream);
+  font: inherit;
+}
+
+/* The tab's error stays in sight at the foot of the scrolling panel. */
+.build-tab .error:not(:empty) {
+  position: sticky;
+  bottom: calc(-1 * var(--space-4));
+  padding: var(--space-2) 0 var(--space-4);
+  background: var(--c-cream);
 }
 
 /* Income on its way to the cash readout. */

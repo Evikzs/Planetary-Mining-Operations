@@ -1,42 +1,23 @@
 import type { ComponentChildren } from 'preact';
-import { useState } from 'preact/hooks';
-import { motion, selection, simClient, ui, world } from '../../client/store';
-import { BUILDINGS, RECIPES, SKILLS, type Skill } from '../../data/buildings';
-import { ERROR_COPY } from '../../data/copy';
+import { motion, selection, ui, world } from '../../client/store';
+import { BUILDINGS, RECIPES, SKILLS } from '../../data/buildings';
+import {
+  BUILDING_STATUS,
+  ERROR_COPY,
+  PLOT_KIND_NAMES,
+  PRIORITY_NAMES,
+  SKILL_NAMES,
+} from '../../data/copy';
 import { GOOD_IDS, GOODS } from '../../data/goods';
 import type { MapPick } from '../../render/renderer';
 import { busLoad, type Trip } from '../../shared/trips';
 import type { Inventory } from '../../sim/inventory';
-import type { BuildingStatus, Priority } from '../../sim/state';
 import type { UiSnapshot, WorldView } from '../../sim/views';
-import { formatGameDuration, formatMass, formatMoney } from '../format';
+import { BuySection } from '../components/BuySection';
+import { formatGameDuration, formatMass } from '../format';
 import { Icon } from '../icons';
 import { activeTab } from './tabs';
-
-const PLOT_KIND = {
-  hub: 'Hub plot',
-  build: 'Build plot',
-  deposit: 'Deposit',
-  public: 'Public plot',
-} as const;
-
-const STATUS: Record<BuildingStatus, string> = {
-  constructing: 'Under construction',
-  upgrading: 'Upgrading',
-  active: 'Working',
-  blocked: 'Stopped: no room for its output',
-  unpowered: 'Short of power',
-  unstaffed: 'No workers on shift',
-  striking: 'On strike',
-};
-
-const SKILL_LABEL: Record<Skill, string> = {
-  miner: 'Miners',
-  technician: 'Technicians',
-  engineer: 'Engineers',
-};
-
-const PRIORITY: Record<Priority, string> = { high: 'High', normal: 'Normal', low: 'Low' };
+import { isDesktop } from './useBreakpoint';
 
 interface Fact {
   label: string;
@@ -70,7 +51,7 @@ function plotView(id: number, w: WorldView, snap: UiSnapshot | null): View | nul
   const owned = snap?.sections.some((s) => s.id === p.sectionId) ?? false;
   const buildable = p.kind === 'build' || p.kind === 'deposit';
   return {
-    title: PLOT_KIND[p.kind],
+    title: PLOT_KIND_NAMES[p.kind],
     facts,
     extra:
       buildable &&
@@ -92,14 +73,17 @@ function buildingView(id: number, w: WorldView, snap: UiSnapshot | null): View |
   const busy = status === 'constructing' || status === 'upgrading';
   const progress = Math.floor((live?.progress ?? b.progress) * 100);
   const facts: Fact[] = [
-    { label: 'Status', value: busy ? `${STATUS[status]}, ${progress}%` : STATUS[status] },
+    {
+      label: 'Status',
+      value: busy ? `${BUILDING_STATUS[status]}, ${progress}%` : BUILDING_STATUS[status],
+    },
     { label: 'Level', value: String(b.level), num: true },
   ];
   if (live) {
     for (const skill of SKILLS) {
       const job = live.jobs[skill];
       if (job) {
-        facts.push({ label: SKILL_LABEL[skill], value: `${job.filled}/${job.slots}`, num: true });
+        facts.push({ label: SKILL_NAMES[skill], value: `${job.filled}/${job.slots}`, num: true });
       }
     }
     if (live.avgMorale > 0) {
@@ -115,7 +99,7 @@ function buildingView(id: number, w: WorldView, snap: UiSnapshot | null): View |
     if (input) facts.push({ label: 'Input', value: input });
     const output = contents(live.output);
     if (output) facts.push({ label: 'Output', value: output });
-    facts.push({ label: 'Priority', value: PRIORITY[live.priority] });
+    facts.push({ label: 'Priority', value: PRIORITY_NAMES[live.priority] });
   }
   return { title: BUILDINGS[b.type].name, facts };
 }
@@ -145,24 +129,6 @@ function roverView(
     facts.push({ label: 'Next stop', value: 'Back to the garage' });
   }
   return { title: trip.kind === 'toWork' ? 'Bus to work' : 'Bus home', facts };
-}
-
-function BuySection({ id, priceCents }: { id: number; priceCents: number }) {
-  const [error, setError] = useState<string | null>(null);
-  const buy = async (): Promise<void> => {
-    const result = await simClient.value?.send({ t: 'buySection', sectionId: id });
-    setError(result && !result.ok ? ERROR_COPY[result.error] : null);
-  };
-  return (
-    <>
-      <button type="button" class="action" onClick={() => void buy()}>
-        Buy section — {formatMoney(priceCents)}
-      </button>
-      <p class="error" aria-live="polite">
-        {error}
-      </p>
-    </>
-  );
 }
 
 function sectionView(id: number, w: WorldView, snap: UiSnapshot | null): View | null {
@@ -200,8 +166,11 @@ function describe(
   trips: readonly Trip[],
 ): View | null {
   switch (pick.kind) {
-    case 'plot':
-      return plotView(pick.id, w, snap);
+    case 'plot': {
+      // A plot with a building on it shows the building, as a tap on the map would.
+      const built = w.buildings.find((b) => b.plotId === pick.id);
+      return built ? buildingView(built.id, w, snap) : plotView(pick.id, w, snap);
+    }
     case 'building':
       return buildingView(pick.id, w, snap);
     case 'rover':
@@ -215,6 +184,8 @@ function describe(
 export function ContextPanel() {
   const pick = selection.value;
   const w = world.value;
+  // On phones an open tab sheet takes the bottom of the screen.
+  if (!isDesktop.value && activeTab.value) return null;
   const view = pick && w ? describe(pick, w, ui.value, motion.value?.view.trips ?? []) : null;
   if (!view) return null;
   return (
