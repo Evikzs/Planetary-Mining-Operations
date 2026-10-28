@@ -1,6 +1,7 @@
 import {
   AmbientLight,
   DirectionalLight,
+  MeshToonMaterial,
   PerspectiveCamera,
   Raycaster,
   Scene,
@@ -16,6 +17,8 @@ import type { MotionView, WorldView } from '../sim/views';
 import { sectionAt } from '../sim/world/sections';
 import { palette } from '../ui/tokens';
 import { clipPlanes, createDprController, gameTimeAt } from './frame';
+import { ChunkStreamer } from './globe/chunkStreamer';
+import { bandsTexture } from './materials';
 import { createSky } from './sky';
 
 export interface RenderStats {
@@ -80,6 +83,23 @@ export function createRenderer(
   scene.add(new AmbientLight(palette.cream, 0.35));
   const sky = createSky(opts.seed, FOV);
   const layers: Layer[] = [];
+
+  const terrainMaterial = new MeshToonMaterial({ vertexColors: true, gradientMap: bandsTexture() });
+  const globe = new ChunkStreamer(scene, {
+    seed: opts.seed,
+    radius,
+    workers: Math.min(4, Math.max(1, (navigator.hardwareConcurrency || 4) - 2)),
+    cacheSize: 512,
+    material: terrainMaterial,
+  });
+  layers.push({
+    update: (_time, cam) => globe.update(cam),
+    dispose: () => {
+      globe.dispose();
+      terrainMaterial.gradientMap?.dispose();
+      terrainMaterial.dispose();
+    },
+  });
 
   camera.position.set(
     ...(START_DIR.map((v) => v * (radius + START_ALTITUDE)) as [number, number, number]),
@@ -151,7 +171,7 @@ export function createRenderer(
 
   const point = new Vector3();
   const raycaster = new Raycaster();
-  const globe = new Sphere(new Vector3(), radius);
+  const surface = new Sphere(new Vector3(), radius);
 
   return {
     setWorld(w) {
@@ -175,7 +195,7 @@ export function createRenderer(
     pick(x, y) {
       if (!world || width === 0 || height === 0) return null;
       raycaster.setFromCamera(new Vector2((x / width) * 2 - 1, 1 - (y / height) * 2), camera);
-      const hit = raycaster.ray.intersectSphere(globe, new Vector3());
+      const hit = raycaster.ray.intersectSphere(surface, new Vector3());
       if (!hit) return null;
       const section = world.sections[sectionAt(world.sections, normalize([hit.x, hit.y, hit.z]))];
       return section ? { kind: 'section', id: section.id } : null;
@@ -185,8 +205,8 @@ export function createRenderer(
       triangles: gl.info.render.triangles,
       frameMsAvg: dpr.frameMsAvg,
       dpr: dpr.value,
-      chunksVisible: 0,
-      chunksPending: 0,
+      chunksVisible: globe.stats().visible,
+      chunksPending: globe.stats().pending,
       rovers: 0,
       crates: 0,
       walkers: 0,

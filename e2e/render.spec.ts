@@ -1,8 +1,7 @@
 import { expect, test } from '@playwright/test';
 import { gotoGame } from './helpers';
 
-// The globe layer arrives in task 26 (B19).
-test.fixme('the globe renders chunks', async ({ page }) => {
+test('the globe renders chunks', async ({ page }) => {
   await gotoGame(page);
   await expect
     .poll(() => page.evaluate(() => window.__pmo.renderStats()?.chunksVisible ?? 0))
