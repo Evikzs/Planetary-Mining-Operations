@@ -23,9 +23,11 @@ import { ChunkStreamer } from './globe/chunkStreamer';
 import { bandsTexture } from './materials';
 import type { MapFilter } from './overlays/filters';
 import { SectionOverlay } from './overlays/sectionOverlay';
+import { BeltLayer } from './world/beltLayer';
 import { BuildingLayer } from './world/buildingLayer';
 import { PlotPicker } from './world/picking';
 import { PlotLayer } from './world/plotLayer';
+import { RoadLayer } from './world/roadLayer';
 import { createSky } from './sky';
 
 export interface RenderStats {
@@ -124,7 +126,11 @@ export function createRenderer(canvas: HTMLCanvasElement, opts: RendererOptions)
   const buildings = new BuildingLayer(scene, terrain, radius, bands, opts.reducedMotion);
   const plots = new PlotLayer(scene, terrain, radius);
   const picker = new PlotPicker(terrain, radius);
+  const roads = new RoadLayer(scene, terrain, radius, bands);
+  const belts = new BeltLayer(scene, terrain, radius, bands, opts.reducedMotion);
   layers.push(
+    { update: (_time, _cam, view) => roads.update(view), dispose: () => roads.dispose() },
+    { update: (time, _cam, view) => belts.update(time, view), dispose: () => belts.dispose() },
     { update: (_time, _cam, view) => overlay.update(view), dispose: () => overlay.dispose() },
     { update: (_time, _cam, view) => buildings.update(view), dispose: () => buildings.dispose() },
     { update: (_time, _cam, view) => plots.update(view), dispose: () => plots.dispose() },
@@ -229,12 +235,15 @@ export function createRenderer(canvas: HTMLCanvasElement, opts: RendererOptions)
       buildings.setWorld(w);
       plots.setWorld(w);
       picker.setWorld(w);
+      roads.setWorld(w);
+      belts.setWorld(w);
     },
     setUi(ui) {
       buildings.setUi(ui);
     },
     setMotion(view, anchorRealMs, timescale) {
       motion = { view, anchorRealMs, timescale };
+      belts.setMotion(view);
     },
     freezeAt(time) {
       frozenAt = time;
@@ -257,7 +266,7 @@ export function createRenderer(canvas: HTMLCanvasElement, opts: RendererOptions)
       chunksVisible: globe.stats().visible,
       chunksPending: globe.stats().pending,
       rovers: 0,
-      crates: 0,
+      crates: belts.shown,
       walkers: 0,
     }),
     camera: () => controller.state,
@@ -267,6 +276,7 @@ export function createRenderer(canvas: HTMLCanvasElement, opts: RendererOptions)
     setFilter(f) {
       overlay.setFilter(f);
       buildings.setFilter(f);
+      belts.setFilter(f);
     },
     dispose() {
       cancelAnimationFrame(raf);
