@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { makeBenchState } from '../../bot/scenes';
 import { applyCommand, createGame, step } from '../../src/sim/engine';
+import { indexOfId } from '../../src/sim/people/store';
 import {
   buildMotionView,
   buildUiSnapshot,
@@ -42,6 +43,20 @@ describe('views', () => {
       expect(hasTypedArray(view)).toBe(false);
       expect(structuredClone(view)).toEqual(view);
     }
+  });
+
+  it('motion view trips carry the skill of each rider', () => {
+    const s = founded();
+    for (let i = 0; i < 30; i++) step(s, { mode: 'fine' });
+    const trips = buildMotionView(s).trips;
+    expect(trips.length).toBeGreaterThan(0);
+    for (const stop of trips.flatMap((t) => t.stops)) {
+      expect(stop.skills).toEqual(
+        stop.workerIds.map((id) => s.people.skill[indexOfId(s.people, id)]),
+      );
+    }
+    // The sim's own trips stay as they were.
+    expect(s.trips.flatMap((t) => t.stops).every((stop) => stop.skills === undefined)).toBe(true);
   });
 
   it('world version bumps only on world changes', () => {

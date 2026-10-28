@@ -28,6 +28,9 @@ import { BuildingLayer } from './world/buildingLayer';
 import { PlotPicker } from './world/picking';
 import { PlotLayer } from './world/plotLayer';
 import { RoadLayer } from './world/roadLayer';
+import { RoverLayer } from './world/roverLayer';
+import { TrafficLayer } from './world/trafficLayer';
+import { WalkerLayer } from './world/walkerLayer';
 import { createSky } from './sky';
 
 export interface RenderStats {
@@ -128,7 +131,13 @@ export function createRenderer(canvas: HTMLCanvasElement, opts: RendererOptions)
   const picker = new PlotPicker(terrain, radius);
   const roads = new RoadLayer(scene, terrain, radius, bands);
   const belts = new BeltLayer(scene, terrain, radius, bands, opts.reducedMotion);
+  const rovers = new RoverLayer(scene, terrain, radius, bands);
+  const walkers = new WalkerLayer(scene, terrain, radius, bands);
+  const traffic = new TrafficLayer(scene, terrain, radius);
   layers.push(
+    { update: (time, _cam, view) => rovers.update(time, view), dispose: () => rovers.dispose() },
+    { update: (time, _cam, view) => walkers.update(time, view), dispose: () => walkers.dispose() },
+    { update: (_time, _cam, view) => traffic.update(view), dispose: () => traffic.dispose() },
     { update: (_time, _cam, view) => roads.update(view), dispose: () => roads.dispose() },
     { update: (time, _cam, view) => belts.update(time, view), dispose: () => belts.dispose() },
     { update: (_time, _cam, view) => overlay.update(view), dispose: () => overlay.dispose() },
@@ -237,6 +246,13 @@ export function createRenderer(canvas: HTMLCanvasElement, opts: RendererOptions)
       picker.setWorld(w);
       roads.setWorld(w);
       belts.setWorld(w);
+      traffic.setWorld(w);
+      const doors = new Map(w.plots.map((p) => [p.id, p.dir]));
+      walkers.setDoors(
+        new Map(
+          w.buildings.flatMap((b) => (doors.has(b.plotId) ? [[b.id, doors.get(b.plotId)!]] : [])),
+        ),
+      );
     },
     setUi(ui) {
       buildings.setUi(ui);
@@ -244,6 +260,9 @@ export function createRenderer(canvas: HTMLCanvasElement, opts: RendererOptions)
     setMotion(view, anchorRealMs, timescale) {
       motion = { view, anchorRealMs, timescale };
       belts.setMotion(view);
+      rovers.setTrips(view.trips);
+      walkers.setTrips(view.trips);
+      traffic.setTrips(view.trips, view.tick);
     },
     freezeAt(time) {
       frozenAt = time;
@@ -265,9 +284,9 @@ export function createRenderer(canvas: HTMLCanvasElement, opts: RendererOptions)
       dpr: dpr.value,
       chunksVisible: globe.stats().visible,
       chunksPending: globe.stats().pending,
-      rovers: 0,
+      rovers: rovers.shown,
       crates: belts.shown,
-      walkers: 0,
+      walkers: walkers.shown,
     }),
     camera: () => controller.state,
     setCamera(s) {

@@ -7,6 +7,8 @@ export interface TripStop {
   buildingId: number;
   workerIds: number[];
   dwell: number;
+  /** Skill code of each rider; only the motion view fills it, for the renderer. */
+  skills?: number[];
 }
 
 /** One bus run. The renderer places the bus from this alone, at any moment. */

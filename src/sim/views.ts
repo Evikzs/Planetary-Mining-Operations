@@ -15,7 +15,7 @@ import { balance } from './ledger';
 import type { Order } from './market/orders';
 import { housingCapacity, residentsBySection } from './people/housing';
 import { staffing } from './people/jobs';
-import { SKILL_OF, workerName } from './people/store';
+import { indexOfId, SKILL_OF, workerName } from './people/store';
 import type { Building, BuildingStatus, Company, GameState, Priority } from './state';
 import type { BeatId, HintCategory } from './story/beats';
 import { currentLine } from './story/story';
@@ -207,7 +207,13 @@ export function buildWorldView(state: GameState, version: number): WorldView {
 export function buildMotionView(state: GameState): MotionView {
   return {
     tick: state.tick,
-    trips: structuredClone(state.trips),
+    trips: state.trips.map((t) => ({
+      ...structuredClone(t),
+      stops: t.stops.map((stop) => ({
+        ...structuredClone(stop),
+        skills: stop.workerIds.map((id) => state.people.skill[indexOfId(state.people, id)] ?? 0),
+      })),
+    })),
     lanes: state.belts.flatMap((b) =>
       (['out', 'in'] as const).map((lane) => ({
         beltId: b.id,
