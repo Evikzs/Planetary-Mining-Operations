@@ -1,8 +1,18 @@
 import { effect } from '@preact/signals';
 import { useEffect, useRef } from 'preact/hooks';
-import { compass, gameRenderer, motion, simClient, ui, world } from '../../client/store';
+import {
+  compass,
+  gameRenderer,
+  mapFilter,
+  mapLevel,
+  motion,
+  simClient,
+  ui,
+  world,
+} from '../../client/store';
 import { heading } from '../../render/camera/globeCamera';
 import { createRenderer } from '../../render/renderer';
+import { LOCAL_MAX_ALT } from '../../shared/scale';
 import type { DebugFlags } from '../../worker/protocol';
 
 /** The map. Its renderer starts once the world's seed is known; a new seed gets a fresh canvas. */
@@ -22,6 +32,7 @@ export function MapCanvas({ flags }: { flags: DebugFlags }) {
         if (Math.abs(h - shown.heading) > 0.005 || s.lockNorth !== shown.lockNorth) {
           compass.value = { heading: h, lockNorth: s.lockNorth };
         }
+        mapLevel.value = s.altitude >= LOCAL_MAX_ALT ? 'planetary' : 'local';
       },
       onGesture(kind) {
         if (taught[kind] || !ui.value?.company || !simClient.value) return;
@@ -35,6 +46,7 @@ export function MapCanvas({ flags }: { flags: DebugFlags }) {
     const stopWorld = effect(() => {
       if (world.value) r.setWorld(world.value);
     });
+    const stopFilter = effect(() => r.setFilter(mapFilter.value));
     const stopMotion = effect(() => {
       const m = motion.value;
       if (!m) return;
@@ -43,6 +55,7 @@ export function MapCanvas({ flags }: { flags: DebugFlags }) {
     });
     return () => {
       stopWorld();
+      stopFilter();
       stopMotion();
       r.dispose();
       gameRenderer.value = null;

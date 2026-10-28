@@ -21,6 +21,8 @@ import { cameraPose, createCameraState, type GlobeCameraState } from './camera/g
 import { clipPlanes, createDprController, gameTimeAt } from './frame';
 import { ChunkStreamer } from './globe/chunkStreamer';
 import { bandsTexture } from './materials';
+import type { MapFilter } from './overlays/filters';
+import { SectionOverlay } from './overlays/sectionOverlay';
 import { createSky } from './sky';
 
 export interface RenderStats {
@@ -50,6 +52,7 @@ export interface GameRenderer {
   stats(): RenderStats;
   camera(): GlobeCameraState;
   setCamera(s: GlobeCameraState): void;
+  setFilter(f: MapFilter): void;
   dispose(): void;
 }
 
@@ -65,7 +68,7 @@ export interface RendererOptions {
 
 /** Something drawn that moves with game time or the camera; the globe and world layers are layers. */
 export interface Layer {
-  update(gameTime: number, camera: PerspectiveCamera): void;
+  update(gameTime: number, camera: PerspectiveCamera, view: GlobeCameraState): void;
   dispose(): void;
 }
 
@@ -110,6 +113,12 @@ export function createRenderer(canvas: HTMLCanvasElement, opts: RendererOptions)
       terrainMaterial.gradientMap?.dispose();
       terrainMaterial.dispose();
     },
+  });
+
+  const overlay = new SectionOverlay(scene, terrain, radius);
+  layers.push({
+    update: (_time, _cam, view) => overlay.update(view),
+    dispose: () => overlay.dispose(),
   });
 
   const controller = createCameraController(canvas, createCameraState(START_DIR, START_ALTITUDE), {
@@ -165,7 +174,7 @@ export function createRenderer(canvas: HTMLCanvasElement, opts: RendererOptions)
     resize();
     updateCamera();
     const time = gameTime();
-    for (const layer of layers) layer.update(time, camera);
+    for (const layer of layers) layer.update(time, camera, controller.state);
     gl.info.reset();
     gl.clear();
     sky.render(gl, camera);
@@ -204,6 +213,7 @@ export function createRenderer(canvas: HTMLCanvasElement, opts: RendererOptions)
   return {
     setWorld(w) {
       world = w;
+      overlay.setWorld(w);
     },
     setMotion(view, anchorRealMs, timescale) {
       motion = { view, anchorRealMs, timescale };
@@ -235,6 +245,9 @@ export function createRenderer(canvas: HTMLCanvasElement, opts: RendererOptions)
     camera: () => controller.state,
     setCamera(s) {
       controller.set(s);
+    },
+    setFilter(f) {
+      overlay.setFilter(f);
     },
     dispose() {
       cancelAnimationFrame(raf);

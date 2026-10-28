@@ -7,6 +7,7 @@ import { Compass } from './Compass';
 import { ContextPanel } from './ContextPanel';
 import { NewsTicker } from './NewsTicker';
 import { MapCanvas } from './MapCanvas';
+import { MapFilters } from './MapFilters';
 import { Sheet } from './Sheet';
 import { TabRail } from './TabRail';
 import { activeTab, TABS, toggleTab, type TabId } from './tabs';
@@ -96,6 +97,7 @@ export function Shell({ flags }: { flags: DebugFlags }) {
     <div class="shell" data-testid="app" data-layout={desktop ? 'desktop' : 'phone'}>
       <MapCanvas flags={flags} />
       <Compass />
+      <MapFilters />
       <TopBar />
       {desktop ? <TabRail /> : <BottomTabs />}
       <TabPanel desktop={desktop} />

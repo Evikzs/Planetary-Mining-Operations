@@ -1,4 +1,5 @@
 import { signal } from '@preact/signals';
+import { DEFAULT_FILTER, type MapFilter } from '../render/overlays/filters';
 import type { GameRenderer } from '../render/renderer';
 import type { AwaySummary } from '../sim/offline';
 import type { SimClient } from './simClient';
@@ -14,3 +15,6 @@ export const gameRenderer = signal<GameRenderer | null>(null);
 export const simClient = signal<SimClient | null>(null);
 /** What the compass shows: radians clockwise from north, and whether north is locked. */
 export const compass = signal({ heading: 0, lockNorth: true });
+export const mapFilter = signal<MapFilter>(DEFAULT_FILTER);
+/** Planetary filters show from altitude 30 up; local filters below. */
+export const mapLevel = signal<'planetary' | 'local'>('planetary');
