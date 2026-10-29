@@ -1,3 +1,4 @@
+import type { GoodId } from '../data/goods';
 import type { Command, CommandResult } from '../sim/commands';
 import type { PeopleFilter, PeopleRow } from '../sim/views';
 import type { FromWorker, ToWorker } from '../worker/protocol';
@@ -11,6 +12,12 @@ export interface SimClient {
     offset: number,
     limit: number,
   ): Promise<{ total: number; rows: PeopleRow[] }>;
+  /** What a market order of this size would clear at now, and how much of it would fill. */
+  quote(
+    goodId: GoodId,
+    side: 'buy' | 'sell',
+    kg: number,
+  ): Promise<{ priceCents: number; filledKg: number }>;
   post(msg: ToWorker): void;
   on<T extends FromWorker['t']>(t: T, fn: Handler<T>): () => void;
   saveNow(): void;
@@ -58,6 +65,14 @@ export function createSimClient(worker: Worker): SimClient {
       ask(
         (id) => ({ t: 'queryPeople', id, filter, offset, limit }),
         (msg) => (msg.t === 'peoplePage' ? { total: msg.total, rows: msg.rows } : undefined),
+      ),
+    quote: (goodId, side, kg) =>
+      ask(
+        (id) => ({ t: 'quote', id, goodId, side, kg }),
+        (msg) =>
+          msg.t === 'quoteResult'
+            ? { priceCents: msg.priceCents, filledKg: msg.filledKg }
+            : undefined,
       ),
     on(t, fn) {
       const set = handlers.get(t) ?? new Set();

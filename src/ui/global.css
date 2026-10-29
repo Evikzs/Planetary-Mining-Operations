@@ -138,9 +138,23 @@ h3 {
   align-self: center;
 }
 
-.topbar .trend {
+/* Price trends: on cream by default; the navy top bar recolours them. */
+.trend {
   display: inline-flex;
   align-self: center;
+  vertical-align: middle;
+}
+
+.trend.up {
+  color: var(--c-teal);
+}
+
+.trend.down {
+  color: var(--c-rust);
+}
+
+.trend.flat {
+  opacity: 0.55;
 }
 
 .topbar .trend.up {
@@ -724,8 +738,9 @@ h3 {
   font: inherit;
 }
 
-/* The tab's error stays in sight at the foot of the scrolling panel. */
-.build-tab .error:not(:empty) {
+/* A tab's error stays in sight at the foot of the scrolling panel. */
+.build-tab .error:not(:empty),
+.trade-tab .error:not(:empty) {
   position: sticky;
   bottom: calc(-1 * var(--space-4));
   padding: var(--space-2) 0 var(--space-4);
@@ -930,7 +945,8 @@ h3 {
 
 .choices {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-auto-columns: 1fr;
+  grid-auto-flow: column;
   border: 2px solid var(--c-offBlack);
 }
 
@@ -959,6 +975,210 @@ h3 {
 .choice:has(input:focus-visible) {
   outline: 2px solid var(--c-mustard);
   outline-offset: 2px;
+}
+
+/* Trade tab */
+.trade-tab h3 {
+  margin: var(--space-4) 0 var(--space-2);
+  font-size: 17px;
+}
+
+.trade-tab .good-detail h3 {
+  margin-top: 0;
+  font-size: 19px;
+}
+
+.trade-tab p {
+  margin: var(--space-1) 0 0;
+}
+
+.good-detail {
+  scroll-margin-top: var(--space-4);
+  padding-bottom: var(--space-3);
+  border-bottom: 2px solid var(--c-offBlack);
+}
+
+.chart {
+  position: relative;
+  margin: var(--space-3) 0 0;
+}
+
+.chart svg {
+  display: block;
+  width: 100%;
+  height: 120px;
+  border: 2px solid var(--c-offBlack);
+}
+
+.chart .grid {
+  stroke: color-mix(in srgb, var(--c-offBlack) 14%, var(--c-cream));
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+
+.chart .line {
+  fill: none;
+  stroke: var(--c-navy);
+  stroke-width: 2;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+}
+
+.chart .hi,
+.chart .lo {
+  position: absolute;
+  left: var(--space-2);
+  padding: 0 var(--space-1);
+  background: var(--c-cream);
+  font-size: 11px;
+}
+
+.chart .hi {
+  top: var(--space-1);
+}
+
+.chart .lo {
+  bottom: 26px;
+}
+
+.chart figcaption {
+  display: flex;
+  justify-content: space-between;
+  margin-top: var(--space-1);
+  font-size: 11px;
+}
+
+.order-form {
+  display: grid;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+}
+
+.field-set {
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.field-set legend {
+  padding: 0;
+  margin-bottom: var(--space-1);
+  font-family: var(--font-display);
+  font-weight: 500;
+}
+
+.order-form .fields {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+  font-family: var(--font-display);
+  font-weight: 500;
+}
+
+.order-form input,
+.order-form select {
+  min-height: 44px;
+  min-width: 0;
+  padding: 0 var(--space-2);
+  border: 2px solid var(--c-offBlack);
+  background: var(--c-cream);
+  font: inherit;
+}
+
+.order-form input {
+  font-family: var(--font-mono);
+}
+
+.order-form .quote {
+  min-height: 1.45em;
+}
+
+.orders {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.orders li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-2) 0;
+  border-bottom: 1px solid color-mix(in srgb, var(--c-offBlack) 18%, transparent);
+}
+
+.orders .meta {
+  display: block;
+}
+
+.orders .action.quiet {
+  margin-top: 0;
+}
+
+.goods-table {
+  width: 100%;
+  margin-top: var(--space-3);
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.goods-table caption {
+  margin-bottom: var(--space-2);
+  font-family: var(--font-display);
+  font-size: 17px;
+  font-weight: 600;
+  text-align: left;
+}
+
+.goods-table th,
+.goods-table td {
+  padding: 0 var(--space-1);
+  border-bottom: 1px solid color-mix(in srgb, var(--c-offBlack) 18%, transparent);
+  text-align: right;
+  white-space: nowrap;
+}
+
+.goods-table th:first-child {
+  padding-left: 0;
+  text-align: left;
+  white-space: normal;
+}
+
+.goods-table thead th {
+  padding-bottom: var(--space-1);
+  font-family: var(--font-display);
+  font-weight: 500;
+}
+
+.goods-table tbody th button {
+  min-height: 40px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  font-family: var(--font-display);
+  font-weight: 500;
+  text-align: left;
+  text-decoration: underline;
+  text-decoration-color: color-mix(in srgb, var(--c-offBlack) 30%, transparent);
+  text-underline-offset: 3px;
+}
+
+.goods-table tbody th button[aria-pressed='true'] {
+  font-weight: 700;
+  text-decoration-color: var(--c-mustard);
+  text-decoration-thickness: 3px;
+}
+
+.goods-table .pin {
+  margin-left: auto;
+  opacity: 0.35;
+}
+
+.goods-table .pin[aria-pressed='true'] {
+  color: var(--c-burntOrange);
+  opacity: 1;
 }
 
 /* Income on its way to the cash readout. */

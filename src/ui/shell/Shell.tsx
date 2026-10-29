@@ -5,6 +5,7 @@ import type { DebugFlags } from '../../worker/protocol';
 import { Icon } from '../icons';
 import { BuildTab } from '../tabs/BuildTab';
 import { PeopleTab } from '../tabs/PeopleTab';
+import { TradeTab } from '../tabs/TradeTab';
 import { AlertsList, alertsOpen } from './Alerts';
 import { BottomTabs, moreOpen } from './BottomTabs';
 import { Compass } from './Compass';
@@ -18,11 +19,11 @@ import { activeTab, TABS, toggleTab, type TabId } from './tabs';
 import { TopBar } from './TopBar';
 import { isDesktop } from './useBreakpoint';
 
-// Placeholder bodies until the tab tasks (36–38) replace them.
+// Placeholder bodies until the tab tasks (37–38) replace them.
 const TAB_BODY: Record<TabId, () => ComponentChildren> = {
   build: () => <BuildTab />,
   people: () => <PeopleTab />,
-  trade: () => <p>Lunar market prices show here.</p>,
+  trade: () => <TradeTab />,
   contracts: () => <p>Contract offers show here.</p>,
   codex: () => <p>Entries unlock as you meet new things.</p>,
   settings: () => <p>Game settings show here.</p>,

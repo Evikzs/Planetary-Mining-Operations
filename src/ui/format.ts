@@ -1,9 +1,10 @@
-const grouped = (n: number, decimals = 0): string =>
+/** '1,234.5': grouped thousands, a fixed number of decimals. */
+export const formatNumber = (n: number, decimals = 0): string =>
   n.toLocaleString('en-US', { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
 
 /** 'LM 1,234.56'; negative amounts take a true minus sign: '−LM 12.00'. */
 export function formatMoney(cents: number): string {
-  const text = `LM ${grouped(Math.abs(cents) / 100, 2)}`;
+  const text = `LM ${formatNumber(Math.abs(cents) / 100, 2)}`;
   return cents < 0 ? `−${text}` : text;
 }
 
@@ -12,7 +13,7 @@ export function formatMass(kg: number): string {
   if (Math.abs(kg) < 1000) return `${Math.round(kg)} kg`;
   const t = kg / 1000;
   const decimals = Math.abs(t) < 10 ? 2 : Math.abs(t) < 100 ? 1 : 0;
-  return `${grouped(t, decimals)} t`;
+  return `${formatNumber(t, decimals)} t`;
 }
 
 /** Game time: '3 d 4 h', '4 h 12 min', '35 min'. */

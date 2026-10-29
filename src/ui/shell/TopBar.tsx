@@ -4,7 +4,8 @@ import { motion, pinnedGoods, selection, ui, world } from '../../client/store';
 import { GOODS, type GoodId } from '../../data/goods';
 import type { UiSnapshot } from '../../sim/views';
 import { APP_TITLE } from '../App';
-import { formatMass, formatMoney, trendOf } from '../format';
+import { Trend } from '../components/Trend';
+import { formatMass, formatMoney } from '../format';
 import { Icon } from '../icons';
 import { EASE } from '../motion/eases';
 import { AlertsBell } from './Alerts';
@@ -25,12 +26,6 @@ const SHORT_NAME: Partial<Record<GoodId, string>> = {
   prefabStructures: 'Prefab',
   solarPanels: 'Panels',
 };
-
-const TREND = {
-  up: { icon: 'trendUp', label: 'price rising' },
-  down: { icon: 'trendDown', label: 'price falling' },
-  flat: { icon: 'trendFlat', label: 'price steady' },
-} as const;
 
 /** Rolls up to each new amount over 600 ms; shows it at once with reduced motion or on first show. */
 function Cash({ cents }: { cents: number | null }) {
@@ -61,14 +56,11 @@ function Cash({ cents }: { cents: number | null }) {
 }
 
 function GoodSlot({ good, kg, history }: { good: GoodId; kg: number; history: number[] }) {
-  const trend = trendOf(history);
   return (
     <li class="slot" title={GOODS[good].name}>
       <span class="slot-label">{SHORT_NAME[good] ?? GOODS[good].name}</span>
       <span class="num">{formatMass(kg)}</span>
-      <span class={`trend ${trend}`} role="img" aria-label={TREND[trend].label}>
-        <Icon name={TREND[trend].icon} size={12} />
-      </span>
+      <Trend history={history} />
     </li>
   );
 }
