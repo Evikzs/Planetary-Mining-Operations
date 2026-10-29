@@ -33,6 +33,9 @@ async function frame(page: Page, alt: number): Promise<void> {
   await page.waitForTimeout(500);
 }
 
+// A slow CI runner needs several seconds to capture one WebGL frame through SwiftShader.
+const CAPTURE_MS = 20_000;
+
 // The interface chrome is masked: baselines judge the rendered map, not system font hinting.
 const chrome = (page: Page) =>
   ['top-bar', 'tab-rail', 'bottom-tabs', 'map-filters', 'compass', 'news-ticker'].map((id) =>
@@ -41,10 +44,16 @@ const chrome = (page: Page) =>
 
 test('poster look: the demo at bird’s-eye', async ({ page }) => {
   await frame(page, 4);
-  await expect(page).toHaveScreenshot('demo-birdseye.png', { mask: chrome(page) });
+  await expect(page).toHaveScreenshot('demo-birdseye.png', {
+    mask: chrome(page),
+    timeout: CAPTURE_MS,
+  });
 });
 
 test('poster look: the Moon from altitude 200', async ({ page }) => {
   await frame(page, 200);
-  await expect(page).toHaveScreenshot('planetary-200.png', { mask: chrome(page) });
+  await expect(page).toHaveScreenshot('planetary-200.png', {
+    mask: chrome(page),
+    timeout: CAPTURE_MS,
+  });
 });
