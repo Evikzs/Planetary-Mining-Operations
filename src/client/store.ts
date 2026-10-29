@@ -1,4 +1,4 @@
-import { signal } from '@preact/signals';
+import { computed, signal } from '@preact/signals';
 import type { GoodId } from '../data/goods';
 import { DEFAULT_FILTER, type MapFilter } from '../render/overlays/filters';
 import type { GameRenderer, MapPick } from '../render/renderer';
@@ -30,5 +30,21 @@ export const pinnedGoods = signal<GoodId[]>([
   'ilmenite',
   'steel',
 ]);
+/** Set when the founding screen succeeds: the map flies down to the new company's hub. */
+export const flyHome = signal(false);
+/** A Codex entry to open next, as when the companion points at one. */
+export const codexFocus = signal<string | null>(null);
+/** The companion's dialogue sheet on phones. */
+export const companionOpen = signal(false);
+
+export type MotionPref = 'system' | 'on' | 'off';
+/** The player's reduced-motion choice; 'system' follows the browser. */
+export const motionPref = signal<MotionPref>('system');
+/** Whether the browser asks for reduced motion. */
+export const systemReducedMotion = signal(false);
+export const reducedMotion = computed(() =>
+  motionPref.value === 'system' ? systemReducedMotion.value : motionPref.value === 'on',
+);
+
 /** The player's latest market fills, newest first, as the worker reports them. */
 export const recentFills = signal<Extract<SimEvent, { t: 'trade' }>[]>([]);

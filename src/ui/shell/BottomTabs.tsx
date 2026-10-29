@@ -1,4 +1,5 @@
 import { signal } from '@preact/signals';
+import { companionOpen } from '../../client/store';
 import { Icon } from '../icons';
 import { activeTab, TABS, toggleTab, type TabId } from './tabs';
 
@@ -17,6 +18,7 @@ export function BottomTabs() {
           aria-pressed={activeTab.value === tab.id}
           onClick={() => {
             moreOpen.value = false;
+            companionOpen.value = false;
             toggleTab(tab.id);
           }}
         >
@@ -29,6 +31,7 @@ export function BottomTabs() {
         aria-pressed={moreActive}
         onClick={() => {
           activeTab.value = null;
+          companionOpen.value = false;
           moreOpen.value = !moreOpen.value;
         }}
       >

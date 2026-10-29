@@ -13,7 +13,7 @@ import {
   worldSignature,
 } from '../sim/views';
 import type { SaveFile, SaveStore } from '../save/types';
-import type { DebugFlags, FromWorker, ToWorker } from './protocol';
+import type { DebugFlags, FromWorker, ManualSlot, SaveSlot, ToWorker } from './protocol';
 
 export interface SaveCodec {
   encode(state: GameState, savedAtRealMs: number): SaveFile;
@@ -47,6 +47,9 @@ const DEFAULT_FLAGS: DebugFlags = {
   noWebgl: false,
 };
 
+const saveErrorText = (err: unknown): string =>
+  `Could not save the game: ${err instanceof Error ? err.message : String(err)}`;
+
 export class SimHost {
   private state: GameState = createGame(0);
   private flags: DebugFlags = DEFAULT_FLAGS;
@@ -70,9 +73,12 @@ export class SimHost {
         return;
       case 'command': {
         const result = applyCommand(this.state, msg.cmd);
-        if (result.ok && msg.cmd.t === 'foundCompany') this.reanchor();
+        const founded = result.ok && msg.cmd.t === 'foundCompany';
+        if (founded) this.reanchor();
         this.deps.post({ t: 'commandResult', id: msg.id, result });
         this.postViews(false);
+        // Saved at once, so a reload before the first autosave keeps the new company.
+        if (founded) await this.save();
         return;
       }
       case 'saveNow':
@@ -106,14 +112,14 @@ export class SimHost {
         const loaded = file ? this.deps.codec.decode(file) : null;
         if (!loaded) {
           this.deps.post({
-            t: 'importResult',
+            t: 'loadResult',
             id: msg.id,
             ok: false,
             error: 'That code is not a valid save.',
           });
           return;
         }
-        this.deps.post({ t: 'importResult', id: msg.id, ok: true });
+        this.deps.post({ t: 'loadResult', id: msg.id, ok: true });
         this.replaceState(loaded.state);
         await this.save();
         return;
@@ -123,7 +129,11 @@ export class SimHost {
         // Saved at once, so a reload does not bring the old company back.
         await this.save(true);
         return;
-      case 'manualSave':
+      case 'listSaves':
+        this.deps.post({ t: 'saveSlots', id: msg.id, slots: await this.manualSlots() });
+        return;
+      case 'manualSave': {
+        let error: string | undefined;
         try {
           if (!this.deps.saves.writeManual) throw new Error('this browser cannot keep save slots');
           await this.deps.saves.writeManual(
@@ -131,17 +141,21 @@ export class SimHost {
             this.deps.codec.encode(this.state, this.now()),
           );
         } catch (err) {
-          this.reportSaveError(err);
+          error = saveErrorText(err);
         }
+        const slots = await this.manualSlots();
+        this.deps.post({ t: 'saveSlots', id: msg.id, slots, ...(error ? { error } : {}) });
         return;
+      }
       case 'manualLoad': {
         const file = await this.deps.saves.readManual?.(msg.slot);
         const loaded = file ? this.deps.codec.decode(file) : null;
         if (!file || !loaded) {
-          const message = file ? 'That save could not be read.' : 'That save slot is empty.';
-          this.deps.post({ t: 'error', message });
+          const error = file ? 'That save could not be read.' : 'That save slot is empty.';
+          this.deps.post({ t: 'loadResult', id: msg.id, ok: false, error });
           return;
         }
+        this.deps.post({ t: 'loadResult', id: msg.id, ok: true });
         this.replaceState(loaded.state);
         await this.save();
         return;
@@ -239,8 +253,17 @@ export class SimHost {
   }
 
   private reportSaveError(err: unknown): void {
-    const reason = err instanceof Error ? err.message : String(err);
-    this.deps.post({ t: 'error', message: `Could not save the game: ${reason}` });
+    this.deps.post({ t: 'error', message: saveErrorText(err) });
+  }
+
+  private async manualSlots(): Promise<SaveSlot[]> {
+    const all = (await this.deps.saves.list?.()) ?? [];
+    return all.flatMap((s) => {
+      const n = /^manual-([1-5])$/.exec(s.slot)?.[1];
+      if (!n) return [];
+      const { company, tick, savedAtRealMs } = s;
+      return [{ slot: Number(n) as ManualSlot, company, tick, savedAtRealMs }];
+    });
   }
 
   /** The world when it changed, what moves when time moved, and always the UI snapshot. */

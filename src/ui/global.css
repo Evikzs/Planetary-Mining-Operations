@@ -520,11 +520,13 @@ h3 {
   margin: 0 0 var(--space-2);
 }
 
-.context-panel .facts {
+.context-panel .facts,
+.codex-entry .facts {
   margin: 0 0 var(--space-3);
 }
 
-.context-panel .facts div {
+.context-panel .facts div,
+.codex-entry .facts div {
   display: flex;
   justify-content: space-between;
   align-items: baseline;
@@ -533,12 +535,14 @@ h3 {
   border-bottom: 1px solid color-mix(in srgb, var(--c-offBlack) 18%, transparent);
 }
 
-.context-panel .facts dt {
+.context-panel .facts dt,
+.codex-entry .facts dt {
   font-family: var(--font-display);
   font-weight: 500;
 }
 
-.context-panel .facts dd {
+.context-panel .facts dd,
+.codex-entry .facts dd {
   margin: 0;
   text-align: right;
 }
@@ -1312,4 +1316,547 @@ h3 {
   top: 52px;
   bottom: auto;
   max-height: 60vh;
+}
+
+/* Shared form pieces: text fields, disclosures and check rows. */
+.text-input,
+.export-save textarea,
+.import-save textarea {
+  width: 100%;
+  min-height: 44px;
+  padding: var(--space-2);
+  border: 2px solid var(--c-offBlack);
+  border-radius: 0;
+  background: var(--c-cream);
+  color: var(--c-offBlack);
+  font: inherit;
+}
+
+.export-save textarea,
+.import-save textarea {
+  font: 13px/1.4 var(--font-mono);
+  resize: vertical;
+}
+
+.text-input[aria-invalid='true'] {
+  border-color: var(--c-rust);
+}
+
+.field-label {
+  display: block;
+  margin: var(--space-4) 0 var(--space-1);
+  font-family: var(--font-display);
+  font-weight: 500;
+}
+
+.disclosure {
+  margin-top: var(--space-4);
+  border-top: 2px solid var(--c-offBlack);
+}
+
+.disclosure summary {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  font-family: var(--font-display);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.check {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 44px;
+}
+
+/* Founding: a charter on cream stock, over the Moon turning behind it. */
+.founding {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  padding: var(--space-5) var(--space-5) var(--space-5) max(var(--space-5), 7vw);
+  pointer-events: none;
+}
+
+.founding-card {
+  width: min(460px, 100%);
+  max-height: 100%;
+  display: flex;
+  flex-direction: column;
+  pointer-events: auto;
+}
+
+.founding-card .body {
+  overflow: auto;
+  padding: var(--space-5);
+}
+
+.founding .wordmark {
+  margin: 0 0 var(--space-3);
+  padding-bottom: var(--space-3);
+  border-bottom: 4px solid var(--c-burntOrange);
+  font: 700 34px/1 var(--font-display);
+  letter-spacing: -0.01em;
+}
+
+.founding h1 {
+  font-size: 21px;
+}
+
+.founding .lede {
+  margin: var(--space-1) 0 0;
+}
+
+.founding form > .error:not(:empty) {
+  margin-top: var(--space-1);
+}
+
+.founding .action[type='submit'] {
+  margin-top: var(--space-4);
+}
+
+.companions {
+  margin: var(--space-4) 0 0;
+  padding: 0;
+  border: 0;
+  display: grid;
+  gap: var(--space-2);
+}
+
+.companions legend {
+  padding: 0;
+  margin-bottom: var(--space-1);
+  font-family: var(--font-display);
+  font-weight: 500;
+}
+
+.companion-card {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  border: 2px solid var(--c-offBlack);
+  cursor: pointer;
+}
+
+.companion-card input {
+  position: absolute;
+  opacity: 0;
+}
+
+.companion-card:has(input:checked) {
+  background: var(--c-mustard);
+}
+
+.companion-card:has(input:focus-visible) {
+  outline: 2px solid var(--c-mustard);
+  outline-offset: 2px;
+}
+
+.companion-card:has(input:disabled) {
+  border-style: dashed;
+  color: color-mix(in srgb, var(--c-offBlack) 62%, transparent);
+  cursor: not-allowed;
+}
+
+.companion-card img,
+.portrait-blank {
+  flex: none;
+  width: 56px;
+  height: 56px;
+}
+
+.portrait-blank {
+  border: 2px dashed currentColor;
+  border-radius: 50%;
+}
+
+.companion-card .who {
+  display: grid;
+}
+
+.companion-card strong {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 16px;
+}
+
+.shell[data-layout='phone'] .founding {
+  align-items: flex-end;
+  padding: var(--space-3);
+}
+
+.shell[data-layout='phone'] .founding-card {
+  width: 100%;
+  max-height: 76%;
+}
+
+.shell[data-layout='phone'] .founding .wordmark {
+  font-size: 27px;
+}
+
+/* The companion: a printed badge, and his line on a speech card beside it. */
+.companion {
+  position: absolute;
+  left: 84px;
+  bottom: 40px;
+  z-index: 2;
+  display: flex;
+  align-items: flex-end;
+  gap: var(--space-3);
+  pointer-events: none;
+  transition: left var(--motion-base) var(--ease-industrial);
+}
+
+.companion > * {
+  pointer-events: auto;
+}
+
+.shell[data-panel='open'] .companion {
+  left: 480px;
+}
+
+.companion .portrait {
+  flex: none;
+  filter: drop-shadow(3px 3px 0 var(--c-offBlack));
+}
+
+.speech {
+  position: relative;
+  max-width: 380px;
+  margin-bottom: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+}
+
+.speech::before {
+  content: '';
+  position: absolute;
+  left: -9px;
+  bottom: 18px;
+  width: 14px;
+  height: 14px;
+  background: var(--c-cream);
+  border-left: 2px solid var(--c-offBlack);
+  border-bottom: 2px solid var(--c-offBlack);
+  transform: rotate(45deg);
+}
+
+.speech .speaker {
+  margin: 0;
+  color: var(--c-rust);
+  font: 600 13px/1.3 var(--font-display);
+}
+
+.speech .line,
+.sheet .line {
+  margin: var(--space-1) 0 0;
+}
+
+.sheet-speech {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+}
+
+.sheet-speech img {
+  flex: none;
+}
+
+.speech-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+}
+
+.speech-actions .action.quiet {
+  margin-top: 0;
+}
+
+.portrait-button {
+  position: absolute;
+  left: 12px;
+  bottom: calc(68px + env(safe-area-inset-bottom));
+  z-index: 1;
+  width: 56px;
+  height: 56px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  filter: drop-shadow(2px 2px 0 var(--c-offBlack));
+}
+
+.portrait-button img {
+  display: block;
+}
+
+.portrait-button .badge {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 16px;
+  height: 16px;
+  border: 2px solid var(--c-offBlack);
+  border-radius: 50%;
+  background: var(--c-burntOrange);
+}
+
+/* Codex: an index of entries, and the open entry above it. */
+.codex-filters {
+  display: grid;
+}
+
+.codex-filters .field:first-child {
+  margin-top: 0;
+}
+
+.codex-filters .text-input {
+  width: 60%;
+}
+
+.codex-tab > .meta {
+  margin: var(--space-3) 0 0;
+}
+
+.codex-list {
+  margin: var(--space-2) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.codex-list button {
+  width: 100%;
+  min-height: 44px;
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: var(--space-3);
+  padding: var(--space-2) 0;
+  border: 0;
+  border-bottom: 1px solid color-mix(in srgb, var(--c-offBlack) 18%, transparent);
+  background: transparent;
+  font-family: var(--font-display);
+  font-weight: 500;
+  text-align: left;
+}
+
+.codex-list button[aria-pressed='true'] {
+  color: var(--c-burntOrange);
+}
+
+.codex-entry {
+  scroll-margin-top: var(--space-4);
+  margin-bottom: var(--space-4);
+  padding-bottom: var(--space-3);
+  border-bottom: 2px solid var(--c-offBlack);
+}
+
+.codex-entry > .meta {
+  margin: 0;
+  color: var(--c-rust);
+  font-family: var(--font-display);
+}
+
+.codex-entry h3 {
+  font-size: 19px;
+}
+
+.codex-entry p {
+  margin: var(--space-2) 0 0;
+}
+
+.codex-entry .real-world {
+  margin-bottom: var(--space-3);
+  padding-left: var(--space-3);
+  border-left: 4px solid var(--c-teal);
+}
+
+/* Settings */
+.settings-tab section + section {
+  margin-top: var(--space-4);
+  padding-top: var(--space-3);
+  border-top: 2px solid var(--c-offBlack);
+}
+
+.settings-tab h3 {
+  font-size: 17px;
+}
+
+.settings-tab p {
+  margin: var(--space-1) 0 0;
+}
+
+.save-slots {
+  margin-top: var(--space-2);
+}
+
+.save-slot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  padding: var(--space-2) 0;
+  border-bottom: 1px solid color-mix(in srgb, var(--c-offBlack) 18%, transparent);
+}
+
+.save-slot > p {
+  margin: 0;
+}
+
+.slot-name {
+  font-family: var(--font-display);
+  font-weight: 600;
+}
+
+.slot-actions {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.save-slot .action.quiet,
+.export-save .action.quiet {
+  margin-top: 0;
+}
+
+.save-slot .confirm {
+  width: 100%;
+  margin-top: 0;
+}
+
+.export-save,
+.import-save {
+  display: grid;
+  justify-items: start;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+}
+
+.import-save label,
+.export-save label {
+  font-family: var(--font-display);
+  font-weight: 500;
+}
+
+/* While you were away: the front page of a company newspaper. */
+.away-backdrop {
+  position: absolute;
+  inset: 0;
+  z-index: 8;
+  display: grid;
+  place-items: center;
+  padding: var(--space-4);
+  background: color-mix(in srgb, var(--c-navy) 80%, transparent);
+}
+
+.away {
+  width: min(640px, 100%);
+  max-height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.away .body {
+  overflow: auto;
+  padding: var(--space-5) var(--space-6);
+}
+
+.masthead {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: var(--space-2);
+  padding-bottom: var(--space-2);
+  border-bottom: 6px double var(--c-offBlack);
+}
+
+.masthead h1 {
+  font-size: 22px;
+}
+
+.dateline {
+  margin: 0;
+  font: 13px/1.3 var(--font-mono);
+}
+
+.away .headline {
+  margin: var(--space-4) 0;
+  font-size: clamp(30px, 6.5vw, 46px);
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: -0.01em;
+  text-transform: uppercase;
+}
+
+.away-stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  column-gap: var(--space-4);
+  margin: 0;
+  border-top: 2px solid var(--c-offBlack);
+}
+
+.away-stats div {
+  padding: var(--space-2) 0;
+  border-bottom: 1px solid color-mix(in srgb, var(--c-offBlack) 25%, transparent);
+}
+
+.away-stats .wide {
+  grid-column: 1 / -1;
+}
+
+.away-stats dt {
+  color: var(--c-rust);
+  font: 500 13px/1.3 var(--font-display);
+}
+
+.away-stats dd {
+  margin: 0;
+  font-size: 17px;
+}
+
+.away .meta {
+  margin: var(--space-3) 0 0;
+}
+
+.away h3 {
+  margin-top: var(--space-4);
+  font-size: 17px;
+}
+
+.away ul {
+  margin: var(--space-2) 0 0;
+  padding-left: var(--space-5);
+}
+
+.away .action {
+  margin-top: var(--space-5);
+}
+
+.shell[data-layout='phone'] .away .body {
+  padding: var(--space-4);
+}
+
+/* Catch-up: a progress card over the map while the worker runs the time away. */
+.catch-up {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  z-index: 9;
+  width: min(360px, calc(100% - 32px));
+  padding: var(--space-4);
+  transform: translate(-50%, -50%);
+}
+
+.catch-up p {
+  margin: 0;
+  font-family: var(--font-display);
+  font-weight: 600;
 }

@@ -1,8 +1,9 @@
 import { expect, test } from '@playwright/test';
-import { gotoGame } from './helpers';
+import { foundCompany, gotoGame } from './helpers';
 
 test('desktop shows the rail, phone shows bottom tabs', async ({ page }, info) => {
   await gotoGame(page);
+  await foundCompany(page);
   if (info.project.name === 'desktop') {
     await expect(page.getByTestId('tab-rail')).toBeVisible();
     await expect(page.getByTestId('bottom-tabs')).toBeHidden();
@@ -15,6 +16,7 @@ test('desktop shows the rail, phone shows bottom tabs', async ({ page }, info) =
 test('phone tab buttons are at least 44x44', async ({ page }, info) => {
   test.skip(info.project.name !== 'phone', 'phone layout only');
   await gotoGame(page);
+  await foundCompany(page);
   const buttons = page.getByTestId('bottom-tabs').getByRole('button');
   const count = await buttons.count();
   expect(count).toBe(5);
@@ -28,6 +30,7 @@ test('phone tab buttons are at least 44x44', async ({ page }, info) => {
 test('keyboard 2 opens People and Esc closes', async ({ page }, info) => {
   test.skip(info.project.name !== 'desktop', 'desktop keyboard');
   await gotoGame(page);
+  await foundCompany(page);
   await page.keyboard.press('2');
   await expect(page.getByTestId('tab-panel')).toBeVisible();
   await expect(page.getByTestId('tab-panel').getByRole('heading', { level: 2 })).toHaveText(

@@ -1,11 +1,12 @@
 import { expect, test } from '@playwright/test';
-import { gotoGame } from './helpers';
+import { foundCompany, gotoGame } from './helpers';
 
 const camera = (page: import('@playwright/test').Page) =>
   page.evaluate(() => window.__pmo.camera());
 
 test.beforeEach(async ({ page }) => {
   await gotoGame(page);
+  await foundCompany(page);
   await expect.poll(() => camera(page)).not.toBeNull();
   await page.evaluate(() => window.__pmo.setCamera(-70, 30, 20, 0));
 });

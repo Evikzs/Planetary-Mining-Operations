@@ -1,7 +1,7 @@
 import type { GoodId } from '../data/goods';
 import type { Command, CommandResult } from '../sim/commands';
 import type { PeopleFilter, PeopleRow } from '../sim/views';
-import type { FromWorker, ToWorker } from '../worker/protocol';
+import type { FromWorker, ManualSlot, SaveSlot, ToWorker } from '../worker/protocol';
 
 type Handler<T extends FromWorker['t']> = (msg: Extract<FromWorker, { t: T }>) => void;
 
@@ -18,10 +18,20 @@ export interface SimClient {
     side: 'buy' | 'sell',
     kg: number,
   ): Promise<{ priceCents: number; filledKg: number }>;
+  /** The game as a 'PMO1.' code. */
+  exportSave(): Promise<string>;
+  /** Replaces the game with the one in a code; ok is false for a code that is not a save. */
+  importSave(code: string): Promise<{ ok: boolean; error?: string }>;
+  listSaves(): Promise<SaveSlot[]>;
+  manualSave(slot: ManualSlot): Promise<{ slots: SaveSlot[]; error?: string }>;
+  manualLoad(slot: ManualSlot): Promise<{ ok: boolean; error?: string }>;
   post(msg: ToWorker): void;
   on<T extends FromWorker['t']>(t: T, fn: Handler<T>): () => void;
   saveNow(): void;
 }
+
+const loadResult = (msg: FromWorker) =>
+  msg.t === 'loadResult' ? { ok: msg.ok, error: msg.error } : undefined;
 
 export function createSimClient(worker: Worker): SimClient {
   let nextId = 1;
@@ -74,6 +84,23 @@ export function createSimClient(worker: Worker): SimClient {
             ? { priceCents: msg.priceCents, filledKg: msg.filledKg }
             : undefined,
       ),
+    exportSave: () =>
+      ask(
+        (id) => ({ t: 'exportSave', id }),
+        (msg) => (msg.t === 'exportResult' ? msg.code : undefined),
+      ),
+    importSave: (code) => ask((id) => ({ t: 'importSave', id, code }), loadResult),
+    listSaves: () =>
+      ask(
+        (id) => ({ t: 'listSaves', id }),
+        (msg) => (msg.t === 'saveSlots' ? msg.slots : undefined),
+      ),
+    manualSave: (slot) =>
+      ask(
+        (id) => ({ t: 'manualSave', id, slot }),
+        (msg) => (msg.t === 'saveSlots' ? { slots: msg.slots, error: msg.error } : undefined),
+      ),
+    manualLoad: (slot) => ask((id) => ({ t: 'manualLoad', id, slot }), loadResult),
     on(t, fn) {
       const set = handlers.get(t) ?? new Set();
       handlers.set(t, set);

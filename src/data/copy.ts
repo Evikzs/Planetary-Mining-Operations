@@ -1,5 +1,6 @@
 import type { Alert } from '../sim/alerts';
 import type { CommandError } from '../sim/commands';
+import type { SimEvent } from '../sim/events';
 import type { BuildingStatus, Priority } from '../sim/state';
 import type { PlotKind } from '../sim/world/types';
 import type { Skill } from './buildings';
@@ -76,8 +77,8 @@ export interface AlertNames {
   belt(id: number): string | null;
 }
 
-/** One plain sentence per alert. */
-export function alertText(alert: Alert, names: AlertNames): string {
+/** One plain sentence per alert, from the record or fresh from the sim. */
+export function alertText(alert: Alert | SimEvent, names: AlertNames): string {
   switch (alert.t) {
     case 'shortage': {
       const days = Math.round(alert.daysLeft);

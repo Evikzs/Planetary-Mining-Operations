@@ -13,6 +13,7 @@ import { GOODS, type GoodId } from '../../data/goods';
 import type { Command } from '../../sim/commands';
 import type { Order } from '../../sim/market/orders';
 import type { UiSnapshot } from '../../sim/views';
+import { Choices } from '../components/Choices';
 import { ErrorText, useCommand } from '../components/command';
 import { PriceChart } from '../components/PriceChart';
 import { Trend } from '../components/Trend';
@@ -42,33 +43,6 @@ function orderTerms(o: Order): string {
   if (o.kind === 'market') return 'at market';
   const limit = `${o.side === 'sell' ? 'no lower than' : 'no higher than'} ${formatMoney(o.limitCents ?? 0)}/t`;
   return o.kind === 'standing' ? `${formatMass(o.dailyQtyKg ?? 0)} a day, ${limit}` : limit;
-}
-
-function Choices<T extends string>(props: {
-  legend: string;
-  name: string;
-  options: { id: T; label: string }[];
-  value: T;
-  onChange: (value: T) => void;
-}) {
-  return (
-    <fieldset class="field-set">
-      <legend>{props.legend}</legend>
-      <div class="choices">
-        {props.options.map((o) => (
-          <label key={o.id} class="choice">
-            <input
-              type="radio"
-              name={props.name}
-              checked={props.value === o.id}
-              onChange={() => props.onChange(o.id)}
-            />
-            {o.label}
-          </label>
-        ))}
-      </div>
-    </fieldset>
-  );
 }
 
 function OrderForm(props: {

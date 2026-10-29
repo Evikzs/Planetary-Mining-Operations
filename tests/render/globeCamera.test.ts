@@ -2,16 +2,18 @@ import { describe, expect, it } from 'vitest';
 import {
   cameraPose,
   createCameraState,
+  flyBetween,
   heading,
   pan,
   rotate,
   setLockNorth,
+  spinAboutPole,
   tiltForAltitude,
   zoom,
   type GlobeCameraState,
 } from '../../src/render/camera/globeCamera';
 import { createRng } from '../../src/sim/rng';
-import { dot, fromLatLon, len, sub } from '../../src/shared/vec3';
+import { angleBetween, dot, fromLatLon, latLon, len, sub } from '../../src/shared/vec3';
 
 const R = 100;
 const deg = (d: number) => (d * Math.PI) / 180;
@@ -85,5 +87,42 @@ describe('globe camera', () => {
         expect(Math.abs(dot(pose.up, sub(pose.target, pose.position)))).toBeLessThan(1e-6);
       }
     }
+  });
+
+  it('a flight leaves the camera, lands on the target and keeps to the sphere', () => {
+    const from = createCameraState(fromLatLon(deg(-37), deg(0)), 200);
+    const to = createCameraState(fromLatLon(deg(-80), deg(40)), 4);
+    const start = flyBetween(from, to, 0);
+    expect(angleBetween(start.pos, from.pos)).toBeLessThan(1e-9);
+    expect(start.altitude).toBeCloseTo(200, 9);
+    const end = flyBetween(from, to, 1);
+    expect(angleBetween(end.pos, to.pos)).toBeLessThan(1e-9);
+    expect(end.altitude).toBeCloseTo(4, 9);
+    // Altitude eases in log space: halfway is the geometric mean.
+    expect(flyBetween(from, to, 0.5).altitude).toBeCloseTo(Math.sqrt(200 * 4), 9);
+    let travelled = 0;
+    for (let t = 0.1; t <= 1; t += 0.1) {
+      const s = flyBetween(from, to, t);
+      expectValid(s);
+      const a = angleBetween(from.pos, s.pos);
+      expect(a).toBeGreaterThan(travelled);
+      travelled = a;
+    }
+  });
+
+  it('a flight between opposite points stays finite', () => {
+    const from = createCameraState([0, 0, 1], 100);
+    const to = createCameraState([0, 0, -1], 100);
+    expectValid(flyBetween(from, to, 0.5));
+  });
+
+  it('spinning about the pole keeps the latitude and turns the longitude', () => {
+    const s = createCameraState(fromLatLon(deg(-37), deg(10)), 200);
+    const turned = spinAboutPole(s, deg(30));
+    expectValid(turned);
+    expect(latLon(turned.pos).lat).toBeCloseTo(deg(-37), 9);
+    expect(latLon(turned.pos).lon).toBeCloseTo(deg(40), 9);
+    expect(turned.altitude).toBe(200);
+    expect(heading(turned)).toBeCloseTo(0, 9);
   });
 });

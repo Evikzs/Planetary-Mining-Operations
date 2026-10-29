@@ -137,28 +137,50 @@ describe('SimHost', () => {
     expect(h.posted).toContainEqual({ t: 'ready', founded: false });
     await h.host.handle({ t: 'importSave', id: 2, code: 'nonsense' });
     expect(h.posted).toContainEqual({
-      t: 'importResult',
+      t: 'loadResult',
       id: 2,
       ok: false,
       error: 'That code is not a valid save.',
     });
     await h.host.handle({ t: 'importSave', id: 3, code });
-    expect(h.posted).toContainEqual({ t: 'importResult', id: 3, ok: true });
+    expect(h.posted).toContainEqual({ t: 'loadResult', id: 3, ok: true });
     const snaps = h.posted.filter((m) => m.t === 'snapshot');
     const last = snaps[snaps.length - 1];
     expect(last?.t === 'snapshot' && last.ui.company?.name).toBe('Selene Rock Co');
+  });
+
+  it('saves a new company at once, before the first autosave', async () => {
+    const h = setup({ freeze: true });
+    await h.init();
+    await h.found();
+    const saved = await h.saves.loadLatestValid();
+    expect((saved?.state as GameState | undefined)?.company?.name).toBe('Selene Rock Co');
   });
 
   it('saves to and loads from a manual slot', async () => {
     const h = setup();
     await h.init();
     await h.found();
-    await h.host.handle({ t: 'manualSave', slot: 2 });
+    await h.host.handle({ t: 'listSaves', id: 5 });
+    expect(h.posted).toContainEqual({ t: 'saveSlots', id: 5, slots: [] });
+    h.setNow(90_000);
+    await h.host.handle({ t: 'manualSave', id: 6, slot: 2 });
+    expect(h.posted).toContainEqual({
+      t: 'saveSlots',
+      id: 6,
+      slots: [{ slot: 2, company: 'Selene Rock Co', tick: 0, savedAtRealMs: 90_000 }],
+    });
     await h.host.handle({ t: 'newGame', seed: 9 });
-    await h.host.handle({ t: 'manualLoad', slot: 2 });
+    await h.host.handle({ t: 'manualLoad', id: 7, slot: 2 });
+    expect(h.posted).toContainEqual({ t: 'loadResult', id: 7, ok: true });
     expect(h.posted.filter((m) => m.t === 'ready').at(-1)).toEqual({ t: 'ready', founded: true });
-    await h.host.handle({ t: 'manualLoad', slot: 4 });
-    expect(h.posted).toContainEqual({ t: 'error', message: 'That save slot is empty.' });
+    await h.host.handle({ t: 'manualLoad', id: 8, slot: 4 });
+    expect(h.posted).toContainEqual({
+      t: 'loadResult',
+      id: 8,
+      ok: false,
+      error: 'That save slot is empty.',
+    });
   });
 
   it('a long gap posts catch-up progress and an away summary', async () => {
@@ -195,14 +217,15 @@ describe('SimHost', () => {
     const h = setup();
     await h.init();
     await h.found();
+    expect(h.saves.writes).toBe(1); // founding saves at once
     h.setNow(30_000);
     h.host.pump();
-    expect(h.saves.writes).toBe(1);
+    expect(h.saves.writes).toBe(2);
     h.setNow(60_000);
     h.host.pump();
-    expect(h.saves.writes).toBe(2);
-    await h.host.handle({ t: 'saveNow' });
     expect(h.saves.writes).toBe(3);
+    await h.host.handle({ t: 'saveNow' });
+    expect(h.saves.writes).toBe(4);
   });
 
   it('reports a failed save instead of dropping it', async () => {

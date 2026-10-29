@@ -5,16 +5,21 @@ import '@fontsource/ibm-plex-sans/600.css';
 import '@fontsource/ibm-plex-mono/400.css';
 import '@fontsource/ibm-plex-mono/500.css';
 import './ui/global.css';
+import { effect } from '@preact/signals';
 import { render } from 'preact';
 import { debugEnabled, parseDebugFlags } from './client/debugFlags';
+import { loadMotionPref } from './client/preferences';
 import { createSimClient } from './client/simClient';
 import {
   away,
   catchUpProgress,
   gameRenderer,
   motion,
+  motionPref,
   recentFills,
+  reducedMotion,
   simClient,
+  systemReducedMotion,
   ui,
   world,
 } from './client/store';
@@ -28,10 +33,14 @@ import { applyTokens } from './ui/tokens';
 
 const html = document.documentElement;
 applyTokens(html);
+// Reduced motion follows the device unless the player chose otherwise in Settings.
 const reduced = matchMedia('(prefers-reduced-motion: reduce)');
-const syncMotion = () => (html.dataset.motion = reduced.matches ? 'reduced' : 'full');
-syncMotion();
-reduced.addEventListener('change', syncMotion);
+systemReducedMotion.value = reduced.matches;
+reduced.addEventListener('change', (e) => (systemReducedMotion.value = e.matches));
+motionPref.value = loadMotionPref();
+effect(() => {
+  html.dataset.motion = reducedMotion.value ? 'reduced' : 'full';
+});
 
 const worker = new Worker(new URL('./worker/sim.worker.ts', import.meta.url), { type: 'module' });
 const client = createSimClient(worker);

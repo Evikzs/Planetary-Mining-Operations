@@ -1,4 +1,4 @@
-import type { SaveFile, SaveStore } from './types';
+import { companyOf, type SaveFile, type SaveStore } from './types';
 
 /** In-memory SaveStore for tests and for environments without IndexedDB. */
 export function createMemorySaveStore(): SaveStore & { writes: number; files: SaveFile[] } {
@@ -12,6 +12,18 @@ export function createMemorySaveStore(): SaveStore & { writes: number; files: Sa
     },
     readManual(slot: number) {
       return Promise.resolve(manual.get(slot) ?? null);
+    },
+    list() {
+      return Promise.resolve(
+        [...manual]
+          .sort(([a], [b]) => a - b)
+          .map(([slot, f]) => ({
+            slot: `manual-${slot}`,
+            savedAtRealMs: f.savedAtRealMs,
+            tick: f.tick,
+            company: companyOf(f),
+          })),
+      );
     },
     writeAuto(file: SaveFile) {
       store.writes++;

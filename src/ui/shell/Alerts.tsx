@@ -10,7 +10,8 @@ export const alertsOpen = signal(false);
 /** Alerts stamped after this tick count as new. */
 const seenTick = signal(-1);
 
-function namesIn(w: WorldView | null): AlertNames {
+/** Building and belt names from the world view, for alert texts. */
+export function namesIn(w: WorldView | null): AlertNames {
   const building = (id: number): string | null => {
     const b = w?.buildings.find((x) => x.id === id);
     return b ? BUILDINGS[b.type].name : null;

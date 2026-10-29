@@ -1,14 +1,8 @@
 import { openDB, type IDBPDatabase } from 'idb';
 import { fromSaveFile } from './saveFile';
-import type { SaveFile, SaveStore } from './types';
+import { companyOf, type SaveFile, type SaveStore, type SlotInfo } from './types';
 
 export type ManualSlot = 1 | 2 | 3 | 4 | 5;
-export interface SlotInfo {
-  slot: string;
-  savedAtRealMs: number;
-  tick: number;
-  company: string;
-}
 
 const AUTO_SLOTS = 3;
 
@@ -60,13 +54,7 @@ export function createIdbSaveStore(dbName = 'pmo'): SaveStore & {
       for (const slot of keys) {
         const f: unknown = await d.get('saves', slot);
         if (!looksLikeSave(f)) continue;
-        const company = (f.state as { company?: { name?: unknown } | null }).company?.name;
-        infos.push({
-          slot,
-          savedAtRealMs: f.savedAtRealMs,
-          tick: f.tick,
-          company: typeof company === 'string' ? company : '',
-        });
+        infos.push({ slot, savedAtRealMs: f.savedAtRealMs, tick: f.tick, company: companyOf(f) });
       }
       return infos;
     },

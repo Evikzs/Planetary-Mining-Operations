@@ -16,6 +16,14 @@ export interface DebugFlags {
 
 export type ManualSlot = 1 | 2 | 3 | 4 | 5;
 
+/** A filled manual save slot, as the Settings tab lists it. */
+export interface SaveSlot {
+  slot: ManualSlot;
+  company: string;
+  tick: number;
+  savedAtRealMs: number;
+}
+
 export type ToWorker =
   | { t: 'init'; nowMs: number; debug: DebugFlags }
   | { t: 'command'; id: number; cmd: Command }
@@ -32,8 +40,9 @@ export type ToWorker =
   | { t: 'exportSave'; id: number }
   | { t: 'importSave'; id: number; code: string }
   | { t: 'newGame'; seed: number }
-  | { t: 'manualSave'; slot: ManualSlot }
-  | { t: 'manualLoad'; slot: ManualSlot };
+  | { t: 'listSaves'; id: number }
+  | { t: 'manualSave'; id: number; slot: ManualSlot }
+  | { t: 'manualLoad'; id: number; slot: ManualSlot };
 
 export type FromWorker =
   | { t: 'ready'; founded: boolean }
@@ -45,7 +54,10 @@ export type FromWorker =
   | { t: 'peoplePage'; id: number; total: number; rows: PeopleRow[] }
   | { t: 'quoteResult'; id: number; priceCents: number; filledKg: number }
   | { t: 'exportResult'; id: number; code: string }
-  | { t: 'importResult'; id: number; ok: boolean; error?: string }
+  /** The answer to importSave and manualLoad. */
+  | { t: 'loadResult'; id: number; ok: boolean; error?: string }
+  /** The filled manual slots, after listSaves or manualSave; error when the save failed. */
+  | { t: 'saveSlots'; id: number; slots: SaveSlot[]; error?: string }
   | { t: 'error'; message: string }
   | { t: 'catchUp'; progress: number }
   | { t: 'away'; summary: AwaySummary };

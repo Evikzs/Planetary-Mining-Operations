@@ -1,11 +1,17 @@
 import type { ComponentChildren } from 'preact';
 import { useEffect } from 'preact/hooks';
-import { selection } from '../../client/store';
+import { companionOpen, selection, ui } from '../../client/store';
 import type { DebugFlags } from '../../worker/protocol';
+import { CompanionBubble } from '../companion/CompanionBubble';
 import { Icon } from '../icons';
+import { AwayScreen } from '../screens/AwayScreen';
+import { CatchUpOverlay } from '../screens/CatchUpOverlay';
+import { FoundingScreen } from '../screens/FoundingScreen';
 import { BuildTab } from '../tabs/BuildTab';
+import { CodexTab } from '../tabs/CodexTab';
 import { ContractsTab } from '../tabs/ContractsTab';
 import { PeopleTab } from '../tabs/PeopleTab';
+import { SettingsTab } from '../tabs/SettingsTab';
 import { TradeTab } from '../tabs/TradeTab';
 import { AlertsList, alertsOpen } from './Alerts';
 import { BottomTabs, moreOpen } from './BottomTabs';
@@ -20,14 +26,13 @@ import { activeTab, TABS, toggleTab, type TabId } from './tabs';
 import { TopBar } from './TopBar';
 import { isDesktop } from './useBreakpoint';
 
-// Placeholder bodies until task 38 replaces them.
 const TAB_BODY: Record<TabId, () => ComponentChildren> = {
   build: () => <BuildTab />,
   people: () => <PeopleTab />,
   trade: () => <TradeTab />,
   contracts: () => <ContractsTab />,
-  codex: () => <p>Entries unlock as you meet new things.</p>,
-  settings: () => <p>Game settings show here.</p>,
+  codex: () => <CodexTab />,
+  settings: () => <SettingsTab />,
 };
 
 function isTyping(target: EventTarget | null): boolean {
@@ -45,6 +50,7 @@ function useShortcuts() {
         activeTab.value = null;
         moreOpen.value = false;
         alertsOpen.value = false;
+        companionOpen.value = false;
         selection.value = null;
       }
     };
@@ -101,17 +107,32 @@ function TabPanel({ desktop }: { desktop: boolean }) {
 export function Shell({ flags }: { flags: DebugFlags }) {
   useShortcuts();
   const desktop = isDesktop.value;
+  const snap = ui.value;
+  // Until the company exists, the founding screen is all there is over the turning Moon.
   return (
-    <div class="shell" data-testid="app" data-layout={desktop ? 'desktop' : 'phone'}>
+    <div
+      class="shell"
+      data-testid="app"
+      data-layout={desktop ? 'desktop' : 'phone'}
+      data-panel={activeTab.value ? 'open' : 'closed'}
+    >
       <MapCanvas flags={flags} />
-      <Compass />
-      <MapFilters />
-      <TopBar />
-      {desktop ? <TabRail /> : <BottomTabs />}
-      <TabPanel desktop={desktop} />
-      <ContextPanel />
-      <AlertsList />
-      {desktop && <NewsTicker />}
+      {snap?.company && (
+        <>
+          <Compass />
+          <MapFilters />
+          <TopBar />
+          {desktop ? <TabRail /> : <BottomTabs />}
+          <TabPanel desktop={desktop} />
+          <ContextPanel />
+          <AlertsList />
+          <CompanionBubble desktop={desktop} />
+          {desktop && <NewsTicker />}
+        </>
+      )}
+      {snap && !snap.company && <FoundingScreen />}
+      <AwayScreen />
+      <CatchUpOverlay />
     </div>
   );
 }

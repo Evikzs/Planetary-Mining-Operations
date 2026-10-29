@@ -77,6 +77,32 @@ export function zoom(s: GlobeCameraState, factor: number): GlobeCameraState {
   return { ...s, altitude: clampAltitude(s.altitude * factor) };
 }
 
+/** The point `t` of the way along the great circle from a to b; opposite points turn about any axis. */
+function slerp(a: Vec3, b: Vec3, t: number): Vec3 {
+  const angle = Math.acos(Math.min(1, Math.max(-1, dot(a, b))));
+  if (angle < 1e-12) return b;
+  let axis = cross(a, b);
+  if (len(axis) < 1e-9) axis = cross(a, Math.abs(a[0]) < 0.9 ? [1, 0, 0] : [0, 1, 0]);
+  return rotateAbout(a, normalize(axis), angle * t);
+}
+
+/** The camera `t` of the way from one view to another: along the great circle, altitude eased in log space, north up. */
+export function flyBetween(
+  from: GlobeCameraState,
+  to: GlobeCameraState,
+  t: number,
+): GlobeCameraState {
+  const altitude = from.altitude * (to.altitude / from.altitude) ** t;
+  return createCameraState(slerp(from.pos, to.pos, t), altitude);
+}
+
+/** The Moon turning under the camera: about its axis, so latitude and heading stay. */
+export function spinAboutPole(s: GlobeCameraState, radians: number): GlobeCameraState {
+  const axis: Vec3 = [0, 1, 0];
+  const next = settle(rotateAbout(s.pos, axis, radians), rotateAbout(s.fwd, axis, radians));
+  return { ...s, pos: next.pos, fwd: s.lockNorth ? north(next.pos) : next.fwd };
+}
+
 /** Radians clockwise from local north, in [0, 2π). */
 export function heading(s: GlobeCameraState): number {
   const { east, north: n } = tangentBasis(s.pos);

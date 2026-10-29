@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96">
+  <!-- Ox Varga: a printed badge in the palette. Mustard sun, orange suit, grey beard over the helmet ring. -->
+  <defs>
+    <clipPath id="badge"><circle cx="48" cy="48" r="45"/></clipPath>
+  </defs>
+  <circle cx="48" cy="48" r="45" fill="#E1A730"/>
+  <path clip-path="url(#badge)" d="M6 100 C10 78 26 70 48 70 C70 70 86 78 90 100 Z" fill="#C8551F" stroke="#1A1A1A" stroke-width="3" stroke-linejoin="round"/>
+  <rect x="22" y="63" width="52" height="13" rx="6.5" fill="#F2E8D5" stroke="#1A1A1A" stroke-width="3"/>
+  <circle cx="29" cy="69.5" r="1.8" fill="#1A1A1A"/>
+  <circle cx="67" cy="69.5" r="1.8" fill="#1A1A1A"/>
+  <path d="M31 36 C31 22 38 15 48 15 C58 15 65 22 65 36 L65 46 C65 56 58 62 48 62 C38 62 31 56 31 46 Z" fill="#D89A8E" stroke="#1A1A1A" stroke-width="3"/>
+  <path d="M31 28 C29 32 29 40 31 45 L35 45 L35 28 Z M65 28 C67 32 67 40 65 45 L61 45 L61 28 Z" fill="#9A9A94" stroke="#1A1A1A" stroke-width="2" stroke-linejoin="round"/>
+  <path d="M35 33 L45 31 M51 31 L61 33" stroke="#1A1A1A" stroke-width="4" stroke-linecap="round"/>
+  <path d="M37 38.5 L43 38.5 M53 38.5 L59 38.5" stroke="#1A1A1A" stroke-width="3" stroke-linecap="round"/>
+  <path d="M48 37 L45 47 L50 47" fill="none" stroke="#1A1A1A" stroke-width="2" stroke-linejoin="round"/>
+  <path d="M31 44 C31 61 38 73 48 76 C58 73 65 61 65 44 C60 51 55 53 48 53 C41 53 36 51 31 44 Z" fill="#9A9A94" stroke="#1A1A1A" stroke-width="3" stroke-linejoin="round"/>
+  <path d="M39 53 C43 49 53 49 57 53" fill="none" stroke="#F2E8D5" stroke-width="3" stroke-linecap="round"/>
+  <path d="M39 60 L41 65 M48 62 L48 68 M57 60 L55 65" stroke="#F2E8D5" stroke-width="2" stroke-linecap="round"/>
+  <path d="M40 18 C44 16 52 16 56 18" fill="none" stroke="#F2E8D5" stroke-width="2" stroke-linecap="round"/>
+  <circle cx="48" cy="48" r="45" fill="none" stroke="#1A1A1A" stroke-width="3"/>
+</svg>

@@ -10,6 +10,7 @@ import {
   Vector3,
   WebGLRenderer,
 } from 'three';
+import { industrialEase } from '../shared/ease';
 import { LUNA_RADIUS } from '../shared/scale';
 import { createTerrain } from '../shared/terrain';
 import { normalize, type Vec3 } from '../shared/vec3';
@@ -17,7 +18,13 @@ import type { MotionView, UiSnapshot, WorldView } from '../sim/views';
 import { sectionAt } from '../sim/world/sections';
 import { palette } from '../ui/tokens';
 import { createCameraController } from './camera/controller';
-import { cameraPose, createCameraState, type GlobeCameraState } from './camera/globeCamera';
+import {
+  cameraPose,
+  createCameraState,
+  flyBetween,
+  spinAboutPole,
+  type GlobeCameraState,
+} from './camera/globeCamera';
 import { clipPlanes, createDprController, gameTimeAt } from './frame';
 import { ChunkStreamer } from './globe/chunkStreamer';
 import { bandsTexture } from './materials';
@@ -61,6 +68,10 @@ export interface GameRenderer {
   stats(): RenderStats;
   camera(): GlobeCameraState;
   setCamera(s: GlobeCameraState): void;
+  /** Flies the camera to look down on `dir` from `altitude`, over `ms` (at once when 0). */
+  flyTo(dir: Vec3, altitude: number, ms: number): void;
+  /** Turns the Moon slowly under the camera, as behind the founding screen. */
+  setSpin(on: boolean): void;
   setFilter(f: MapFilter): void;
   /** Live building status, progress, power and morale, which the world view leaves out. */
   setUi(ui: UiSnapshot): void;
@@ -89,6 +100,8 @@ const FOV = 50;
 // The first view hangs over the southern latitudes, where companies are founded.
 const START_DIR = normalize([0, -0.6, 0.8]);
 const START_ALTITUDE = 200;
+/** One turn of the Moon in four minutes. */
+const SPIN_RADIANS_PER_MS = (2 * Math.PI) / 240_000;
 /** A bus is small: a tap this close to one, in CSS pixels, picks it. */
 const BUS_REACH_PX = 22;
 
@@ -156,8 +169,14 @@ export function createRenderer(canvas: HTMLCanvasElement, opts: RendererOptions)
     radius,
     reducedMotion: opts.reducedMotion,
     onTap: (x, y) => opts.onPick?.(pick(x, y)),
-    onGesture: (kind) => opts.onGesture?.(kind),
+    onGesture: (kind) => {
+      flight = null; // the player takes the camera back
+      opts.onGesture?.(kind);
+    },
   });
+  let flight: { from: GlobeCameraState; to: GlobeCameraState; start: number; ms: number } | null =
+    null;
+  let spinning = false;
 
   let width = 0;
   let height = 0;
@@ -203,6 +222,13 @@ export function createRenderer(canvas: HTMLCanvasElement, opts: RendererOptions)
         gl.setPixelRatio(ratio);
         composer.setSize(width, height, ratio);
       }
+    }
+    if (flight) {
+      const u = Math.min(1, (t - flight.start) / flight.ms);
+      controller.set(flyBetween(flight.from, flight.to, industrialEase(u)));
+      if (u >= 1) flight = null;
+    } else if (spinning && last > 0) {
+      controller.set(spinAboutPole(controller.state, (t - last) * SPIN_RADIANS_PER_MS));
     }
     if (controller.update(last > 0 ? t - last : 0)) opts.onCamera?.(controller.state);
     last = t;
@@ -307,7 +333,19 @@ export function createRenderer(canvas: HTMLCanvasElement, opts: RendererOptions)
     }),
     camera: () => controller.state,
     setCamera(s) {
+      flight = null;
       controller.set(s);
+    },
+    flyTo(dir, altitude, ms) {
+      const to = createCameraState(dir, altitude);
+      if (ms > 0) flight = { from: controller.state, to, start: performance.now(), ms };
+      else {
+        flight = null;
+        controller.set(to);
+      }
+    },
+    setSpin(on) {
+      spinning = on;
     },
     setFilter(f) {
       overlay.setFilter(f);
