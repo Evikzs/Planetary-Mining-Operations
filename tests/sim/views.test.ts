@@ -132,11 +132,21 @@ describe('views', () => {
     const s = founded();
     const array = s.buildings.find((b) => b.type === 'solarArray')!;
     const row = buildUiSnapshot(s).buildings.find((b) => b.id === array.id)!;
-    expect(row.jobs).toEqual({ technician: { filled: 1, slots: 1 } });
+    expect(row.jobs).toEqual({ technician: { filled: 1, slots: 1, open: 0 } });
     array.input.ilmenite = 5;
     array.output.steel = 7;
     const again = buildUiSnapshot(s).buildings.find((b) => b.id === array.id)!;
     expect([again.input, again.output]).toEqual([{ ilmenite: 5 }, { steel: 7 }]);
+  });
+
+  it('ui snapshot counts open slots over all three shifts', () => {
+    const s = founded();
+    const array = s.buildings.find((b) => b.type === 'solarArray')!;
+    const p = s.people;
+    const i = Array.from({ length: p.count }, (_, k) => k).find((k) => p.job[k] === array.id)!;
+    p.job[i] = -1;
+    const row = buildUiSnapshot(s).buildings.find((b) => b.id === array.id)!;
+    expect(row.jobs.technician!.open).toBe(1);
   });
 
   it('housing reports the average morale of its residents', () => {
@@ -169,6 +179,15 @@ describe('views', () => {
     expect(techs.rows.filter((r) => r.job !== null)).toHaveLength(9);
     expect(techs.rows[0]!.home).toMatch(/^Crew quarters \d+$/);
     expect(queryPeople(s, { morale: 'lt25' }, 0, 50).total).toBe(0);
+  });
+
+  it('queryPeople finds one worker by id, with home section and job ids', () => {
+    const s = founded();
+    const p = s.people;
+    const i = Array.from({ length: p.count }, (_, k) => k).find((k) => p.job[k]! >= 0)!;
+    const page = queryPeople(s, { workerId: p.id[i]! }, 0, 1);
+    expect(page.total).toBe(1);
+    expect(page.rows[0]).toMatchObject({ id: p.id[i], sectionId: home, jobId: p.job[i] });
   });
 
   it('ui snapshot for the bench state is < 200 KB JSON and builds in < 2 ms', () => {

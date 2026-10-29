@@ -1,9 +1,8 @@
-import type { Skill } from '../data/buildings';
 import type { GoodId } from '../data/goods';
 import type { Command, CommandResult } from '../sim/commands';
 import type { SimEvent } from '../sim/events';
 import type { AwaySummary } from '../sim/offline';
-import type { MoraleBand, MotionView, PeopleRow, UiSnapshot, WorldView } from '../sim/views';
+import type { MotionView, PeopleFilter, PeopleRow, UiSnapshot, WorldView } from '../sim/views';
 
 export type { UiSnapshot } from '../sim/views';
 
@@ -25,7 +24,7 @@ export type ToWorker =
   | {
       t: 'queryPeople';
       id: number;
-      filter: { sectionId?: number; skill?: Skill; morale?: MoraleBand };
+      filter: PeopleFilter;
       offset: number;
       limit: number;
     }

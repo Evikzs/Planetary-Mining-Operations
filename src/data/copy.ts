@@ -49,7 +49,13 @@ export const PLOT_KIND_NAMES: Record<PlotKind, string> = {
   public: 'Public plot',
 };
 
-/** Plural, as in 'Technicians 1/1'; the skill id is the singular. */
+export const SKILL_NAME: Record<Skill, string> = {
+  miner: 'Miner',
+  technician: 'Technician',
+  engineer: 'Engineer',
+};
+
+/** Plural, as in 'Technicians 1/1'. */
 export const SKILL_NAMES: Record<Skill, string> = {
   miner: 'Miners',
   technician: 'Technicians',

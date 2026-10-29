@@ -41,6 +41,10 @@ h3 {
   font-variant-numeric: tabular-nums;
 }
 
+[hidden] {
+  display: none !important;
+}
+
 .visually-hidden {
   position: absolute;
   width: 1px;
@@ -547,6 +551,12 @@ h3 {
   box-shadow: 3px 3px 0 var(--c-offBlack);
 }
 
+.action:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
 .action:active {
   transform: translate(2px, 2px);
   box-shadow: 1px 1px 0 var(--c-offBlack);
@@ -720,6 +730,235 @@ h3 {
   bottom: calc(-1 * var(--space-4));
   padding: var(--space-2) 0 var(--space-4);
   background: var(--c-cream);
+}
+
+/* People tab: the list fills what the wages and filters leave of the panel. */
+.people-tab {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  height: 100%;
+}
+
+.people-tab .filters {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+  font-family: var(--font-display);
+  font-weight: 500;
+}
+
+.people-tab select,
+.worker select {
+  min-height: 44px;
+  padding: 0 var(--space-2);
+  border: 2px solid var(--c-offBlack);
+  background: var(--c-cream);
+  font: inherit;
+}
+
+.people-list {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
+.people-list .count {
+  margin: 0 0 var(--space-2);
+}
+
+.vlist {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  list-style: none;
+  border-top: 2px solid var(--c-offBlack);
+}
+
+.vlist li {
+  position: absolute;
+  left: 0;
+  right: 0;
+}
+
+.vlist li[role='none'] {
+  width: 1px;
+  right: auto;
+}
+
+.worker-row {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 2px;
+  padding: 0 var(--space-2);
+  border: 0;
+  border-bottom: 1px solid color-mix(in srgb, var(--c-offBlack) 18%, transparent);
+  background: transparent;
+  text-align: left;
+}
+
+.worker-row:hover {
+  background: color-mix(in srgb, var(--c-mustard) 25%, transparent);
+}
+
+.worker-row .line {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-width: 0;
+  white-space: nowrap;
+}
+
+.worker-row .small {
+  font-size: 13px;
+}
+
+.worker-row .name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-family: var(--font-display);
+  font-weight: 600;
+}
+
+.worker-row .job,
+.worker-row .home {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.worker-row .job {
+  flex: 1;
+}
+
+.worker-row .home {
+  max-width: 40%;
+}
+
+.worker-row .locked {
+  display: inline-flex;
+}
+
+.morale {
+  flex: none;
+  display: inline-block;
+  width: 48px;
+  height: 8px;
+  border: 1px solid var(--c-offBlack);
+  vertical-align: middle;
+}
+
+.morale span {
+  display: block;
+  height: 100%;
+}
+
+.morale.good span {
+  background: var(--c-teal);
+}
+
+.morale.mid span {
+  background: var(--c-mustard);
+}
+
+.morale.low span {
+  background: var(--c-rust);
+}
+
+.worker {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  overflow-y: auto;
+}
+
+.worker h3 {
+  font-size: 19px;
+}
+
+.worker p {
+  margin: 0;
+}
+
+.worker .action.quiet:first-child {
+  margin-top: 0;
+}
+
+.worker .field {
+  margin-top: var(--space-2);
+}
+
+.check {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 44px;
+}
+
+.check input {
+  width: 20px;
+  height: 20px;
+  accent-color: var(--c-teal);
+}
+
+.wages summary {
+  padding: var(--space-3) 0;
+  font-family: var(--font-display);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.wages fieldset {
+  margin: 0 0 var(--space-3);
+  padding: 0;
+  border: 0;
+}
+
+.wages legend {
+  padding: 0;
+  font-family: var(--font-display);
+  font-weight: 500;
+}
+
+.choices {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  border: 2px solid var(--c-offBlack);
+}
+
+.choice {
+  position: relative;
+  min-height: 40px;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+}
+
+.choice + .choice {
+  border-left: 2px solid var(--c-offBlack);
+}
+
+.choice input {
+  position: absolute;
+  opacity: 0;
+}
+
+.choice:has(input:checked) {
+  background: var(--c-mustard);
+  font-weight: 600;
+}
+
+.choice:has(input:focus-visible) {
+  outline: 2px solid var(--c-mustard);
+  outline-offset: 2px;
 }
 
 /* Income on its way to the cash readout. */

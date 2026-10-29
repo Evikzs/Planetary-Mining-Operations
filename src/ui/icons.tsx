@@ -18,6 +18,7 @@ const PATHS = {
   trendDown: 'M12 18L5 6h14z',
   trendFlat: 'M4 12h16',
   close: 'M6 6l12 12M18 6L6 18',
+  lock: 'M7 11V8a5 5 0 0 1 10 0v3M5 11h14v10H5z',
   compass: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM12 6l3 6-3 6-3-6z',
 } as const;
 

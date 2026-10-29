@@ -4,6 +4,7 @@ import { selection } from '../../client/store';
 import type { DebugFlags } from '../../worker/protocol';
 import { Icon } from '../icons';
 import { BuildTab } from '../tabs/BuildTab';
+import { PeopleTab } from '../tabs/PeopleTab';
 import { AlertsList, alertsOpen } from './Alerts';
 import { BottomTabs, moreOpen } from './BottomTabs';
 import { Compass } from './Compass';
@@ -17,10 +18,10 @@ import { activeTab, TABS, toggleTab, type TabId } from './tabs';
 import { TopBar } from './TopBar';
 import { isDesktop } from './useBreakpoint';
 
-// Placeholder bodies until the tab tasks (35–38) replace them.
+// Placeholder bodies until the tab tasks (36–38) replace them.
 const TAB_BODY: Record<TabId, () => ComponentChildren> = {
   build: () => <BuildTab />,
-  people: () => <p>Your workers show here once your company is founded.</p>,
+  people: () => <PeopleTab />,
   trade: () => <p>Lunar market prices show here.</p>,
   contracts: () => <p>Contract offers show here.</p>,
   codex: () => <p>Entries unlock as you meet new things.</p>,

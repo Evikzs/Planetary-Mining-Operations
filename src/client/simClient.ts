@@ -1,10 +1,16 @@
 import type { Command, CommandResult } from '../sim/commands';
+import type { PeopleFilter, PeopleRow } from '../sim/views';
 import type { FromWorker, ToWorker } from '../worker/protocol';
 
 type Handler<T extends FromWorker['t']> = (msg: Extract<FromWorker, { t: T }>) => void;
 
 export interface SimClient {
   send(cmd: Command): Promise<CommandResult>;
+  queryPeople(
+    filter: PeopleFilter,
+    offset: number,
+    limit: number,
+  ): Promise<{ total: number; rows: PeopleRow[] }>;
   post(msg: ToWorker): void;
   on<T extends FromWorker['t']>(t: T, fn: Handler<T>): () => void;
   saveNow(): void;
@@ -12,29 +18,47 @@ export interface SimClient {
 
 export function createSimClient(worker: Worker): SimClient {
   let nextId = 1;
-  const pending = new Map<number, (r: CommandResult) => void>();
+  const replies = new Map<number, (msg: FromWorker) => void>();
   const handlers = new Map<string, Set<(msg: FromWorker) => void>>();
 
   worker.onmessage = (e: MessageEvent<FromWorker>) => {
     const msg = e.data;
-    if (msg.t === 'commandResult') {
-      pending.get(msg.id)?.(msg.result);
-      pending.delete(msg.id);
+    if ('id' in msg) {
+      replies.get(msg.id)?.(msg);
+      replies.delete(msg.id);
     }
     handlers.get(msg.t)?.forEach((fn) => fn(msg));
   };
 
   const post = (msg: ToWorker) => worker.postMessage(msg);
 
+  /** Posts a request under a fresh id; `take` reads the worker's reply to that id. */
+  function ask<R>(
+    request: (id: number) => ToWorker,
+    take: (msg: FromWorker) => R | undefined,
+  ): Promise<R> {
+    const id = nextId++;
+    return new Promise((resolve) => {
+      replies.set(id, (msg) => {
+        const reply = take(msg);
+        if (reply !== undefined) resolve(reply);
+      });
+      post(request(id));
+    });
+  }
+
   return {
     post,
-    send(cmd) {
-      const id = nextId++;
-      return new Promise((resolve) => {
-        pending.set(id, resolve);
-        post({ t: 'command', id, cmd });
-      });
-    },
+    send: (cmd) =>
+      ask(
+        (id) => ({ t: 'command', id, cmd }),
+        (msg) => (msg.t === 'commandResult' ? msg.result : undefined),
+      ),
+    queryPeople: (filter, offset, limit) =>
+      ask(
+        (id) => ({ t: 'queryPeople', id, filter, offset, limit }),
+        (msg) => (msg.t === 'peoplePage' ? { total: msg.total, rows: msg.rows } : undefined),
+      ),
     on(t, fn) {
       const set = handlers.get(t) ?? new Set();
       handlers.set(t, set);

@@ -108,8 +108,8 @@ export interface UiSnapshot {
     powerFactor: number;
     /** Workers' average morale; for housing, the residents'. */
     avgMorale: number;
-    /** Per skill, the workers assigned to the current shift against its slots. */
-    jobs: Partial<Record<Skill, { filled: number; slots: number }>>;
+    /** Per skill: workers on the current shift, slots per shift, and free slots over all three. */
+    jobs: Partial<Record<Skill, { filled: number; slots: number; open: number }>>;
     input: Inventory;
     output: Inventory;
     outputTph: Partial<Record<GoodId, number>>;
@@ -136,13 +136,24 @@ export interface UiSnapshot {
 
 export type MoraleBand = 'lt25' | '25to50' | '50to75' | 'ge75';
 
+export interface PeopleFilter {
+  /** The home's section. */
+  sectionId?: number;
+  skill?: Skill;
+  morale?: MoraleBand;
+  workerId?: number;
+}
+
 export interface PeopleRow {
   id: number;
   name: string;
   skill: Skill;
   level: number;
   home: string;
+  /** Section of the home; null for the homeless. */
+  sectionId: number | null;
   job: string | null;
+  jobId: number | null;
   shift: number;
   morale: number;
   locked: boolean;
@@ -246,9 +257,9 @@ export function buildUiSnapshot(state: GameState): UiSnapshot {
   // Morale summed by workplace, and by home for housing; a home's count is its residents.
   const moraleSum = new Float64Array(state.nextId);
   const heads = new Uint32Array(state.nextId);
-  // Workers on the current shift by workplace and skill.
+  // Workers by workplace, shift and skill.
   const shift = shiftAt(state.tick);
-  const onShift = new Uint32Array(state.nextId * 3);
+  const crew = new Uint32Array(state.nextId * 9);
   let employed = 0;
   for (let i = 0; i < p.count; i++) {
     const skill = bySkill[SKILL_OF[p.skill[i]!]!];
@@ -265,7 +276,7 @@ export function buildUiSnapshot(state: GameState): UiSnapshot {
     skill.employed++;
     moraleSum[job]! += morale;
     heads[job]!++;
-    if (p.shift[i] === shift) onShift[job * 3 + p.skill[i]!]!++;
+    crew[(job * 3 + p.shift[i]!) * 3 + p.skill[i]!]!++;
   }
   const residents = new Map<number, number>();
   const housingCap = new Map<number, number>();
@@ -281,7 +292,10 @@ export function buildUiSnapshot(state: GameState): UiSnapshot {
     const jobs: UiSnapshot['buildings'][number]['jobs'] = {};
     for (const skill of SKILLS) {
       const n = slots[skill];
-      if (n) jobs[skill] = { filled: onShift[b.id * 3 + SKILL_CODE[skill]]!, slots: n };
+      if (!n) continue;
+      const on = (s: number) => crew[(b.id * 3 + s) * 3 + SKILL_CODE[skill]]!;
+      const open = Math.max(0, n - on(0)) + Math.max(0, n - on(1)) + Math.max(0, n - on(2));
+      jobs[skill] = { filled: on(shift), slots: n, open };
     }
     return jobs;
   };
@@ -359,10 +373,10 @@ const inBand = (morale: number, band: MoraleBand) =>
         ? morale >= 50 && morale < 75
         : morale >= 75;
 
-/** One page of the workforce, filtered by home section, skill and morale band. */
+/** One page of the workforce, filtered by home section, skill, morale band or worker id. */
 export function queryPeople(
   state: GameState,
-  filter: { sectionId?: number; skill?: Skill; morale?: MoraleBand },
+  filter: PeopleFilter,
   offset: number,
   limit: number,
 ): { total: number; rows: PeopleRow[] } {
@@ -374,6 +388,7 @@ export function queryPeople(
     if (filter.sectionId !== undefined && home?.sectionId !== filter.sectionId) continue;
     if (filter.skill !== undefined && SKILL_OF[p.skill[i]!] !== filter.skill) continue;
     if (filter.morale !== undefined && !inBand(p.morale[i]!, filter.morale)) continue;
+    if (filter.workerId !== undefined && p.id[i] !== filter.workerId) continue;
     matches.push(i);
   }
   const rows = matches.slice(offset, offset + limit).map((i) => ({
@@ -382,7 +397,9 @@ export function queryPeople(
     skill: SKILL_OF[p.skill[i]!]!,
     level: p.level[i]!,
     home: label(byId.get(p.home[i]!)) ?? 'No home',
+    sectionId: byId.get(p.home[i]!)?.sectionId ?? null,
     job: label(byId.get(p.job[i]!)),
+    jobId: byId.has(p.job[i]!) ? p.job[i]! : null,
     shift: p.shift[i]!,
     morale: Math.round(p.morale[i]!),
     locked: p.locked[i] === 1,
