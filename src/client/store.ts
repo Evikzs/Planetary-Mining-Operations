@@ -2,6 +2,7 @@ import { signal } from '@preact/signals';
 import type { GoodId } from '../data/goods';
 import { DEFAULT_FILTER, type MapFilter } from '../render/overlays/filters';
 import type { GameRenderer, MapPick } from '../render/renderer';
+import type { SimEvent } from '../sim/events';
 import type { AwaySummary } from '../sim/offline';
 import type { SimClient } from './simClient';
 import type { MotionView, UiSnapshot, WorldView } from '../sim/views';
@@ -29,3 +30,5 @@ export const pinnedGoods = signal<GoodId[]>([
   'ilmenite',
   'steel',
 ]);
+/** The player's latest market fills, newest first, as the worker reports them. */
+export const recentFills = signal<Extract<SimEvent, { t: 'trade' }>[]>([]);

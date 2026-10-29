@@ -1,5 +1,13 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
-import { motion, pinnedGoods, selection, simClient, ui, world } from '../../client/store';
+import {
+  motion,
+  pinnedGoods,
+  recentFills,
+  selection,
+  simClient,
+  ui,
+  world,
+} from '../../client/store';
 import { ERROR_COPY } from '../../data/copy';
 import { GOODS, type GoodId } from '../../data/goods';
 import type { Command } from '../../sim/commands';
@@ -204,6 +212,28 @@ function OpenOrders({ orders, run }: { orders: Order[]; run: Run }) {
   );
 }
 
+/** What the market filled for the player lately, newest first. */
+function RecentFills() {
+  const fills = recentFills.value;
+  return (
+    <>
+      <h3>Recent fills</h3>
+      <ul class="orders" aria-label="Recent fills">
+        {fills.length === 0 && <li class="empty">No fills yet.</li>}
+        {fills.map((f, i) => (
+          <li key={`${f.orderId}-${i}`}>
+            <span>
+              {f.side === 'sell' ? 'Sold' : 'Bought'} {formatMass(f.kg)} {GOODS[f.goodId].name}{' '}
+              {f.side === 'sell' ? 'for' : 'at'} <span class="num">{formatMoney(f.cents)}</span>
+              <span class="meta">{formatMoney(Math.round((f.cents * 1000) / f.kg))}/t</span>
+            </span>
+          </li>
+        ))}
+      </ul>
+    </>
+  );
+}
+
 function GoodsTable(props: {
   market: Market[];
   stock: Section['stockKg'];
@@ -307,6 +337,7 @@ export function TradeTab() {
         </section>
       )}
       <OpenOrders orders={snap.orders} run={run} />
+      <RecentFills />
       <GoodsTable market={snap.market} stock={section.stockKg} chosen={good} onChoose={setGood} />
       <ErrorText error={error} />
     </div>

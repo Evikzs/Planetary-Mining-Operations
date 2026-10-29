@@ -8,7 +8,16 @@ import './ui/global.css';
 import { render } from 'preact';
 import { debugEnabled, parseDebugFlags } from './client/debugFlags';
 import { createSimClient } from './client/simClient';
-import { away, catchUpProgress, gameRenderer, motion, simClient, ui, world } from './client/store';
+import {
+  away,
+  catchUpProgress,
+  gameRenderer,
+  motion,
+  recentFills,
+  simClient,
+  ui,
+  world,
+} from './client/store';
 import { installTestApi } from './client/testApi';
 import { isWebGL2Available } from './render/webgl';
 import type { SimEvent } from './sim/events';
@@ -32,7 +41,11 @@ client.on('world', (msg) => (world.value = msg.world));
 client.on('motion', (msg) => (motion.value = { view: msg.motion, anchorRealMs: msg.anchorRealMs }));
 client.on('away', (msg) => (away.value = msg.summary));
 client.on('catchUp', (msg) => (catchUpProgress.value = msg.progress < 1 ? msg.progress : null));
-client.on('events', (msg) => flyIncomeTokens(msg.events));
+client.on('events', (msg) => {
+  const fills = msg.events.filter((e) => e.t === 'trade');
+  if (fills.length) recentFills.value = [...fills.reverse(), ...recentFills.value].slice(0, 10);
+  flyIncomeTokens(msg.events);
+});
 if (debugEnabled()) installTestApi(client);
 const flags = parseDebugFlags(location.search, debugEnabled());
 client.post({ t: 'init', nowMs: Date.now(), debug: flags });
