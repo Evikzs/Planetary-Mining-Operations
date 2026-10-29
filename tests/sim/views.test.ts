@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { makeBenchState } from '../../bot/scenes';
 import { applyCommand, createGame, step } from '../../src/sim/engine';
-import { indexOfId } from '../../src/sim/people/store';
+import type { Contract } from '../../src/sim/contracts/contracts';
+import { addWorker, indexOfId, SKILL_CODE } from '../../src/sim/people/store';
 import {
   buildMotionView,
   buildUiSnapshot,
@@ -147,6 +148,43 @@ describe('views', () => {
     p.job[i] = -1;
     const row = buildUiSnapshot(s).buildings.find((b) => b.id === array.id)!;
     expect(row.jobs.technician!.open).toBe(1);
+  });
+
+  it('ui snapshot shows the crew per shift at an active contract site', () => {
+    const s = founded();
+    const quarters = s.buildings.find((b) => b.type === 'crewQuarters')!.id;
+    for (let k = 0; k < 6; k++) {
+      addWorker(s.people, {
+        first: 0,
+        last: 0,
+        skill: SKILL_CODE.engineer,
+        level: 1,
+        home: quarters,
+      });
+    }
+    const plot = plotOf(s, 'public');
+    const c: Contract = {
+      id: s.nextId++,
+      type: 'infrastructure',
+      issuer: 'Lunar Authority',
+      status: 'offered',
+      offeredTick: s.tick,
+      deadlineTick: s.tick + 48 * 60,
+      hours: 100,
+      rewardCents: 100_000,
+      repGain: 5,
+      repLoss: 8,
+      stages: [{ kind: 'build', engineerHours: 12, done: 0 }],
+      stageIndex: 0,
+      plotId: plot.id,
+      asset: 'commMast',
+    };
+    s.contracts.push(c);
+    expect(applyCommand(s, { t: 'acceptContract', contractId: c.id })).toEqual({ ok: true });
+    step(s, { mode: 'fine' });
+    const site = buildUiSnapshot(s).sites.find((x) => x.contractId === c.id)!;
+    // Nobody has reached the site yet: the buses take a while.
+    expect(site.crew).toEqual({ engineer: { slots: 2, shifts: [2, 2, 2], present: 0 } });
   });
 
   it('housing reports the average morale of its residents', () => {

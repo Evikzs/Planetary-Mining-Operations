@@ -740,7 +740,8 @@ h3 {
 
 /* A tab's error stays in sight at the foot of the scrolling panel. */
 .build-tab .error:not(:empty),
-.trade-tab .error:not(:empty) {
+.trade-tab .error:not(:empty),
+.contracts-tab .error:not(:empty) {
   position: sticky;
   bottom: calc(-1 * var(--space-4));
   padding: var(--space-2) 0 var(--space-4);
@@ -1179,6 +1180,91 @@ h3 {
 .goods-table .pin[aria-pressed='true'] {
   color: var(--c-burntOrange);
   opacity: 1;
+}
+
+/* Contracts tab: paper work orders with a rubber stamp. */
+.contracts-tab h3 {
+  margin: var(--space-4) 0 var(--space-2);
+  font-size: 17px;
+}
+
+.contracts-tab section:first-child h3 {
+  margin-top: 0;
+}
+
+.contracts-tab p {
+  margin: var(--space-1) 0 0;
+}
+
+.contract {
+  margin-bottom: var(--space-3);
+  padding: var(--space-3);
+  border: 2px solid var(--c-offBlack);
+}
+
+.contract header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+}
+
+.contract .issuer {
+  font-family: var(--font-display);
+  font-weight: 500;
+}
+
+.contract .job {
+  font-family: var(--font-display);
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.stamp {
+  display: inline-block;
+  padding: 1px var(--space-2);
+  border: 2px solid currentColor;
+  color: var(--c-burntOrange);
+  font-family: var(--font-display);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  transform: rotate(-2deg);
+}
+
+.stamp.infrastructure {
+  color: var(--c-teal);
+}
+
+.stamp.status {
+  color: var(--c-offBlack);
+}
+
+.contract .action {
+  margin-top: var(--space-3);
+}
+
+.contract .deliver .field {
+  margin-top: var(--space-2);
+}
+
+.bar {
+  height: 10px;
+  margin-top: var(--space-2);
+  border: 2px solid var(--c-offBlack);
+}
+
+.bar span {
+  display: block;
+  height: 100%;
+  background: var(--c-mustard);
+}
+
+.shifts {
+  margin: var(--space-2) 0 0;
+  padding: 0;
+  list-style: none;
 }
 
 /* Income on its way to the cash readout. */

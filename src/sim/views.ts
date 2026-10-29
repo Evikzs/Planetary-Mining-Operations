@@ -20,7 +20,7 @@ import { totalKg, type Inventory } from './inventory';
 import { balance } from './ledger';
 import type { Order } from './market/orders';
 import { housingCapacity } from './people/housing';
-import { slotsPerShift, staffing } from './people/jobs';
+import { presentCrew, slotsPerShift, staffing } from './people/jobs';
 import { indexOfId, SKILL_CODE, SKILL_OF, workerName } from './people/store';
 import type { Building, BuildingStatus, Company, GameState, Priority } from './state';
 import type { BeatId, HintCategory } from './story/beats';
@@ -125,6 +125,14 @@ export interface UiSnapshot {
   }[];
   orders: Order[];
   contracts: Contract[];
+  /** Work sites of active contracts: per skill, slots per shift, workers assigned to each
+   * shift, and those at work now. */
+  sites: {
+    contractId: number;
+    crew: Partial<
+      Record<Skill, { slots: number; shifts: [number, number, number]; present: number }>
+    >;
+  }[];
   story: {
     line: { beatId: BeatId; speaker: string; lines: string[] } | null;
     codex: string[];
@@ -259,7 +267,7 @@ export function buildUiSnapshot(state: GameState): UiSnapshot {
   const heads = new Uint32Array(state.nextId);
   // Workers by workplace, shift and skill.
   const shift = shiftAt(state.tick);
-  const crew = new Uint32Array(state.nextId * 9);
+  const tally = new Uint32Array(state.nextId * 9);
   let employed = 0;
   for (let i = 0; i < p.count; i++) {
     const skill = bySkill[SKILL_OF[p.skill[i]!]!];
@@ -276,7 +284,7 @@ export function buildUiSnapshot(state: GameState): UiSnapshot {
     skill.employed++;
     moraleSum[job]! += morale;
     heads[job]!++;
-    crew[(job * 3 + p.shift[i]!) * 3 + p.skill[i]!]!++;
+    tally[(job * 3 + p.shift[i]!) * 3 + p.skill[i]!]!++;
   }
   const residents = new Map<number, number>();
   const housingCap = new Map<number, number>();
@@ -293,7 +301,7 @@ export function buildUiSnapshot(state: GameState): UiSnapshot {
     for (const skill of SKILLS) {
       const n = slots[skill];
       if (!n) continue;
-      const on = (s: number) => crew[(b.id * 3 + s) * 3 + SKILL_CODE[skill]]!;
+      const on = (s: number) => tally[(b.id * 3 + s) * 3 + SKILL_CODE[skill]]!;
       const open = Math.max(0, n - on(0)) + Math.max(0, n - on(1)) + Math.max(0, n - on(2));
       jobs[skill] = { filled: on(shift), slots: n, open };
     }
@@ -352,6 +360,19 @@ export function buildUiSnapshot(state: GameState): UiSnapshot {
     }),
     orders: state.orders.map((o) => ({ ...o })),
     contracts: structuredClone(state.contracts),
+    sites: state.contracts.flatMap((c) => {
+      const site =
+        c.status === 'active' && state.buildings.find((b) => b.plotId === c.plotId && isSite(b));
+      if (!site) return [];
+      const at = presentCrew(state, site.id);
+      const crew: UiSnapshot['sites'][number]['crew'] = {};
+      for (const skill of SKILLS) {
+        const n = slotsPerShift(site)[skill];
+        const on = (s: number) => tally[(site.id * 3 + s) * 3 + SKILL_CODE[skill]]!;
+        if (n) crew[skill] = { slots: n, shifts: [on(0), on(1), on(2)], present: at[skill] };
+      }
+      return [{ contractId: c.id, crew }];
+    }),
     story: {
       line: currentLine(state, VETERAN_LINES, NARRATOR_LINES),
       codex: [...state.story.codex],
