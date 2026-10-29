@@ -66,22 +66,19 @@ function OrderForm(props: {
   const canPlace = validKg && (!needsLimit || (Number.isSafeInteger(limitCents) && limitCents > 0));
   const asked = useRef('');
 
-  // The quote follows the form 300 ms after its last change, and each new game hour.
+  // The quote follows the form 300 ms after its last change, and each new game hour. A new hour
+  // keeps the answer on its way: at high timescales hours come faster than the worker replies.
   useEffect(() => {
     const key = `${good}|${side}|${kg}`;
     if (asked.current !== key) setQuote(null);
     asked.current = key;
     if (!validKg) return;
-    let live = true;
     const timer = setTimeout(() => {
       void simClient.value?.quote(good, side, kg).then((q) => {
-        if (live) setQuote(q);
+        if (asked.current === key) setQuote(q);
       });
     }, 300);
-    return () => {
-      live = false;
-      clearTimeout(timer);
-    };
+    return () => clearTimeout(timer);
   }, [good, side, kg, props.hour]);
 
   return (

@@ -77,8 +77,8 @@ export class SimHost {
         if (founded) this.reanchor();
         this.deps.post({ t: 'commandResult', id: msg.id, result });
         this.postViews(false);
-        // Saved at once, so a reload before the first autosave keeps the new company.
-        if (founded) await this.save();
+        // Each action is saved at once: the save on leaving the page is not sure to finish.
+        if (result.ok) await this.save();
         return;
       }
       case 'saveNow':
