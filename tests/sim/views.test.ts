@@ -190,11 +190,13 @@ describe('views', () => {
     expect(page.rows[0]).toMatchObject({ id: p.id[i], sectionId: home, jobId: p.job[i] });
   });
 
-  it('ui snapshot for the bench state is < 200 KB JSON and builds in < 2 ms', () => {
+  it('ui snapshot for the bench state is < 200 KB JSON and builds in < 2 ms', async () => {
     const s = makeBenchState(42);
     step(s, { mode: 'fine' });
     const times: number[] = [];
-    for (let k = 0; k < 21; k++) {
+    for (let k = 0; k < 41; k++) {
+      // Spread over a quarter second, so a burst of outside load cannot cover every build.
+      await new Promise((r) => setTimeout(r, 5));
       const start = performance.now();
       buildUiSnapshot(s);
       times.push(performance.now() - start);
@@ -202,5 +204,5 @@ describe('views', () => {
     // The fastest build is its cost: other test files share the CPU, and that only adds time.
     expect(Math.min(...times)).toBeLessThan(2);
     expect(JSON.stringify(buildUiSnapshot(s)).length).toBeLessThan(200_000);
-  });
+  }, 30_000);
 });
