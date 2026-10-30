@@ -25,7 +25,7 @@ const codec = {
   }),
 };
 
-function setup(debug: Partial<{ timescale: number; freeze: boolean }> = {}) {
+function setup(debug: Partial<{ timescale: number; freeze: boolean; seed: number }> = {}) {
   let now = 0;
   const posted: FromWorker[] = [];
   const saves = createMemorySaveStore();
@@ -149,6 +149,22 @@ describe('SimHost', () => {
     expect(last?.t === 'snapshot' && last.ui.company?.name).toBe('Selene Rock Co');
   });
 
+  it('a seed whose Moon has no room for its plots gives way to the next one', async () => {
+    // About 1 seed in 40 fails world generation; these two were found by the final review.
+    const seedOf = (h: ReturnType<typeof setup>) => {
+      const worlds = h.posted.filter((m) => m.t === 'world');
+      const last = worlds[worlds.length - 1];
+      return last?.t === 'world' ? last.world.seed : null;
+    };
+    const h = setup({ seed: 3_450_755_655 });
+    await h.init();
+    expect(seedOf(h)).toBeGreaterThan(3_450_755_655);
+    expect(seedOf(h)).toBeLessThan(3_450_755_675);
+    await h.host.handle({ t: 'newGame', seed: 1_406_710_698 });
+    expect(seedOf(h)).toBeGreaterThan(1_406_710_698);
+    expect(seedOf(h)).toBeLessThan(1_406_710_718);
+  }, 60_000);
+
   it('saves a new company at once, before the first autosave', async () => {
     const h = setup({ freeze: true });
     await h.init();
@@ -173,6 +189,48 @@ describe('SimHost', () => {
     // A refused command changes nothing, so nothing is saved.
     await h.host.handle({ t: 'command', id: 3, cmd: { t: 'demolish', buildingId: 99_999 } });
     expect(h.saves.writes).toBe(writes + 1);
+  });
+
+  it('refuses a code whose inner data is broken, and keeps the company', async () => {
+    const h = setup({ freeze: true });
+    await h.init();
+    await h.found();
+    const file = codec.encode(h.saves.files.at(-1)!.state as GameState, 0);
+    delete (file.state as { sections: { power?: unknown }[] }).sections[0]!.power;
+    await h.host.handle({ t: 'importSave', id: 9, code: `PMO1.${JSON.stringify(file)}` });
+    expect(h.posted).toContainEqual({
+      t: 'loadResult',
+      id: 9,
+      ok: false,
+      error: 'That code is not a valid save.',
+    });
+    h.host.pump();
+    expect(h.posted.filter((m) => m.t === 'error')).toEqual([]);
+  });
+
+  it('a broken newest autosave gives way to the one before it', async () => {
+    const h = setup({ freeze: true });
+    await h.init();
+    await h.found();
+    const good = h.saves.files.at(-1)!;
+    const broken = structuredClone(good);
+    broken.savedAtRealMs += 1;
+    delete (broken.state as { sections: { power?: unknown }[] }).sections[0]!.power;
+    h.saves.files.push(broken);
+    const again = new SimHost({
+      post: (m) => h.posted.push(m),
+      now: () => 0,
+      saves: h.saves,
+      codec,
+    });
+    h.posted.length = 0;
+    await again.handle({
+      t: 'init',
+      nowMs: 0,
+      debug: { timescale: 1, freeze: true, seed: 42, scene: 'none', noWebgl: false },
+    });
+    expect(h.posted).toContainEqual({ t: 'ready', founded: true });
+    expect(h.posted.filter((m) => m.t === 'error')).toEqual([]);
   });
 
   it('saves to and loads from a manual slot', async () => {
@@ -267,6 +325,74 @@ describe('SimHost', () => {
     expect(posted).toContainEqual({
       t: 'error',
       message: 'Could not save the game: quota exceeded',
+    });
+  });
+
+  it('starts without saves when the save store cannot open, and says so', async () => {
+    const posted: FromWorker[] = [];
+    const saves = {
+      writeAuto: () => Promise.reject(new Error('blocked')),
+      loadLatestValid: () => Promise.reject(new Error('blocked')),
+    };
+    const host = new SimHost({ post: (m) => posted.push(m), now: () => 0, saves, codec });
+    const flags = { timescale: 1, freeze: false, seed: 42, scene: 'none' as const, noWebgl: false };
+    await host.handle({ t: 'init', nowMs: 0, debug: flags });
+    expect(posted.map((m) => m.t)).toEqual(expect.arrayContaining(['error', 'ready', 'snapshot']));
+    await host.handle({
+      t: 'command',
+      id: 1,
+      cmd: { t: 'foundCompany', name: 'Selene Rock Co', companionId: 'veteran' },
+    });
+    // Saves now go to memory: no 'Could not save' message for each one.
+    expect(posted.filter((m) => m.t === 'error')).toHaveLength(1);
+  });
+
+  it('a step that throws stops the clock once, says so, and is never saved', async () => {
+    let now = 0;
+    const posted: FromWorker[] = [];
+    const saves = createMemorySaveStore();
+    const host = new SimHost({
+      post: (m) => posted.push(m),
+      now: () => now,
+      saves,
+      codec,
+      checkInvariants: () => {
+        throw new Error('boom');
+      },
+    });
+    const flags = { timescale: 1, freeze: false, seed: 42, scene: 'none' as const, noWebgl: false };
+    await host.handle({ t: 'init', nowMs: 0, debug: flags });
+    await host.handle({
+      t: 'command',
+      id: 1,
+      cmd: { t: 'foundCompany', name: 'Selene Rock Co', companionId: 'veteran' },
+    });
+    const writes = saves.writes;
+    now = 5000;
+    host.pump();
+    now = 10_000;
+    host.pump();
+    const errors = posted.filter((m) => m.t === 'error');
+    expect(errors).toHaveLength(1);
+    expect(errors[0]?.t === 'error' && errors[0].message).toMatch(/^The game stopped: boom\./);
+    await host.handle({ t: 'saveNow' });
+    expect(saves.writes).toBe(writes);
+  });
+
+  it('a request that fails answers with an error message', async () => {
+    const posted: FromWorker[] = [];
+    const host = new SimHost({
+      post: (m) => posted.push(m),
+      now: () => 0,
+      saves: createMemorySaveStore(),
+      codec: { ...codec, exportCode: () => Promise.reject(new Error('no CompressionStream')) },
+    });
+    const flags = { timescale: 1, freeze: false, seed: 42, scene: 'none' as const, noWebgl: false };
+    await host.handle({ t: 'init', nowMs: 0, debug: flags });
+    await host.handle({ t: 'exportSave', id: 2 });
+    expect(posted).toContainEqual({
+      t: 'error',
+      message: 'Something went wrong: no CompressionStream',
     });
   });
 

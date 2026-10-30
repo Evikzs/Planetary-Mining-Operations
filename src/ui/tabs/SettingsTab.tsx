@@ -132,7 +132,7 @@ export function SettingsTab() {
         <h3 id="settings-transfer">Move a game</h3>
         <p class="meta">Export a code here and import it on another device.</p>
         <ExportSave />
-        <ImportSave />
+        <ImportSave confirm />
       </section>
       <section aria-labelledby="settings-new">
         <h3 id="settings-new">Start over</h3>

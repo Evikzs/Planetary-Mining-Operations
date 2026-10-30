@@ -80,6 +80,8 @@ export interface GameState {
   rng: RngState;
   company: Company | null;
   nextId: number;
+  /** Bus trips count apart: they come and go by the thousand, and arrays are sized by nextId. */
+  nextTripId: number;
   ledger: Ledger;
   sections: SectionState[];
   buildings: Building[];
@@ -130,6 +132,7 @@ export function createInitialState(seed: number): GameState {
     rng: createRng(deriveSeed(seed, 'main')).getState(),
     company: null,
     nextId: 1,
+    nextTripId: 1,
     ledger: createLedger(),
     sections: [],
     buildings: [],

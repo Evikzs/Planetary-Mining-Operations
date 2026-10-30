@@ -108,6 +108,41 @@ describe('production', () => {
     expect(produced(half, 'ilmenite') / produced(full, 'ilmenite')).toBeCloseTo(0.5, 2);
   });
 
+  it('a running smelter switched to glass keeps working and loses no ilmenite', () => {
+    const s = founded();
+    const smelter = ready(s, 'smelter');
+    const depot = sectionState(s, home)!.depot;
+    depot.ilmenite = 50_000;
+    depot.anorthite = 40_000;
+    run(s, 30);
+    const belt = s.belts.find((b) => b.buildingId === smelter.id)!;
+    expect(belt.in.batches.some((b) => b.goodId === 'ilmenite')).toBe(true);
+    const onBelt = (g: 'ilmenite') =>
+      belt.in.batches.reduce((sum, b) => (b.goodId === g ? sum + b.kg : sum), 0);
+    const ilmenite = () =>
+      (depot.ilmenite ?? 0) + (smelter.input.ilmenite ?? 0) + onBelt('ilmenite');
+    const before = ilmenite();
+    expect(applyCommand(s, { t: 'setRecipe', buildingId: smelter.id, recipeId: 'glass' })).toEqual({
+      ok: true,
+    });
+    run(s, 6 * 60);
+    expect(s.stats.producedKg.glass ?? 0).toBeGreaterThan(0);
+    expect(ilmenite()).toBe(before);
+    expect(depot.ilmenite).toBe(before);
+  });
+
+  it('a recipe switch on a full depot keeps the buffered goods', () => {
+    const s = founded();
+    const smelter = ready(s, 'smelter');
+    const depot = sectionState(s, home)!.depot;
+    smelter.input = { ilmenite: 8000 };
+    smelter.output = { steel: 700 };
+    depot.regolith = storageCapKg(s, home) - totalKg(depot);
+    const before = totalKg(depot) + totalKg(smelter.input) + totalKg(smelter.output);
+    applyCommand(s, { t: 'setRecipe', buildingId: smelter.id, recipeId: 'glass' });
+    expect(totalKg(depot)).toBe(before);
+  });
+
   it('full depot jams the out lane and blocks production without losing goods', () => {
     const s = founded();
     const mine = ready(s, 'mine');

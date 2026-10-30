@@ -310,4 +310,13 @@ describe('commute', () => {
       expect(p.present[i]).toBe(p.job[i]! >= 0 && p.shift[i] === 0 ? 1 : 0);
     }
   });
+
+  it('bus trips count their own ids, so the shared id counter stays small', () => {
+    const s = founded();
+    const before = s.nextId;
+    // The first buses leave at 05:20 for the 06:00 shift; nothing hourly runs before then.
+    for (let i = 0; i < 25; i++) step(s, { mode: 'fine' });
+    expect(s.trips.length).toBeGreaterThan(0);
+    expect(s.nextId).toBe(before);
+  });
 });

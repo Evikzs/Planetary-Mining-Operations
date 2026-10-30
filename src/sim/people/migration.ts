@@ -1,18 +1,19 @@
-import { BUILDINGS, SKILLS, type Skill } from '../../data/buildings';
-import { levelJobs, migrationPerDay, MORALE } from '../../data/balance';
+import { SKILLS, type Skill } from '../../data/buildings';
+import { migrationPerDay, MORALE } from '../../data/balance';
 import type { StepContext, System } from '../engine';
 import type { GameState } from '../state';
 import { housingCapacity, residentsByHome } from './housing';
+import { slotsPerShift } from './jobs';
 import { addWorker, removeWorkerAt, SKILL_CODE } from './store';
 
 const isHour = (state: GameState) => state.tick % 60 === 0;
 
-/** The skill whose job slots are least filled; ties go miner, technician, engineer. */
+/** The skill whose job slots, contract sites' included, are least filled; ties go miner, technician, engineer. */
 export function arrivalSkill(state: GameState): Skill {
   const slots: Record<Skill, number> = { miner: 0, technician: 0, engineer: 0 };
   for (const b of state.buildings) {
-    for (const [skill, n] of Object.entries(BUILDINGS[b.type].jobs)) {
-      slots[skill as Skill] += levelJobs(b.level, n) * 3;
+    for (const [skill, n] of Object.entries(slotsPerShift(b)) as [Skill, number][]) {
+      slots[skill] += n * 3;
     }
   }
   const filled: Record<Skill, number> = { miner: 0, technician: 0, engineer: 0 };

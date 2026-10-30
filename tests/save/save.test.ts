@@ -72,6 +72,11 @@ describe('save files', () => {
   it('loads the v1 fixture', () => {
     expect(fromSaveFile(fixture).ok).toBe(true);
   });
+
+  it('a version-1 save gains a trip counter that starts above every id it holds', () => {
+    const res = fromSaveFile(fixture);
+    expect(res.ok && res.state.nextTripId).toBe(res.ok && res.state.nextId);
+  });
 });
 
 describe('IndexedDB slots', () => {

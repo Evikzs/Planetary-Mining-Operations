@@ -62,3 +62,18 @@ export function worldOf(state: { seed: number }): World {
   }
   return world;
 }
+
+/**
+ * The seed, or the first seed after it whose Moon can be built: about one seed in forty leaves a
+ * section without room for its plots.
+ */
+export function usableSeed(seed: number): number {
+  for (let s = seed >>> 0, tries = 0; ; s = (s + 1) >>> 0, tries++) {
+    try {
+      worldOf({ seed: s });
+      return s;
+    } catch (err) {
+      if (tries >= 20) throw err;
+    }
+  }
+}

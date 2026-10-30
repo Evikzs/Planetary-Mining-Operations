@@ -5,6 +5,7 @@ import { quote } from '../sim/market/market';
 import { runCatchUp } from '../sim/offline';
 import type { GameState } from '../sim/state';
 import { unlockCodex } from '../sim/story/codex';
+import { usableSeed } from '../sim/world/luna';
 import {
   buildMotionView,
   buildUiSnapshot,
@@ -12,6 +13,7 @@ import {
   queryPeople,
   worldSignature,
 } from '../sim/views';
+import { createMemorySaveStore } from '../save/memoryStore';
 import type { SaveFile, SaveStore } from '../save/types';
 import type { DebugFlags, FromWorker, ManualSlot, SaveSlot, ToWorker } from './protocol';
 
@@ -47,8 +49,25 @@ const DEFAULT_FLAGS: DebugFlags = {
   noWebgl: false,
 };
 
-const saveErrorText = (err: unknown): string =>
-  `Could not save the game: ${err instanceof Error ? err.message : String(err)}`;
+/**
+ * Whether a loaded state can run: its views build and a copy takes one step. The checksum only
+ * proves a save is whole, not that its inner data fits this version of the game.
+ */
+function usable(state: GameState): boolean {
+  try {
+    const copy = structuredClone(state);
+    buildWorldView(copy, 0);
+    buildUiSnapshot(copy);
+    buildMotionView(copy);
+    step(copy, { mode: 'fine' });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+const reason = (err: unknown): string => (err instanceof Error ? err.message : String(err));
+const saveErrorText = (err: unknown): string => `Could not save the game: ${reason(err)}`;
 
 export class SimHost {
   private state: GameState = createGame(0);
@@ -59,14 +78,28 @@ export class SimHost {
   private lastSaveMs = 0;
   private worldVersion = 0;
   private worldSig = '';
+  private saves: SaveStore;
+  /** Set when a step threw: the clock stops and nothing more is saved over the last good save. */
+  private halted = false;
 
-  constructor(private readonly deps: SimHostDeps) {}
+  constructor(private readonly deps: SimHostDeps) {
+    this.saves = deps.saves;
+  }
 
   private now(): number {
     return this.deps.now() + this.offsetMs;
   }
 
+  /** Answers one message; a failure becomes an error message rather than a silent stop. */
   async handle(msg: ToWorker): Promise<void> {
+    try {
+      await this.dispatch(msg);
+    } catch (err) {
+      this.deps.post({ t: 'error', message: `Something went wrong: ${reason(err)}` });
+    }
+  }
+
+  private async dispatch(msg: ToWorker): Promise<void> {
     switch (msg.t) {
       case 'init':
         await this.init(msg.nowMs, msg.debug);
@@ -110,7 +143,7 @@ export class SimHost {
       case 'importSave': {
         const file = await this.deps.codec.importCode(msg.code);
         const loaded = file ? this.deps.codec.decode(file) : null;
-        if (!loaded) {
+        if (!loaded || !usable(loaded.state)) {
           this.deps.post({
             t: 'loadResult',
             id: msg.id,
@@ -125,7 +158,7 @@ export class SimHost {
         return;
       }
       case 'newGame':
-        this.replaceState(createGame(msg.seed >>> 0));
+        this.replaceState(createGame(usableSeed(msg.seed)));
         // Saved at once, so a reload does not bring the old company back.
         await this.save(true);
         return;
@@ -135,11 +168,8 @@ export class SimHost {
       case 'manualSave': {
         let error: string | undefined;
         try {
-          if (!this.deps.saves.writeManual) throw new Error('this browser cannot keep save slots');
-          await this.deps.saves.writeManual(
-            msg.slot,
-            this.deps.codec.encode(this.state, this.now()),
-          );
+          if (!this.saves.writeManual) throw new Error('this browser cannot keep save slots');
+          await this.saves.writeManual(msg.slot, this.deps.codec.encode(this.state, this.now()));
         } catch (err) {
           error = saveErrorText(err);
         }
@@ -148,9 +178,9 @@ export class SimHost {
         return;
       }
       case 'manualLoad': {
-        const file = await this.deps.saves.readManual?.(msg.slot);
+        const file = await this.saves.readManual?.(msg.slot);
         const loaded = file ? this.deps.codec.decode(file) : null;
-        if (!file || !loaded) {
+        if (!file || !loaded || !usable(loaded.state)) {
           const error = file ? 'That save could not be read.' : 'That save slot is empty.';
           this.deps.post({ t: 'loadResult', id: msg.id, ok: false, error });
           return;
@@ -166,17 +196,30 @@ export class SimHost {
   private async init(nowMs: number, debug: DebugFlags): Promise<void> {
     this.flags = debug;
     const seed = debug.seed ?? nowMs >>> 0;
-    const file = await this.deps.saves.loadLatestValid();
+    let file: SaveFile | null = null;
+    try {
+      file = await this.saves.loadLatestValid((f) => {
+        const d = this.deps.codec.decode(f);
+        return !!d && usable(d.state);
+      });
+    } catch (err) {
+      // IndexedDB can exist and still refuse to open, as when a browser blocks site data.
+      this.saves = createMemorySaveStore();
+      this.deps.post({
+        t: 'error',
+        message: `This browser does not let the game keep saves (${reason(err)}). You can play, but progress ends when the page closes.`,
+      });
+    }
     const loaded = file ? this.deps.codec.decode(file) : null;
     if (debug.scene !== 'none' && this.deps.loadScene) {
-      this.state = await this.deps.loadScene(debug.scene, seed);
+      this.state = await this.deps.loadScene(debug.scene, usableSeed(seed));
       this.reanchor();
     } else if (loaded) {
       this.state = loaded.state;
       this.reanchor();
       if (this.state.company) this.catchUp(this.now() - loaded.savedAtRealMs);
     } else {
-      this.state = createGame(seed);
+      this.state = createGame(usableSeed(seed));
       this.reanchor();
     }
     this.lastSaveMs = this.now();
@@ -193,6 +236,19 @@ export class SimHost {
   }
 
   pump(): void {
+    if (this.halted) return;
+    try {
+      this.advance();
+    } catch (err) {
+      this.halted = true;
+      this.deps.post({
+        t: 'error',
+        message: `The game stopped: ${reason(err)}. Reload the page to go on from your last save.`,
+      });
+    }
+  }
+
+  private advance(): void {
     if (!this.state.company || this.flags.freeze) return;
     const start = this.now();
     const target = this.anchorTick + this.ticksFor(start - this.anchorRealMs);
@@ -243,10 +299,10 @@ export class SimHost {
   }
 
   private async save(evenUnfounded = false): Promise<void> {
-    if (!this.state.company && !evenUnfounded) return;
+    if (this.halted || (!this.state.company && !evenUnfounded)) return;
     this.lastSaveMs = this.now();
     try {
-      await this.deps.saves.writeAuto(this.deps.codec.encode(this.state, this.lastSaveMs));
+      await this.saves.writeAuto(this.deps.codec.encode(this.state, this.lastSaveMs));
     } catch (err) {
       this.reportSaveError(err);
     }
@@ -257,7 +313,7 @@ export class SimHost {
   }
 
   private async manualSlots(): Promise<SaveSlot[]> {
-    const all = (await this.deps.saves.list?.()) ?? [];
+    const all = (await this.saves.list?.()) ?? [];
     return all.flatMap((s) => {
       const n = /^manual-([1-5])$/.exec(s.slot)?.[1];
       if (!n) return [];

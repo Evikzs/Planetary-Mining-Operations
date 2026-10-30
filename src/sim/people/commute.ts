@@ -11,7 +11,7 @@ import { len, sub, type Vec3 } from '../../shared/vec3';
 import { plotRoute } from '../build/routes';
 import { shiftAt, shiftStartingAt } from '../clock';
 import type { System } from '../engine';
-import { newId, type Building, type GameState } from '../state';
+import type { Building, GameState } from '../state';
 import { worldOf } from '../world/luna';
 import { forgetCrews } from './jobs';
 import { indexOfId } from './store';
@@ -116,7 +116,7 @@ function makeTrip(state: GameState, sectionId: number, kind: Trip['kind'], load:
     stops.push({ s: cum[cum.length - 1]!, ...load.stops[k]!, dwell: STOP_DWELL_MINUTES });
   });
   return {
-    id: newId(state),
+    id: state.nextTripId++,
     sectionId,
     departTick: 0,
     points,

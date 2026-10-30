@@ -129,6 +129,9 @@ export interface UiSnapshot {
    * shift, and those at work now. */
   sites: {
     contractId: number;
+    /** The site's building, which workers are assigned to, and its section. */
+    buildingId: number;
+    sectionId: number;
     crew: Partial<
       Record<Skill, { slots: number; shifts: [number, number, number]; present: number }>
     >;
@@ -371,7 +374,7 @@ export function buildUiSnapshot(state: GameState): UiSnapshot {
         const on = (s: number) => tally[(site.id * 3 + s) * 3 + SKILL_CODE[skill]]!;
         if (n) crew[skill] = { slots: n, shifts: [on(0), on(1), on(2)], present: at[skill] };
       }
-      return [{ contractId: c.id, crew }];
+      return [{ contractId: c.id, buildingId: site.id, sectionId: site.sectionId, crew }];
     }),
     story: {
       line: currentLine(state, VETERAN_LINES, NARRATOR_LINES),

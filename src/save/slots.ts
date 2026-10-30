@@ -32,13 +32,13 @@ export function createIdbSaveStore(dbName = 'pmo'): SaveStore & {
       await tx.objectStore('meta').put((next + 1) % AUTO_SLOTS, 'autoNext');
       await tx.done;
     },
-    async loadLatestValid() {
+    async loadLatestValid(accept) {
       const d = await db();
       const records: unknown[] = await Promise.all(
         Array.from({ length: AUTO_SLOTS }, (_, i) => d.get('saves', `auto-${i}`)),
       );
       const files = records.filter(looksLikeSave).sort((a, b) => b.savedAtRealMs - a.savedAtRealMs);
-      return files.find((f) => fromSaveFile(f).ok) ?? null;
+      return files.find((f) => fromSaveFile(f).ok && (accept?.(f) ?? true)) ?? null;
     },
     async writeManual(slot, file) {
       await (await db()).put('saves', file, `manual-${slot}`);

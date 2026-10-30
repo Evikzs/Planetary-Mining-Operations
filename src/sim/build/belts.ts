@@ -67,17 +67,27 @@ export function createBelt(state: GameState, building: Building): Belt {
   return belt;
 }
 
-/** Removes a building's belt; goods on it go to the depot while there is space. */
+/** Puts a lane's batches in the depot, even past its storage cap: goods never vanish. */
+function unload(state: GameState, belt: Belt, lane: Lane): void {
+  const depot = sectionState(state, belt.sectionId)!.depot;
+  for (const batch of lane.batches) addKg(depot, batch.goodId, batch.kg);
+  lane.batches = [];
+}
+
+/** Removes a building's belt; the goods on it go back to the depot. */
 export function removeBelt(state: GameState, building: Building): void {
   const belt = state.belts.find((b) => b.id === building.beltId);
   if (!belt) return;
-  const depot = sectionState(state, belt.sectionId)!.depot;
-  for (const batch of [...belt.out.batches, ...belt.in.batches]) {
-    const free = Math.max(0, storageCapKg(state, belt.sectionId) - totalKg(depot));
-    addKg(depot, batch.goodId, Math.min(batch.kg, free));
-  }
+  unload(state, belt, belt.out);
+  unload(state, belt, belt.in);
   state.belts = state.belts.filter((b) => b.id !== belt.id);
   building.beltId = null;
+}
+
+/** A new recipe needs other inputs: what the in-lane carries goes back to the depot. */
+export function returnInputs(state: GameState, building: Building): void {
+  const belt = state.belts.find((b) => b.id === building.beltId);
+  if (belt) unload(state, belt, belt.in);
 }
 
 const inTransit = (lane: Lane, g: GoodId) =>

@@ -30,8 +30,9 @@ export function createMemorySaveStore(): SaveStore & { writes: number; files: Sa
       store.files.push(file);
       return Promise.resolve();
     },
-    loadLatestValid() {
-      return Promise.resolve(store.files[store.files.length - 1] ?? null);
+    loadLatestValid(accept?: (file: SaveFile) => boolean) {
+      const newestFirst = [...store.files].reverse();
+      return Promise.resolve(newestFirst.find((f) => accept?.(f) ?? true) ?? null);
     },
   };
   return store;

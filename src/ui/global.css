@@ -1860,3 +1860,27 @@ h3 {
   font-family: var(--font-display);
   font-weight: 600;
 }
+
+/* A problem in the game worker: a slip of paper over everything, until dismissed. */
+.error-banner {
+  position: absolute;
+  top: 60px;
+  left: 50%;
+  z-index: 11;
+  width: min(520px, calc(100% - 32px));
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  transform: translateX(-50%);
+  border-color: var(--c-rust);
+}
+
+.error-banner p {
+  flex: 1;
+  margin: 0;
+}
+
+.error-banner .action.quiet {
+  margin-top: 0;
+}

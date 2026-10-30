@@ -111,28 +111,37 @@ function Offer(props: { c: Contract; snap: UiSnapshot; full: boolean; run: Run }
 
 function Crew({ site }: { site: UiSnapshot['sites'][number] | undefined }) {
   if (!site) return <p>The site is getting ready.</p>;
+  const short = Object.values(site.crew).some((c) => c.shifts.some((n) => n < c.slots));
   return (
-    <ul class="shifts">
-      {SKILLS.flatMap((skill) => {
-        const crew = site.crew[skill];
-        if (!crew) return [];
-        const name = SKILL_NAMES[skill].toLowerCase();
-        return [
-          ...crew.shifts.map((n, s) => (
-            <li key={`${skill}-${s}`}>
-              {SHIFT_NAMES[s]} shift:{' '}
-              <span class="num">
-                {n} of {crew.slots}
-              </span>{' '}
-              {name}
-            </li>
-          )),
-          <li key={`${skill}-now`}>
-            At work now: <span class="num">{crew.present}</span> {name}
-          </li>,
-        ];
-      })}
-    </ul>
+    <>
+      <ul class="shifts">
+        {SKILLS.flatMap((skill) => {
+          const crew = site.crew[skill];
+          if (!crew) return [];
+          const name = SKILL_NAMES[skill].toLowerCase();
+          return [
+            ...crew.shifts.map((n, s) => (
+              <li key={`${skill}-${s}`}>
+                {SHIFT_NAMES[s]} shift:{' '}
+                <span class="num">
+                  {n} of {crew.slots}
+                </span>{' '}
+                {name}
+              </li>
+            )),
+            <li key={`${skill}-now`}>
+              At work now: <span class="num">{crew.present}</span> {name}
+            </li>,
+          ];
+        })}
+      </ul>
+      {short && (
+        <p class="meta">
+          Short of crew? In the People tab, pick a worker and choose Contract site {site.buildingId}
+          .
+        </p>
+      )}
+    </>
   );
 }
 

@@ -72,12 +72,17 @@ export function SaveSlots({ canSave }: { canSave: boolean }) {
   );
 }
 
-/** Takes a 'PMO1.' save code, as Settings exports it, and plays that game. */
-export function ImportSave() {
+/**
+ * Takes a 'PMO1.' save code, as Settings exports it, and plays that game. With `confirm`, it asks
+ * first: the import replaces the company being played.
+ */
+export function ImportSave({ confirm = false }: { confirm?: boolean }) {
   const id = useId();
   const [code, setCode] = useState('');
+  const [asking, setAsking] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const run = async () => {
+    setAsking(false);
     const res = await simClient.value?.importSave(code.trim());
     setError(res && !res.ok ? (res.error ?? null) : null);
   };
@@ -86,7 +91,8 @@ export function ImportSave() {
       class="import-save"
       onSubmit={(e) => {
         e.preventDefault();
-        void run();
+        if (confirm) setAsking(true);
+        else void run();
       }}
     >
       <label for={id}>Paste a save code</label>
@@ -97,9 +103,21 @@ export function ImportSave() {
         value={code}
         onInput={(e) => setCode(e.currentTarget.value)}
       />
-      <button type="submit" class="action small" disabled={!code.trim()}>
-        Import
-      </button>
+      {asking ? (
+        <div class="confirm">
+          <p>Import this save? It replaces your current company.</p>
+          <button type="button" class="action small danger" onClick={() => void run()}>
+            Replace my company
+          </button>{' '}
+          <button type="button" class="action small quiet" onClick={() => setAsking(false)}>
+            Keep playing
+          </button>
+        </div>
+      ) : (
+        <button type="submit" class="action small" disabled={!code.trim()}>
+          Import
+        </button>
+      )}
       <ErrorText error={error} />
     </form>
   );

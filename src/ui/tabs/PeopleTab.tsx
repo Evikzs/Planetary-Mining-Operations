@@ -64,16 +64,21 @@ function WorkerRow({ row, onPick }: { row: PeopleRow; onPick: (id: number) => vo
   );
 }
 
-/** Workplaces in a section that employ a skill, with their free slots over all shifts. */
-function workplaces(snap: UiSnapshot, sectionOf: Map<number, number>, row: PeopleRow) {
-  return snap.buildings
-    .flatMap((b) => {
-      const job = b.jobs[row.skill];
-      return job && sectionOf.get(b.id) === row.sectionId
-        ? [{ id: b.id, name: `${BUILDINGS[b.type].name} ${b.id}`, open: job.open }]
-        : [];
-    })
-    .sort((a, b) => b.open - a.open || a.id - b.id);
+/** Workplaces and contract sites in a section that employ a skill, with free slots over all shifts. */
+export function workplaces(snap: UiSnapshot, sectionOf: Map<number, number>, row: PeopleRow) {
+  const buildings = snap.buildings.flatMap((b) => {
+    const job = b.jobs[row.skill];
+    return job && sectionOf.get(b.id) === row.sectionId
+      ? [{ id: b.id, name: `${BUILDINGS[b.type].name} ${b.id}`, open: job.open }]
+      : [];
+  });
+  const sites = snap.sites.flatMap((s) => {
+    const crew = s.crew[row.skill];
+    if (!crew || s.sectionId !== row.sectionId) return [];
+    const open = crew.slots * 3 - crew.shifts.reduce((sum, n) => sum + n, 0);
+    return [{ id: s.buildingId, name: `Contract site ${s.buildingId}`, open }];
+  });
+  return [...buildings, ...sites].sort((a, b) => b.open - a.open || a.id - b.id);
 }
 
 function WorkerCard(props: { id: number; onBack: () => void; onChanged: () => void }) {

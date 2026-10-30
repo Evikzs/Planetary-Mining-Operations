@@ -18,7 +18,8 @@ export interface SlotInfo {
 
 export interface SaveStore {
   writeAuto(file: SaveFile): Promise<void>;
-  loadLatestValid(): Promise<SaveFile | null>;
+  /** The newest autosave that passes its checks and `accept`, when given. */
+  loadLatestValid(accept?: (file: SaveFile) => boolean): Promise<SaveFile | null>;
   writeManual?(slot: number, file: SaveFile): Promise<void>;
   readManual?(slot: number): Promise<SaveFile | null>;
   list?(): Promise<SlotInfo[]>;

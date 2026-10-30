@@ -30,6 +30,8 @@ export const pinnedGoods = signal<GoodId[]>([
   'ilmenite',
   'steel',
 ]);
+/** The latest problem the game worker reported, until the player dismisses it. */
+export const workerError = signal<string | null>(null);
 /** Set when the founding screen succeeds: the map flies down to the new company's hub. */
 export const flyHome = signal(false);
 /** A Codex entry to open next, as when the companion points at one. */

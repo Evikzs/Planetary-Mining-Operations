@@ -14,6 +14,7 @@ import { PeopleTab } from '../tabs/PeopleTab';
 import { SettingsTab } from '../tabs/SettingsTab';
 import { TradeTab } from '../tabs/TradeTab';
 import { AlertsList, alertsOpen } from './Alerts';
+import { ErrorBanner } from './ErrorBanner';
 import { BottomTabs, moreOpen } from './BottomTabs';
 import { Compass } from './Compass';
 import { ContextPanel } from './ContextPanel';
@@ -133,6 +134,7 @@ export function Shell({ flags }: { flags: DebugFlags }) {
       {snap && !snap.company && <FoundingScreen />}
       <AwayScreen />
       <CatchUpOverlay />
+      <ErrorBanner />
     </div>
   );
 }

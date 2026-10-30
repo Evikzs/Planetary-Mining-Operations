@@ -3,15 +3,15 @@ import { MAX_LEVEL, upgradeCost, upgradeHours } from '../../data/balance';
 import type { GoodId } from '../../data/goods';
 import { fail, OK, type CommandResult } from '../commands';
 import type { System } from '../engine';
-import { add, take, totalKg, type Inventory } from '../inventory';
+import { add, take, type Inventory } from '../inventory';
 import { balance, transfer } from '../ledger';
 import { newId, type Building, type GameState, type Priority } from '../state';
 import { evictResidents } from '../people/housing';
 import { releaseWorkers } from '../people/jobs';
 import { worldOf } from '../world/luna';
 import { connectToNetwork } from '../world/roads';
-import { createBelt, removeBelt } from './belts';
-import { addBuilding, gridFor, sectionState, storageCapKg } from './sections';
+import { createBelt, removeBelt, returnInputs } from './belts';
+import { addBuilding, gridFor, sectionState } from './sections';
 
 const kg = (t: number) => Math.round(t * 1000);
 
@@ -86,13 +86,12 @@ export function upgrade(state: GameState, buildingId: number): CommandResult {
   return OK;
 }
 
-/** Moves buffers back to the depot while there is space; the rest is lost. */
+/** Moves buffers back to the depot, even past its storage cap: goods never vanish. */
 function flushBuffers(state: GameState, b: Building): void {
   const section = sectionState(state, b.sectionId)!;
   for (const buffer of [b.input, b.output]) {
     for (const [g, amount] of Object.entries(buffer)) {
-      const free = Math.max(0, storageCapKg(state, b.sectionId) - totalKg(section.depot));
-      add(section.depot, g as GoodId, Math.min(amount, free));
+      add(section.depot, g as GoodId, amount);
       delete buffer[g as GoodId];
     }
   }
@@ -120,6 +119,7 @@ export function setRecipe(state: GameState, buildingId: number, recipeId: Recipe
   if (!BUILDINGS[b.type].recipes.includes(recipeId)) return fail('INVALID_RECIPE');
   if (b.recipeId !== recipeId) {
     flushBuffers(state, b);
+    returnInputs(state, b);
     b.recipeId = recipeId;
   }
   return OK;

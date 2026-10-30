@@ -8,6 +8,7 @@ import { applyCommand, createGame, step } from '../../../src/sim/engine';
 import type { SimEvent } from '../../../src/sim/events';
 import { checkInvariants } from '../../../src/sim/invariants';
 import { balance } from '../../../src/sim/ledger';
+import { arrivalSkill } from '../../../src/sim/people/migration';
 import { addWorker, SKILL_CODE } from '../../../src/sim/people/store';
 import { createRng } from '../../../src/sim/rng';
 import type { GameState } from '../../../src/sim/state';
@@ -201,6 +202,21 @@ describe('contracts', () => {
     expect(s.buildings.some((b) => b.plotId === plot.id)).toBe(false);
     expect(Array.from(s.people.job.subarray(0, s.people.count))).not.toContain(site.id);
     expect(checkInvariants(s)).toEqual([]);
+  });
+
+  it('arrivals bring the engineers a contract site lacks', () => {
+    const s = founded();
+    const plot = world.plots.find((p) => p.sectionId === home && p.kind === 'public')!;
+    const c = offer(s, {
+      type: 'infrastructure',
+      plotId: plot.id,
+      asset: 'commMast',
+      hours: 100,
+      stages: [{ kind: 'build', engineerHours: 12, done: 0 }],
+    });
+    expect(accept(s, c)).toEqual({ ok: true });
+    // No building needs an engineer, but the site needs 2 on each shift.
+    expect(arrivalSkill(s)).toBe('engineer');
   });
 
   it('offers expire after 48 hours; accept beyond the limit → CONTRACT_LIMIT', () => {

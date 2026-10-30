@@ -56,10 +56,17 @@ test('a save slot keeps the company through a new game', async ({ page }) => {
   await expect(page.getByTestId('top-bar')).toContainText('Selene Rock Co');
 });
 
-test('a code that is not a save is refused', async ({ page }) => {
+test('importing in Settings asks first, and a code that is not a save is refused', async ({
+  page,
+}) => {
   const panel = page.getByTestId('tab-panel');
   await panel.getByLabel('Paste a save code').fill('hello');
   await panel.getByRole('button', { name: 'Import' }).click();
+  await expect(panel).toContainText('Import this save? It replaces your current company.');
+  await panel.getByRole('button', { name: 'Keep playing' }).click();
+  await expect(panel).not.toContainText('Import this save?');
+  await panel.getByRole('button', { name: 'Import' }).click();
+  await panel.getByRole('button', { name: 'Replace my company' }).click();
   await expect(panel).toContainText('That code is not a valid save.');
   await expect(page.getByTestId('top-bar')).toContainText('Selene Rock Co');
 });
