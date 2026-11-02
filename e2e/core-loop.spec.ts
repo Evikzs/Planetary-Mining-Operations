@@ -24,8 +24,12 @@ test('the core loop: found, build, sell, deliver, expand, and reload', async ({ 
   await openTab(page, 'Build');
   await panel.getByRole('button', { name: 'Ilmenite deposit' }).first().click();
   await panel.getByRole('button', { name: 'Build Mine' }).click();
-  await expect(panel).toContainText('Under construction');
-  await expect(panel).not.toContainText('Under construction', { timeout: 20_000 });
+  // At 120x the mine builds in 2 real seconds, so a slow runner may never see it under construction.
+  await expect
+    .poll(async () => (await snapshot(page)).buildings.find((b) => b.type === 'mine')?.status, {
+      timeout: 20_000,
+    })
+    .toBe('active');
   // Esc closes the tab and the mine's details, which cover Ox's portrait on phones.
   await page.keyboard.press('Escape');
 
