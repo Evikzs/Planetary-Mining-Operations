@@ -27,6 +27,11 @@ export interface SaveStore {
 
 /** The company a save holds, or '' before founding. */
 export function companyOf(file: SaveFile): string {
-  const name = (file.state as { company?: { name?: unknown } | null }).company?.name;
+  // Version 3 keeps the player as companies[0]; older saves kept a single `company`.
+  const s = file.state as {
+    companies?: { name?: unknown }[];
+    company?: { name?: unknown } | null;
+  };
+  const name = s.companies ? s.companies[0]?.name : s.company?.name;
   return typeof name === 'string' ? name : '';
 }

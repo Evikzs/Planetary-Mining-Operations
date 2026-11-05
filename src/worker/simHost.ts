@@ -16,6 +16,7 @@ import {
 import { createMemorySaveStore } from '../save/memoryStore';
 import type { SaveFile, SaveStore } from '../save/types';
 import type { DebugFlags, FromWorker, ManualSlot, SaveSlot, ToWorker } from './protocol';
+import { playerCompany } from '../sim/companies';
 
 export interface SaveCodec {
   encode(state: GameState, savedAtRealMs: number): SaveFile;
@@ -217,13 +218,13 @@ export class SimHost {
     } else if (loaded) {
       this.state = loaded.state;
       this.reanchor();
-      if (this.state.company) this.catchUp(this.now() - loaded.savedAtRealMs);
+      if (playerCompany(this.state)) this.catchUp(this.now() - loaded.savedAtRealMs);
     } else {
       this.state = createGame(usableSeed(seed));
       this.reanchor();
     }
     this.lastSaveMs = this.now();
-    this.deps.post({ t: 'ready', founded: this.state.company !== null });
+    this.deps.post({ t: 'ready', founded: playerCompany(this.state) !== undefined });
     this.postViews(true);
   }
 
@@ -231,7 +232,7 @@ export class SimHost {
     this.state = state;
     this.reanchor();
     this.worldSig = '';
-    this.deps.post({ t: 'ready', founded: state.company !== null });
+    this.deps.post({ t: 'ready', founded: playerCompany(state) !== undefined });
     this.postViews(true);
   }
 
@@ -249,7 +250,7 @@ export class SimHost {
   }
 
   private advance(): void {
-    if (!this.state.company || this.flags.freeze) return;
+    if (!playerCompany(this.state) || this.flags.freeze) return;
     const start = this.now();
     const target = this.anchorTick + this.ticksFor(start - this.anchorRealMs);
     let due = target - this.state.tick;
@@ -299,7 +300,7 @@ export class SimHost {
   }
 
   private async save(evenUnfounded = false): Promise<void> {
-    if (this.halted || (!this.state.company && !evenUnfounded)) return;
+    if (this.halted || (!playerCompany(this.state) && !evenUnfounded)) return;
     this.lastSaveMs = this.now();
     try {
       await this.saves.writeAuto(this.deps.codec.encode(this.state, this.lastSaveMs));

@@ -3,6 +3,7 @@ import { sectionState, storageCapKg } from '../build/sections';
 import { fail, OK, type Command, type CommandResult } from '../commands';
 import { add, take, totalKg } from '../inventory';
 import { balance, transfer } from '../ledger';
+import { activeCompany, cashAccount, PLAYER, type CompanyId } from '../companies';
 import { newId, type GameState } from '../state';
 
 export interface GoodMarket {
@@ -18,6 +19,7 @@ export interface GoodMarket {
 
 export interface Order {
   id: number;
+  companyId: CompanyId;
   goodId: GoodId;
   side: 'buy' | 'sell';
   kind: 'market' | 'limit' | 'standing';
@@ -46,10 +48,11 @@ export function buyEscrowCents(
 export function placeOrder(
   state: GameState,
   cmd: Extract<Command, { t: 'placeOrder' }>,
+  actor: CompanyId = PLAYER,
 ): CommandResult {
-  if (!state.company) return fail('NOT_FOUNDED');
+  if (!activeCompany(state, actor)) return fail('NOT_FOUNDED');
   const section = sectionState(state, cmd.sectionId);
-  if (!section) return fail('NOT_OWNED');
+  if (section?.owner !== actor) return fail('NOT_OWNED');
   const limit = cmd.kind === 'market' ? null : (cmd.limitCents ?? null);
   if (!Number.isSafeInteger(cmd.qtyKg) || cmd.qtyKg <= 0) return fail('INVALID_ORDER');
   if (cmd.kind !== 'market' && !(limit !== null && Number.isSafeInteger(limit) && limit > 0)) {
@@ -64,11 +67,12 @@ export function placeOrder(
     if (storageCapKg(state, cmd.sectionId) - totalKg(section.depot) < cmd.qtyKg) {
       return fail('STORAGE_FULL');
     }
-    if (balance(state.ledger, 'player') < cents) return fail('INSUFFICIENT_CASH');
+    if (balance(state.ledger, cashAccount(actor)) < cents) return fail('INSUFFICIENT_CASH');
   }
   const order: Order = {
     ...draft,
     id: newId(state),
+    companyId: actor,
     side: cmd.side,
     filledKg: 0,
     sectionId: cmd.sectionId,
@@ -77,25 +81,30 @@ export function placeOrder(
     escrowCents: cents,
   };
   if (cmd.side === 'sell') take(section.depot, cmd.goodId, cmd.qtyKg);
-  else transfer(state.ledger, 'player', `escrow:${order.id}`, cents);
+  else transfer(state.ledger, cashAccount(actor), `escrow:${order.id}`, cents);
   state.orders.push(order);
   return OK;
 }
 
-/** Returns what an order still holds to the player and drops it from the book. */
+/** Returns what an order still holds to its company and drops it from the book. */
 export function closeOrder(state: GameState, order: Order): void {
   const depot = sectionState(state, order.sectionId)?.depot;
   if (depot && order.escrowKg > 0) add(depot, order.goodId, order.escrowKg);
   const account = `escrow:${order.id}` as const;
-  transfer(state.ledger, account, 'player', balance(state.ledger, account));
+  transfer(state.ledger, account, cashAccount(order.companyId), balance(state.ledger, account));
   delete state.ledger.balances[account];
   state.orders = state.orders.filter((o) => o !== order);
 }
 
-export function cancelOrder(state: GameState, orderId: number): CommandResult {
-  if (!state.company) return fail('NOT_FOUNDED');
+export function cancelOrder(
+  state: GameState,
+  orderId: number,
+  actor: CompanyId = PLAYER,
+): CommandResult {
+  if (!activeCompany(state, actor)) return fail('NOT_FOUNDED');
   const order = state.orders.find((o) => o.id === orderId);
   if (!order) return fail('UNKNOWN_ID');
+  if (order.companyId !== actor) return fail('NOT_OWNED');
   closeOrder(state, order);
   return OK;
 }

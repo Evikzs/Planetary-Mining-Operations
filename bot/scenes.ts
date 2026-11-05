@@ -12,6 +12,7 @@ import { arrivalSkill } from '../src/sim/people/migration';
 import { addWorker, SKILL_CODE } from '../src/sim/people/store';
 import { createRng, deriveSeed, type Rng } from '../src/sim/rng';
 import { newId, type GameState } from '../src/sim/state';
+import { PLAYER } from '../src/sim/companies';
 import { worldOf } from '../src/sim/world/luna';
 import { connectToNetwork } from '../src/sim/world/roads';
 import type { Plot, RawGoodId } from '../src/sim/world/types';
@@ -123,7 +124,7 @@ export function makeBenchState(seed: number): GameState {
       if (!order.includes(n) && order.length < BENCH_SECTIONS) order.push(n);
     }
   }
-  for (const sid of order.slice(1)) ownSection(s, sid);
+  for (const sid of order.slice(1)) ownSection(s, sid, PLAYER);
 
   let domes = BENCH_DOMES;
   order.forEach((sid, k) => {

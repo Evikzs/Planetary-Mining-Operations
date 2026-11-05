@@ -12,6 +12,7 @@ import { fail, OK, type Command, type CommandResult } from '../commands';
 import type { System } from '../engine';
 import type { Building, GameState, Priority } from '../state';
 import { indexOfId, SKILL_CODE, SKILL_OF } from './store';
+import { activeCompany, buildingOwner, PLAYER, type CompanyId } from '../companies';
 
 /** Job slots per shift at the building's level. */
 export function slotsPerShift(b: Building): Partial<Record<Skill, number>> {
@@ -159,16 +160,20 @@ export function autoAssign(state: GameState): void {
 export function assignWorker(
   state: GameState,
   cmd: Extract<Command, { t: 'assignWorker' }>,
+  actor: CompanyId = PLAYER,
 ): CommandResult {
-  if (!state.company) return fail('NOT_FOUNDED');
+  if (!activeCompany(state, actor)) return fail('NOT_FOUNDED');
   const p = state.people;
   const i = indexOfId(p, cmd.workerId);
   if (i < 0) return fail('UNKNOWN_ID');
+  const homeOf = state.buildings.find((x) => x.id === p.home[i]);
+  if (!homeOf || buildingOwner(state, homeOf) !== actor) return fail('NOT_OWNED');
   let job = -1;
   let shift: number = p.shift[i]!;
   if (cmd.buildingId !== null) {
     const b = state.buildings.find((x) => x.id === cmd.buildingId);
     if (!b) return fail('UNKNOWN_ID');
+    if (buildingOwner(state, b) !== actor) return fail('NOT_OWNED');
     const need = slotsPerShift(b)[SKILL_OF[p.skill[i]!]!] ?? 0;
     const home = state.buildings.find((x) => x.id === p.home[i]);
     if (!need || b.status === 'constructing' || home?.sectionId !== b.sectionId) {

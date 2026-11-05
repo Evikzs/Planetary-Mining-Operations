@@ -5,6 +5,14 @@ import { fail, OK, type CommandResult } from '../commands';
 import type { StepContext, System } from '../engine';
 import { take } from '../inventory';
 import { transfer } from '../ledger';
+import {
+  activeCompany,
+  cashAccount,
+  changeReputation,
+  PLAYER,
+  playerCompany,
+  type CompanyId,
+} from '../companies';
 import { presentCrew, releaseWorkers } from '../people/jobs';
 import { newId, type GameState } from '../state';
 import { worldOf } from '../world/luna';
@@ -42,16 +50,16 @@ export interface Contract {
   stageIndex: number;
   plotId: number | null;
   asset: Asset | null;
+  /** The company that accepted it; null while offered. */
+  holder: CompanyId | null;
+  /** Infrastructure tenders go to the owner of the plot's section; ore offers are public. */
+  tenderTo: CompanyId | null;
 }
 
 const BUILD_CREW = 2;
 const ABANDON_REP = 4;
 /** Finished contracts kept for the record. */
 const FINISHED_KEPT = 20;
-
-const changeReputation = (state: GameState, delta: number) => {
-  state.reputation = Math.min(100, Math.max(0, state.reputation + delta));
-};
 
 const siteOf = (state: GameState, c: Contract) =>
   c.plotId === null
@@ -84,16 +92,21 @@ function closeSite(state: GameState, c: Contract): void {
   state.buildings = state.buildings.filter((b) => b !== site);
 }
 
-export function acceptContract(state: GameState, contractId: number): CommandResult {
-  if (!state.company) return fail('NOT_FOUNDED');
+export function acceptContract(
+  state: GameState,
+  contractId: number,
+  actor: CompanyId = PLAYER,
+): CommandResult {
+  const company = activeCompany(state, actor);
+  if (!company) return fail('NOT_FOUNDED');
   const c = state.contracts.find((x) => x.id === contractId && x.status === 'offered');
   if (!c) return fail('UNKNOWN_ID');
-  const active = state.contracts.filter((x) => x.status === 'active').length;
-  if (active >= maxActive(state.reputation)) return fail('CONTRACT_LIMIT');
+  const active = state.contracts.filter((x) => x.status === 'active' && x.holder === actor).length;
+  if (active >= maxActive(company.reputation.luna)) return fail('CONTRACT_LIMIT');
   if (c.plotId !== null) {
     const plot = worldOf(state).plots[c.plotId]!;
     const section = sectionState(state, plot.sectionId);
-    if (!section) return fail('NOT_OWNED');
+    if (section?.owner !== actor) return fail('NOT_OWNED');
     if (plotOccupied(state, plot.id)) return fail('PLOT_OCCUPIED');
     const road = connectToNetwork(gridFor(state, plot.sectionId), section.roadNet!, plot.dir, () =>
       newId(state),
@@ -102,6 +115,7 @@ export function acceptContract(state: GameState, contractId: number): CommandRes
     addBuilding(state, plot, 'contractSite', 'active');
   }
   c.status = 'active';
+  c.holder = actor;
   c.deadlineTick = state.tick + c.hours * 60;
   staffSite(state, c);
   return OK;
@@ -112,14 +126,17 @@ export function deliverContract(
   state: GameState,
   contractId: number,
   sectionId: number,
+  actor: CompanyId = PLAYER,
 ): CommandResult {
-  if (!state.company) return fail('NOT_FOUNDED');
+  if (!activeCompany(state, actor)) return fail('NOT_FOUNDED');
   const c = state.contracts.find((x) => x.id === contractId);
   if (!c) return fail('UNKNOWN_ID');
+  if (c.status === 'active' && c.holder !== actor) return fail('NOT_OWNED');
   const stage = c.stages[c.stageIndex];
   if (c.status !== 'active' || stage?.kind !== 'deliver') return fail('NOT_ACTIVE');
-  const depot = sectionState(state, sectionId)?.depot;
-  if (!depot) return fail('NOT_OWNED');
+  const section = sectionState(state, sectionId);
+  if (section?.owner !== actor) return fail('NOT_OWNED');
+  const depot = section.depot;
   let moved = 0;
   for (const [g, need] of Object.entries(stage.needKg) as [GoodId, number][]) {
     const kg = Math.min(need - (stage.doneKg[g] ?? 0), depot[g] ?? 0);
@@ -134,13 +151,18 @@ export function deliverContract(
   return OK;
 }
 
-export function abandonContract(state: GameState, contractId: number): CommandResult {
-  if (!state.company) return fail('NOT_FOUNDED');
+export function abandonContract(
+  state: GameState,
+  contractId: number,
+  actor: CompanyId = PLAYER,
+): CommandResult {
+  if (!activeCompany(state, actor)) return fail('NOT_FOUNDED');
   const c = state.contracts.find((x) => x.id === contractId);
   if (!c) return fail('UNKNOWN_ID');
   if (c.status !== 'active') return fail('NOT_ACTIVE');
+  if (c.holder !== actor) return fail('NOT_OWNED');
   c.status = 'abandoned';
-  changeReputation(state, -ABANDON_REP);
+  changeReputation(state, actor, -ABANDON_REP);
   closeSite(state, c);
   return OK;
 }
@@ -162,9 +184,10 @@ function progress(state: GameState, c: Contract, hours: number): void {
 
 function complete(state: GameState, ctx: StepContext, c: Contract): void {
   c.status = 'completed';
-  transfer(state.ledger, 'world', 'player', c.rewardCents);
+  const holder = c.holder ?? PLAYER;
+  transfer(state.ledger, 'world', cashAccount(holder), c.rewardCents);
   state.stats.incomeCents += c.rewardCents;
-  changeReputation(state, c.repGain);
+  changeReputation(state, holder, c.repGain);
   if (c.plotId !== null && c.asset) state.clientAssets.push({ plotId: c.plotId, asset: c.asset });
   closeSite(state, c);
   state.colonyPop += ctx.rng.int(40, 120);
@@ -174,7 +197,7 @@ function complete(state: GameState, ctx: StepContext, c: Contract): void {
 
 function failContract(state: GameState, ctx: StepContext, c: Contract): void {
   c.status = 'failed';
-  changeReputation(state, -c.repLoss);
+  changeReputation(state, c.holder ?? PLAYER, -c.repLoss);
   closeSite(state, c);
   ctx.events.push({ t: 'contractFailed', contractId: c.id });
 }
@@ -192,7 +215,8 @@ export const contractsSystem: System = {
     state.contracts = state.contracts.filter((c) => c.status !== 'offered' || now < c.deadlineTick);
     if (now % 60 === 0) {
       const onBoard = state.contracts.filter((c) => c.status === 'offered').length;
-      if (onBoard < boardSize(state.reputation) && ctx.rng.next() < 0.25) {
+      const rep = playerCompany(state)?.reputation.luna ?? 0;
+      if (onBoard < boardSize(rep) && ctx.rng.next() < 0.25) {
         const c = generateOffer(state, ctx.rng);
         state.contracts.push(c);
         ctx.events.push({ t: 'contractOffered', contractId: c.id });

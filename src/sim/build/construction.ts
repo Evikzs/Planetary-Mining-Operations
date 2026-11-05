@@ -5,6 +5,7 @@ import { fail, OK, type CommandResult } from '../commands';
 import type { System } from '../engine';
 import { add, take, type Inventory } from '../inventory';
 import { balance, transfer } from '../ledger';
+import { activeCompany, buildingOwner, cashAccount, PLAYER, type CompanyId } from '../companies';
 import { newId, type Building, type GameState, type Priority } from '../state';
 import { evictResidents } from '../people/housing';
 import { releaseWorkers } from '../people/jobs';
@@ -29,6 +30,14 @@ export function findBuilding(state: GameState, id: number): Building | undefined
   return state.buildings.find((b) => b.id === id);
 }
 
+/** The actor's building, or the failure to report. */
+function ownBuilding(state: GameState, id: number, actor: CompanyId): Building | CommandResult {
+  if (!activeCompany(state, actor)) return fail('NOT_FOUNDED');
+  const b = findBuilding(state, id);
+  if (!b) return fail('UNKNOWN_ID');
+  return buildingOwner(state, b) === actor ? b : fail('NOT_OWNED');
+}
+
 export function plotOccupied(state: GameState, plotId: number): boolean {
   return state.buildings.some((b) => b.plotId === plotId);
 }
@@ -36,13 +45,14 @@ export function plotOccupied(state: GameState, plotId: number): boolean {
 export function build(
   state: GameState,
   cmd: { plotId: number; type: BuildingTypeId; recipeId?: RecipeId },
+  actor: CompanyId = PLAYER,
 ): CommandResult {
-  if (!state.company) return fail('NOT_FOUNDED');
+  if (!activeCompany(state, actor)) return fail('NOT_FOUNDED');
   const plot = worldOf(state).plots[cmd.plotId];
   const def = BUILDINGS[cmd.type];
   if (!plot || !def) return fail('UNKNOWN_ID');
   const section = sectionState(state, plot.sectionId);
-  if (!section) return fail('NOT_OWNED');
+  if (section?.owner !== actor) return fail('NOT_OWNED');
   if (plotOccupied(state, plot.id)) return fail('PLOT_OCCUPIED');
   if (def.plot === 'hub' || def.plot === 'public' || def.plot !== plot.kind) {
     return fail('WRONG_PLOT_KIND');
@@ -52,13 +62,14 @@ export function build(
   }
   const recipeId = cmd.recipeId ?? def.recipes[0] ?? null;
   if (recipeId !== null && !def.recipes.includes(recipeId)) return fail('INVALID_RECIPE');
-  if (balance(state.ledger, 'player') < def.cost.cents) return fail('INSUFFICIENT_CASH');
+  const cash = cashAccount(actor);
+  if (balance(state.ledger, cash) < def.cost.cents) return fail('INSUFFICIENT_CASH');
   if (!hasMaterials(section.depot, def.cost.materials)) return fail('INSUFFICIENT_MATERIALS');
   const road = connectToNetwork(gridFor(state, plot.sectionId), section.roadNet!, plot.dir, () =>
     newId(state),
   );
   if (!road) return fail('NO_ROAD_ACCESS');
-  transfer(state.ledger, 'player', 'world', def.cost.cents);
+  transfer(state.ledger, cash, 'world', def.cost.cents);
   consume(section.depot, def.cost.materials);
   const building = addBuilding(state, plot, cmd.type, 'constructing', recipeId);
   if (def.belt) createBelt(state, building);
@@ -66,18 +77,22 @@ export function build(
   return OK;
 }
 
-export function upgrade(state: GameState, buildingId: number): CommandResult {
-  if (!state.company) return fail('NOT_FOUNDED');
-  const b = findBuilding(state, buildingId);
-  if (!b) return fail('UNKNOWN_ID');
+export function upgrade(
+  state: GameState,
+  buildingId: number,
+  actor: CompanyId = PLAYER,
+): CommandResult {
+  const b = ownBuilding(state, buildingId, actor);
+  if (!('id' in b)) return b;
   const def = BUILDINGS[b.type];
   if (busy(b)) return fail('BUSY');
   if (b.level >= MAX_LEVEL || def.buildHours === 0) return fail('MAX_LEVEL');
   const cost = upgradeCost(def, b.level);
   const section = sectionState(state, b.sectionId)!;
-  if (balance(state.ledger, 'player') < cost.cents) return fail('INSUFFICIENT_CASH');
+  const cash = cashAccount(actor);
+  if (balance(state.ledger, cash) < cost.cents) return fail('INSUFFICIENT_CASH');
   if (!hasMaterials(section.depot, cost.materials)) return fail('INSUFFICIENT_MATERIALS');
-  transfer(state.ledger, 'player', 'world', cost.cents);
+  transfer(state.ledger, cash, 'world', cost.cents);
   consume(section.depot, cost.materials);
   b.status = 'upgrading';
   b.progress = 0;
@@ -97,25 +112,37 @@ function flushBuffers(state: GameState, b: Building): void {
   }
 }
 
-export function demolish(state: GameState, buildingId: number): CommandResult {
-  if (!state.company) return fail('NOT_FOUNDED');
-  const b = findBuilding(state, buildingId);
-  if (!b) return fail('UNKNOWN_ID');
+export function demolish(
+  state: GameState,
+  buildingId: number,
+  actor: CompanyId = PLAYER,
+): CommandResult {
+  const b = ownBuilding(state, buildingId, actor);
+  if (!('id' in b)) return b;
   if (b.type === 'depot' || b.type === 'contractSite') return fail('CANNOT_DEMOLISH');
   flushBuffers(state, b);
   removeBelt(state, b);
   releaseWorkers(state, b.id);
   const left = evictResidents(state, b);
   if (left > 0) state.pendingEvents.push({ t: 'emigration', count: left });
-  transfer(state.ledger, 'world', 'player', Math.round(BUILDINGS[b.type].cost.cents * 0.25));
+  transfer(
+    state.ledger,
+    'world',
+    cashAccount(actor),
+    Math.round(BUILDINGS[b.type].cost.cents * 0.25),
+  );
   state.buildings = state.buildings.filter((x) => x.id !== b.id);
   return OK;
 }
 
-export function setRecipe(state: GameState, buildingId: number, recipeId: RecipeId): CommandResult {
-  if (!state.company) return fail('NOT_FOUNDED');
-  const b = findBuilding(state, buildingId);
-  if (!b) return fail('UNKNOWN_ID');
+export function setRecipe(
+  state: GameState,
+  buildingId: number,
+  recipeId: RecipeId,
+  actor: CompanyId = PLAYER,
+): CommandResult {
+  const b = ownBuilding(state, buildingId, actor);
+  if (!('id' in b)) return b;
   if (!BUILDINGS[b.type].recipes.includes(recipeId)) return fail('INVALID_RECIPE');
   if (b.recipeId !== recipeId) {
     flushBuffers(state, b);
@@ -129,10 +156,10 @@ export function setPriority(
   state: GameState,
   buildingId: number,
   priority: Priority,
+  actor: CompanyId = PLAYER,
 ): CommandResult {
-  if (!state.company) return fail('NOT_FOUNDED');
-  const b = findBuilding(state, buildingId);
-  if (!b) return fail('UNKNOWN_ID');
+  const b = ownBuilding(state, buildingId, actor);
+  if (!('id' in b)) return b;
   b.priority = priority;
   state.jobsDirty = true;
   return OK;

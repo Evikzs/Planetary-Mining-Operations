@@ -158,7 +158,7 @@ describe('migration', () => {
     expect(s.people.count).toBe(36); // crew quarters hold 36
     const low = founded();
     for (let i = 0; i < low.people.count; i++) low.people.morale[i] = 20;
-    low.wageLevel = { miner: 'low', technician: 'low', engineer: 'low' };
+    low.companies[0]!.wageLevel = { miner: 'low', technician: 'low', engineer: 'low' };
     delete sectionState(low, home)!.depot.hydroponicProduce;
     run(low, 120);
     expect(low.people.count).toBeLessThanOrEqual(33);
@@ -191,13 +191,13 @@ describe('payroll', () => {
       });
     }
     expect(payrollCentsPerHour(s) * 24).toBe(90_000);
-    const cash = balance(s.ledger, 'player');
+    const cash = balance(s.ledger, 'co:0');
     run(s, 60);
     // Migration can add a worker on the hour, before payroll runs: payroll pays the books as they stand.
-    expect(cash - balance(s.ledger, 'player')).toBe(payrollCentsPerHour(s));
-    transfer(s.ledger, 'player', 'world', balance(s.ledger, 'player'));
+    expect(cash - balance(s.ledger, 'co:0')).toBe(payrollCentsPerHour(s));
+    transfer(s.ledger, 'co:0', 'world', balance(s.ledger, 'co:0'));
     run(s, 60);
-    expect(s.payrollShortfall).toBe(true);
+    expect(s.companies[0]!.payrollShortfall).toBe(true);
   });
 
   it('setWageLevel changes the wage', () => {
@@ -205,6 +205,6 @@ describe('payroll', () => {
     expect(applyCommand(s, { t: 'setWageLevel', skill: 'miner', level: 'high' })).toEqual({
       ok: true,
     });
-    expect(s.wageLevel.miner).toBe('high');
+    expect(s.companies[0]!.wageLevel.miner).toBe('high');
   });
 });

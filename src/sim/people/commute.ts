@@ -18,14 +18,20 @@ import { indexOfId } from './store';
 
 // present codes: 0 = away, 1 = at work, 2 = riding or waiting for a bus.
 
-/** Every assigned worker of the current shift is at work and no bus is out. Coarse steps and founding. */
-export function seatCurrentShift(state: GameState): void {
+/**
+ * Every assigned worker of the current shift is at work and no bus is out. Coarse steps take all
+ * sections; a new charter takes only its own, so other companies' buses keep running.
+ */
+export function seatCurrentShift(state: GameState, sectionId?: number): void {
   const p = state.people;
   const shift = shiftAt(state.tick);
+  const home = new Map(state.buildings.map((b) => [b.id, b.sectionId]));
   for (let i = 0; i < p.count; i++) {
+    if (sectionId !== undefined && home.get(p.home[i]!) !== sectionId) continue;
     p.present[i] = p.job[i]! >= 0 && p.home[i]! >= 0 && p.shift[i] === shift ? 1 : 0;
   }
-  state.trips = [];
+  state.trips =
+    sectionId === undefined ? [] : state.trips.filter((trip) => trip.sectionId !== sectionId);
   forgetCrews(state);
 }
 

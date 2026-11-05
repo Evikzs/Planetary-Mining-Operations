@@ -10,6 +10,8 @@ import { deserializeState, serializeState } from '../../src/save/serialize';
 import { createIdbSaveStore } from '../../src/save/slots';
 import type { SaveFile } from '../../src/save/types';
 import fixture from '../fixtures/saves/v1-founding.json';
+import v2fixture from '../fixtures/saves/v2-founding.json';
+import { checkInvariants } from '../../src/sim/invariants';
 
 function foundedState(ticks = 200) {
   const s = createGame(42);
@@ -71,6 +73,30 @@ describe('save files', () => {
 
   it('loads the v1 fixture', () => {
     expect(fromSaveFile(fixture).ok).toBe(true);
+  });
+
+  it('migrates a v2 save to v3', () => {
+    const res = fromSaveFile(v2fixture);
+    expect(res.ok).toBe(true);
+    if (!res.ok) return;
+    const s = res.state;
+    expect(s.companies[0]).toMatchObject({
+      id: 0,
+      name: 'Selene Rock Co',
+      kind: 'player',
+      companionId: 'veteran',
+      reputation: { group: 20, luna: 20 },
+    });
+    expect(s.ledger.balances['co:0']).toBeGreaterThan(0);
+    expect('player' in s.ledger.balances).toBe(false);
+    expect(s.sections[0]!.owner).toBe(0);
+    for (let i = 0; i < 200; i++) step(s, { mode: 'fine' });
+    expect(checkInvariants(s)).toEqual([]);
+  });
+
+  it('loads the v1 fixture through both migrations', () => {
+    const res = fromSaveFile(fixture);
+    expect(res.ok && res.state.companies[0]!.name).toBe('Selene Rock Co');
   });
 
   it('a version-1 save gains a trip counter that starts above every id it holds', () => {

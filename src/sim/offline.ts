@@ -4,6 +4,7 @@ import { step } from './engine';
 import type { SimEvent } from './events';
 import { balance } from './ledger';
 import type { GameState } from './state';
+import { cashAccount, PLAYER } from './companies';
 
 export interface AwaySummary {
   realMsAway: number;
@@ -74,7 +75,7 @@ export function runCatchUp(
   const away = Math.max(0, realMsAway);
   const ms = Math.min(away, OFFLINE.capMs);
   const total = Math.floor((ms * timescale) / 1000 + 1e-9);
-  const cash = balance(state.ledger, 'player');
+  const cash = balance(state.ledger, cashAccount(PLAYER));
   const produced = { ...state.stats.producedKg };
   const sold = { ...state.stats.soldKg };
   const events: SimEvent[] = [];
@@ -101,7 +102,7 @@ export function runCatchUp(
     realMsAway: away,
     gameHours: total / 60,
     capped: away > OFFLINE.capMs,
-    cashDeltaCents: balance(state.ledger, 'player') - cash,
+    cashDeltaCents: balance(state.ledger, cashAccount(PLAYER)) - cash,
     producedKg: delta(state.stats.producedKg, produced),
     soldKg: delta(state.stats.soldKg, sold),
     contractsCompleted: count('contractCompleted'),

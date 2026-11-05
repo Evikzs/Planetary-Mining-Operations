@@ -2,6 +2,7 @@ import { BUILDING_IDS, BUILDINGS } from '../../data/buildings';
 import { GOOD_IDS, type GoodId } from '../../data/goods';
 import { balance } from '../ledger';
 import type { GameState } from '../state';
+import { cashAccount, PLAYER } from '../companies';
 
 export function unlockCodex(state: GameState, id: string): void {
   if (!state.story.codex.includes(id)) state.story.codex.push(id);
@@ -20,7 +21,7 @@ export function unlockFromState(state: GameState): void {
   }
   for (const g of GOOD_IDS) if (seen.has(g)) unlockCodex(state, `good.${g}`);
 
-  const cash = balance(state.ledger, 'player');
+  const cash = balance(state.ledger, cashAccount(PLAYER));
   for (const type of BUILDING_IDS) {
     const def = BUILDINGS[type];
     if (def.plot !== 'build' && def.plot !== 'deposit') continue;

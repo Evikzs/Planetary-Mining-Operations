@@ -23,6 +23,7 @@ import { housingCapacity } from './people/housing';
 import { presentCrew, slotsPerShift, staffing } from './people/jobs';
 import { indexOfId, SKILL_CODE, SKILL_OF, workerName } from './people/store';
 import type { Building, BuildingStatus, Company, GameState, Priority } from './state';
+import { cashAccount, PLAYER, playerCompany, type CompanyState } from './companies';
 import type { BeatId, HintCategory } from './story/beats';
 import { currentLine } from './story/story';
 import { worldOf } from './world/luna';
@@ -142,7 +143,7 @@ export interface UiSnapshot {
     muted: HintCategory[];
   };
   alerts: Alert[];
-  wageLevel: GameState['wageLevel'];
+  wageLevel: CompanyState['wageLevel'];
 }
 
 export type MoraleBand = 'lt25' | '25to50' | '50to75' | 'ge75';
@@ -189,7 +190,7 @@ export function worldSignature(state: GameState): string {
 
 export function buildWorldView(state: GameState, version: number): WorldView {
   const world = worldOf(state);
-  const owned = new Set(state.sections.map((s) => s.id));
+  const owned = new Set(state.sections.filter((s) => s.owner === PLAYER).map((s) => s.id));
   const buyable = new Set(buyableSections(state));
   return {
     version,
@@ -259,6 +260,7 @@ export function buildMotionView(state: GameState): MotionView {
 }
 
 export function buildUiSnapshot(state: GameState): UiSnapshot {
+  const player = playerCompany(state);
   const p = state.people;
   const bySkill: UiSnapshot['workforce']['bySkill'] = {
     miner: { total: 0, employed: 0 },
@@ -313,22 +315,24 @@ export function buildUiSnapshot(state: GameState): UiSnapshot {
   return {
     tick: state.tick,
     date: formatGameDate(state.tick),
-    company: state.company,
-    cashCents: balance(state.ledger, 'player'),
-    reputation: state.reputation,
+    company: player ? { name: player.name, companionId: player.companionId ?? 'veteran' } : null,
+    cashCents: balance(state.ledger, cashAccount(PLAYER)),
+    reputation: player?.reputation.luna ?? 0,
     landPriceCents: landPrice(state.landPurchases),
-    sections: state.sections.map((s) => ({
-      id: s.id,
-      owned: true,
-      powerSupplyKw: s.power.supplyKw,
-      powerDemandKw: s.power.demandKw,
-      residents: residents.get(s.id) ?? 0,
-      housingCap: housingCap.get(s.id) ?? 0,
-      stockKg: { ...s.depot },
-      storageUsedKg: totalKg(s.depot),
-      storageCapKg: storageCapKg(state, s.id),
-      needsMet: { ...s.needsMet },
-    })),
+    sections: state.sections
+      .filter((s) => s.owner === PLAYER)
+      .map((s) => ({
+        id: s.id,
+        owned: true,
+        powerSupplyKw: s.power.supplyKw,
+        powerDemandKw: s.power.demandKw,
+        residents: residents.get(s.id) ?? 0,
+        housingCap: housingCap.get(s.id) ?? 0,
+        stockKg: { ...s.depot },
+        storageUsedKg: totalKg(s.depot),
+        storageCapKg: storageCapKg(state, s.id),
+        needsMet: { ...s.needsMet },
+      })),
     workforce: { total: p.count, employed, bySkill },
     buildings: state.buildings
       .filter((b) => !isSite(b))
@@ -382,7 +386,9 @@ export function buildUiSnapshot(state: GameState): UiSnapshot {
       muted: [...state.story.muted],
     },
     alerts: structuredClone(state.alerts),
-    wageLevel: { ...state.wageLevel },
+    wageLevel: {
+      ...(player?.wageLevel ?? { miner: 'standard', technician: 'standard', engineer: 'standard' }),
+    },
   };
 }
 

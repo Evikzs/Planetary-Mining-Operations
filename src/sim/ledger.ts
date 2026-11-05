@@ -1,4 +1,6 @@
-export type AccountId = 'player' | 'world' | `escrow:${number}`;
+import type { CashAccount } from './companies';
+
+export type AccountId = 'world' | CashAccount | `escrow:${number}`;
 
 /** Integer cents per account. The world account may go negative; the sum is always 0. */
 export interface Ledger {

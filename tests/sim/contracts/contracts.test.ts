@@ -46,6 +46,8 @@ function offer(s: GameState, c: Partial<Contract> = {}): Contract {
     stageIndex: 0,
     plotId: null,
     asset: null,
+    holder: null,
+    tenderTo: null,
     ...c,
   };
   s.contracts.push(contract);
@@ -119,12 +121,12 @@ describe('contracts', () => {
     depot.ilmenite = 10_000;
     expect(deliver(s, c)).toEqual({ ok: true });
     expect(depot.ilmenite).toBe(4_000);
-    const cash = balance(s.ledger, 'player');
+    const cash = balance(s.ledger, 'co:0');
     const pop = s.colonyPop;
     const events = run(s, 1);
     expect(c.status).toBe('completed');
-    expect(balance(s.ledger, 'player') - cash).toBe(100_000);
-    expect(s.reputation).toBe(23);
+    expect(balance(s.ledger, 'co:0') - cash).toBe(100_000);
+    expect(s.companies[0]!.reputation.luna).toBe(23);
     expect(s.colonyPop - pop).toBeGreaterThanOrEqual(40);
     expect(s.colonyPop - pop).toBeLessThanOrEqual(120);
     expect(events).toContainEqual({ t: 'contractCompleted', contractId: c.id });
@@ -143,7 +145,7 @@ describe('contracts', () => {
     accept(s, c);
     const events = run(s, 121);
     expect(c.status).toBe('failed');
-    expect(s.reputation).toBe(15);
+    expect(s.companies[0]!.reputation.luna).toBe(15);
     expect(events).toContainEqual({ t: 'contractFailed', contractId: c.id });
   });
 
@@ -155,7 +157,7 @@ describe('contracts', () => {
     deliver(s, c);
     expect(applyCommand(s, { t: 'abandonContract', contractId: c.id })).toEqual({ ok: true });
     expect(c.status).toBe('abandoned');
-    expect(s.reputation).toBe(16);
+    expect(s.companies[0]!.reputation.luna).toBe(16);
     expect(sectionState(s, home)!.depot.ilmenite ?? 0).toBe(0);
   });
 
@@ -196,7 +198,7 @@ describe('contracts', () => {
     const pop = s.colonyPop;
     for (let h = 0; h < 48 && c.status === 'active'; h++) run(s, 1, 'coarse');
     expect(c.status).toBe('completed');
-    expect(s.reputation).toBe(25);
+    expect(s.companies[0]!.reputation.luna).toBe(25);
     expect(s.clientAssets).toContainEqual({ plotId: plot.id, asset: 'commMast' });
     expect(s.colonyPop).toBeGreaterThan(pop);
     expect(s.buildings.some((b) => b.plotId === plot.id)).toBe(false);
@@ -240,7 +242,7 @@ describe('contracts', () => {
       offered.push(s.contracts.filter((x) => x.status === 'offered').length);
     }
     expect(Math.max(...offered)).toBeGreaterThan(0);
-    expect(Math.max(...offered)).toBeLessThanOrEqual(boardSize(s.reputation));
+    expect(Math.max(...offered)).toBeLessThanOrEqual(boardSize(s.companies[0]!.reputation.luna));
   });
 
   it('a contract site cannot be built, upgraded or demolished by the player', () => {

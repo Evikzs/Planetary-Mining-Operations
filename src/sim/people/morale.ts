@@ -3,6 +3,7 @@ import { MORALE, WAGE_LEVEL, type WageLevel } from '../../data/balance';
 import type { System } from '../engine';
 import { ALL_MET, type NeedsMet } from './needs';
 import { SKILL_OF } from './store';
+import { playerCompany } from '../companies';
 
 /** The part of a target that depends only on the home: base, housing quality and needs met. */
 function homePart(quality: number, m: NeedsMet): number {
@@ -44,8 +45,9 @@ export const moraleSystem: System = {
       const met = state.sections.find((s) => s.id === b.sectionId)?.needsMet ?? ALL_MET;
       atHome[b.id] = homePart(BUILDINGS[b.type].housing?.quality ?? 0, met);
     }
-    const wage = SKILL_OF.map((s) => WAGE_LEVEL[state.wageLevel[s]].morale);
-    const unpaid = state.payrollShortfall ? MORALE.unpaid : 0;
+    const company = playerCompany(state);
+    const wage = SKILL_OF.map((s) => WAGE_LEVEL[company?.wageLevel[s] ?? 'standard'].morale);
+    const unpaid = company?.payrollShortfall ? MORALE.unpaid : 0;
     const step = (MORALE.driftPerHour * ctx.dtMinutes) / 60;
     const p = state.people;
     // Morale of each workplace's crew, summed after this step's drift.

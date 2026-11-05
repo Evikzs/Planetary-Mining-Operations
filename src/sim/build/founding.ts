@@ -17,12 +17,12 @@ import { newId, type GameState } from '../state';
 import { worldOf } from '../world/luna';
 import { connectToNetwork } from '../world/roads';
 import { addBuilding, gridFor, hubDir, ownSection } from './sections';
+import { cashAccount, PLAYER, type CompanyId } from '../companies';
 
-/** The founding charter: one south-polar section, starter buildings, cash and stock. */
-export function grantCharter(state: GameState): void {
+/** A founding charter: one section with starter buildings, cash, stock and workers. */
+export function grantCharter(state: GameState, companyId: CompanyId, sid: number): void {
   const world = worldOf(state);
-  const sid = world.foundingSectionId;
-  const section = ownSection(state, sid);
+  const section = ownSection(state, sid, companyId);
   const hub = hubDir(state, sid);
   const grid = gridFor(state, sid);
   const plots = world.plots
@@ -38,12 +38,14 @@ export function grantCharter(state: GameState): void {
       }
     }
   }
-  transfer(state.ledger, 'world', 'player', START_CASH_CENTS);
+  transfer(state.ledger, 'world', cashAccount(companyId), START_CASH_CENTS);
   for (const [g, t] of Object.entries(START_STOCK_T)) {
     add(section.depot, g as GoodId, Math.round(t * 1000));
   }
-  const quarters = state.buildings.find((b) => b.type === 'crewQuarters');
-  const names = createRng(deriveSeed(state.seed, 'founders'));
+  const quarters = state.buildings.find((b) => b.type === 'crewQuarters' && b.sectionId === sid);
+  // The player keeps the M1 stream, so existing seeds keep their founders' names.
+  const stream = companyId === PLAYER ? 'founders' : `founders:${companyId}`;
+  const names = createRng(deriveSeed(state.seed, stream));
   for (const skill of SKILLS) {
     for (let i = 0; i < START_WORKERS[skill]; i++) {
       addWorker(state.people, {
@@ -58,5 +60,5 @@ export function grantCharter(state: GameState): void {
   }
   // The night shift is already at work when the charter is granted at 05:00.
   autoAssign(state);
-  seatCurrentShift(state);
+  seatCurrentShift(state, sid);
 }

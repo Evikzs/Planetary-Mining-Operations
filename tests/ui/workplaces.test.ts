@@ -26,6 +26,8 @@ describe('People tab workplaces', () => {
       stageIndex: 0,
       plotId: plot.id,
       asset: 'commMast',
+      holder: null,
+      tenderTo: 0,
     };
     s.contracts.push(c);
     applyCommand(s, { t: 'acceptContract', contractId: c.id });

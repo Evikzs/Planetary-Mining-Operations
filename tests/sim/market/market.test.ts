@@ -26,6 +26,7 @@ let nextId = 1;
 function order(o: Partial<Order> & Pick<Order, 'goodId' | 'side' | 'qtyKg'>): Order {
   return {
     id: nextId++,
+    companyId: 0,
     kind: 'market',
     filledKg: 0,
     limitCents: null,
@@ -131,7 +132,7 @@ describe('market', () => {
     const depot = sectionState(s, home)!.depot;
     depot.ilmenite = 20_000;
     const steel0 = depot.steel ?? 0;
-    const cash0 = balance(s.ledger, 'player');
+    const cash0 = balance(s.ledger, 'co:0');
     const place = (side: 'buy' | 'sell', goodId: GoodId, kind: 'market' | 'limit', kg: number) =>
       applyCommand(s, {
         t: 'placeOrder',
@@ -151,7 +152,7 @@ describe('market', () => {
     const cents = (side: 'buy' | 'sell') =>
       done.filter((t) => t.side === side).reduce((sum, t) => sum + t.cents, 0);
     const escrowCents = s.orders.reduce((sum, o) => sum + balance(s.ledger, `escrow:${o.id}`), 0);
-    expect(balance(s.ledger, 'player') + escrowCents).toBe(cash0 + cents('sell') - cents('buy'));
+    expect(balance(s.ledger, 'co:0') + escrowCents).toBe(cash0 + cents('sell') - cents('buy'));
     const escrowKg = s.orders
       .filter((o) => o.goodId === 'ilmenite')
       .reduce((sum, o) => sum + o.escrowKg, 0);
@@ -164,7 +165,7 @@ describe('market', () => {
     const s = founded();
     const depot = sectionState(s, home)!.depot;
     depot.ilmenite = 10_000;
-    const cash0 = balance(s.ledger, 'player');
+    const cash0 = balance(s.ledger, 'co:0');
     applyCommand(s, {
       t: 'placeOrder',
       goodId: 'ilmenite',
@@ -174,9 +175,9 @@ describe('market', () => {
       limitCents: 3000,
       sectionId: home,
     });
-    expect(balance(s.ledger, 'player')).toBe(cash0 - 3000);
+    expect(balance(s.ledger, 'co:0')).toBe(cash0 - 3000);
     expect(applyCommand(s, { t: 'cancelOrder', orderId: s.orders[0]!.id })).toEqual({ ok: true });
-    expect(balance(s.ledger, 'player')).toBe(cash0);
+    expect(balance(s.ledger, 'co:0')).toBe(cash0);
     expect(s.orders).toHaveLength(0);
     expect(applyCommand(s, { t: 'cancelOrder', orderId: 12_345 })).toEqual({
       ok: false,

@@ -32,7 +32,7 @@ describe('founding charter', () => {
     expect(s.buildings.find((b) => b.type === 'depot')?.plotId).toBe(
       world.sections[home]!.hubPlotId,
     );
-    expect(balance(s.ledger, 'player')).toBe(25_000_000);
+    expect(balance(s.ledger, 'co:0')).toBe(25_000_000);
     const depot = sectionState(s, home)!.depot;
     for (const [g, t] of Object.entries(START_STOCK_T))
       expect(depot[g as keyof typeof depot]).toBe(t * 1000);
@@ -48,7 +48,7 @@ describe('construction', () => {
     expect(applyCommand(s, { t: 'build', plotId: ilmenitePlot.id, type: 'mine' })).toEqual({
       ok: true,
     });
-    expect(balance(s.ledger, 'player')).toBe(25_000_000 - 600_000);
+    expect(balance(s.ledger, 'co:0')).toBe(25_000_000 - 600_000);
     expect(depot.prefabStructures).toBe(130_000);
     expect(depot.machinery).toBe(10_000);
     const mine = s.buildings.find((b) => b.type === 'mine')!;
@@ -92,7 +92,7 @@ describe('construction', () => {
     [
       'INSUFFICIENT_CASH',
       (s: GameState) => {
-        transfer(s.ledger, 'player', 'world', 25_000_000 - 100);
+        transfer(s.ledger, 'co:0', 'world', 25_000_000 - 100);
         return { plot: ilmenitePlot, type: 'mine' as const, s };
       },
     ],
@@ -105,11 +105,11 @@ describe('construction', () => {
     ],
   ] as const)('rejects with %s and charges nothing', (error, arrange) => {
     const { plot, type, s } = arrange(founded());
-    const cash = balance(s.ledger, 'player');
+    const cash = balance(s.ledger, 'co:0');
     const stock = { ...sectionState(s, home)!.depot };
     const count = s.buildings.length;
     expect(applyCommand(s, { t: 'build', plotId: plot.id, type })).toEqual({ ok: false, error });
-    expect(balance(s.ledger, 'player')).toBe(cash);
+    expect(balance(s.ledger, 'co:0')).toBe(cash);
     expect(sectionState(s, home)!.depot).toEqual(stock);
     expect(s.buildings).toHaveLength(count);
   });
@@ -122,13 +122,13 @@ describe('construction', () => {
       (p) => p.sectionId === w.foundingSectionId && p.deposit?.goodId === 'ilmenite',
     )!;
     (plot as { dir: Plot['dir'] }).dir = [-plot.dir[0], -plot.dir[1], -plot.dir[2]];
-    const cash = balance(s.ledger, 'player');
+    const cash = balance(s.ledger, 'co:0');
     const stock = { ...sectionState(s, w.foundingSectionId)!.depot };
     expect(applyCommand(s, { t: 'build', plotId: plot.id, type: 'mine' })).toEqual({
       ok: false,
       error: 'NO_ROAD_ACCESS',
     });
-    expect(balance(s.ledger, 'player')).toBe(cash);
+    expect(balance(s.ledger, 'co:0')).toBe(cash);
     expect(sectionState(s, w.foundingSectionId)!.depot).toEqual(stock);
   });
 
@@ -137,9 +137,9 @@ describe('construction', () => {
     applyCommand(s, { t: 'build', plotId: ilmenitePlot.id, type: 'mine' });
     for (let i = 0; i < 240; i++) step(s, { mode: 'fine' });
     const mine = s.buildings.find((b) => b.type === 'mine')!;
-    const cash = balance(s.ledger, 'player');
+    const cash = balance(s.ledger, 'co:0');
     expect(applyCommand(s, { t: 'upgrade', buildingId: mine.id })).toEqual({ ok: true });
-    expect(cash - balance(s.ledger, 'player')).toBe(360_000);
+    expect(cash - balance(s.ledger, 'co:0')).toBe(360_000);
     expect(mine.status).toBe('upgrading');
     for (let i = 0; i < 120; i++) step(s, { mode: 'fine' });
     expect(mine.status).not.toBe('upgrading');
@@ -150,9 +150,9 @@ describe('construction', () => {
     const s = founded();
     applyCommand(s, { t: 'build', plotId: ilmenitePlot.id, type: 'mine' });
     const mine = s.buildings.find((b) => b.type === 'mine')!;
-    const cash = balance(s.ledger, 'player');
+    const cash = balance(s.ledger, 'co:0');
     expect(applyCommand(s, { t: 'demolish', buildingId: mine.id })).toEqual({ ok: true });
-    expect(balance(s.ledger, 'player') - cash).toBe(BUILDINGS.mine.cost.cents / 4);
+    expect(balance(s.ledger, 'co:0') - cash).toBe(BUILDINGS.mine.cost.cents / 4);
     expect(s.buildings.some((b) => b.id === mine.id)).toBe(false);
     const depot = s.buildings.find((b) => b.type === 'depot')!;
     expect(applyCommand(s, { t: 'demolish', buildingId: depot.id })).toEqual({
@@ -186,11 +186,11 @@ describe('land office', () => {
     expect(landPrice(0)).toBe(6_000_000);
     expect(landPrice(1)).toBe(9_600_000);
     const [a, b] = buyableSections(s);
-    const cash = balance(s.ledger, 'player');
+    const cash = balance(s.ledger, 'co:0');
     expect(applyCommand(s, { t: 'buySection', sectionId: a! })).toEqual({ ok: true });
-    expect(cash - balance(s.ledger, 'player')).toBe(6_000_000);
+    expect(cash - balance(s.ledger, 'co:0')).toBe(6_000_000);
     expect(applyCommand(s, { t: 'buySection', sectionId: b! })).toEqual({ ok: true });
-    expect(cash - balance(s.ledger, 'player')).toBe(15_600_000);
+    expect(cash - balance(s.ledger, 'co:0')).toBe(15_600_000);
     expect(s.buildings.filter((x) => x.type === 'depot')).toHaveLength(3);
     expect(applyCommand(s, { t: 'buySection', sectionId: a! })).toEqual({
       ok: false,

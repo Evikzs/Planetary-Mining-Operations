@@ -12,6 +12,7 @@ import { slotsPerShift, staffing } from '../src/sim/people/jobs';
 import type { GameState, SectionState } from '../src/sim/state';
 import { worldOf } from '../src/sim/world/luna';
 import type { RawGoodId } from '../src/sim/world/types';
+import { cashAccount, PLAYER, playerCompany } from '../src/sim/companies';
 
 interface Plan {
   type: BuildingTypeId;
@@ -55,7 +56,7 @@ const BUY_LIMIT = 2;
 /** Cash kept back from building for wages, in cents. */
 const CASH_FLOOR = 2_000_000;
 
-const cash = (s: GameState) => balance(s.ledger, 'player');
+const cash = (s: GameState) => balance(s.ledger, cashAccount(PLAYER));
 const stock = (sec: SectionState, g: GoodId) => sec.depot[g] ?? 0;
 const hasOrder = (s: GameState, g: GoodId, side: 'buy' | 'sell') =>
   s.orders.some((o) => o.goodId === g && o.side === side);
@@ -211,7 +212,8 @@ function contracts(s: GameState): Command[] {
     const source = [...s.sections].sort((a, b) => stock(b, g) - stock(a, g))[0];
     if (!source || stock(source, g) <= 0) continue;
     if (c.status === 'offered') {
-      if (stock(source, g) < left || active >= maxActive(s.reputation)) continue;
+      if (stock(source, g) < left || active >= maxActive(playerCompany(s)!.reputation.luna))
+        continue;
       cmds.push({ t: 'acceptContract', contractId: c.id });
       active++;
     } else if (c.status !== 'active') continue;

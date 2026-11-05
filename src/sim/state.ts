@@ -1,5 +1,4 @@
 import type { BuildingTypeId, RecipeId, Skill } from '../data/buildings';
-import type { WageLevel } from '../data/balance';
 import type { GoodId } from '../data/goods';
 import type { Belt } from './build/belts';
 import type { SectionPower } from './build/power';
@@ -17,6 +16,7 @@ import { createStory, type StoryState } from './story/story';
 import type { GoodMarket, Order } from './market/orders';
 import type { Need, NeedsMet } from './people/needs';
 import { createPeople, type People } from './people/store';
+import type { CompanyId, CompanyState } from './companies';
 
 export type CompanionId = 'veteran' | 'shipAi' | 'coFounder' | 'pirate';
 
@@ -55,9 +55,10 @@ export interface Building {
   jobs?: Partial<Record<Skill, number>>;
 }
 
-/** A player-owned section. Sections without state belong to the Lunar Authority. */
+/** An owned section. Sections without state belong to the Lunar Authority. */
 export interface SectionState {
   id: number;
+  owner: CompanyId;
   depot: Inventory;
   roadNet: RoadNet | null;
   power: SectionPower;
@@ -78,7 +79,7 @@ export interface GameState {
   seed: number;
   tick: number;
   rng: RngState;
-  company: Company | null;
+  companies: CompanyState[];
   nextId: number;
   /** Bus trips count apart: they come and go by the thousand, and arrays are sized by nextId. */
   nextTripId: number;
@@ -89,8 +90,6 @@ export interface GameState {
   landPurchases: number;
   stats: Stats;
   people: People;
-  wageLevel: Record<Skill, WageLevel>;
-  payrollShortfall: boolean;
   /** Bus runs on the road or waiting for a bus. */
   trips: Trip[];
   /** Per section: buses from its rover garages and when each is free again. */
@@ -102,8 +101,6 @@ export interface GameState {
   /** People in the Lunar colony who buy what the market sells. */
   colonyPop: number;
   contracts: Contract[];
-  /** 0..100. */
-  reputation: number;
   /** Finished infrastructure the colony now owns. */
   clientAssets: { plotId: number; asset: string }[];
   story: StoryState;
@@ -130,7 +127,7 @@ export function createInitialState(seed: number): GameState {
     seed,
     tick: 0,
     rng: createRng(deriveSeed(seed, 'main')).getState(),
-    company: null,
+    companies: [],
     nextId: 1,
     nextTripId: 1,
     ledger: createLedger(),
@@ -140,8 +137,6 @@ export function createInitialState(seed: number): GameState {
     landPurchases: 0,
     stats: { producedKg: {}, soldKg: {}, boughtKg: {}, incomeCents: 0 },
     people: createPeople(),
-    wageLevel: { miner: 'standard', technician: 'standard', engineer: 'standard' },
-    payrollShortfall: false,
     trips: [],
     buses: {},
     jobsDirty: false,
@@ -149,7 +144,6 @@ export function createInitialState(seed: number): GameState {
     orders: [],
     colonyPop: COLONY.startPop,
     contracts: [],
-    reputation: 20,
     clientAssets: [],
     story: createStory(),
     alerts: [],

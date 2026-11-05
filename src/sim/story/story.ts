@@ -7,6 +7,7 @@ import { balance } from '../ledger';
 import type { GameState } from '../state';
 import { BEATS, TUTORIAL, type BeatId, type HintCategory } from './beats';
 import { unlockCodex, unlockFromState } from './codex';
+import { cashAccount, PLAYER, playerCompany } from '../companies';
 
 export interface StoryState {
   /** Every beat that has started, in order. */
@@ -48,7 +49,7 @@ const TRIGGER: Partial<Record<BeatId, (s: GameState, events: SimEvent[]) => bool
   'ch1.belts': (s) =>
     s.buildings.some((b) => BUILDINGS[b.type].belt && b.status !== 'constructing'),
   'ch1.shiftChange': (_s, events) => events.some((e) => e.t === 'shiftChange'),
-  'ch1.expansion': (s) => balance(s.ledger, 'player') >= landPrice(s.landPurchases),
+  'ch1.expansion': (s) => balance(s.ledger, cashAccount(PLAYER)) >= landPrice(s.landPurchases),
 };
 
 /** Beats that end when something happens rather than when the player closes them. */
@@ -150,7 +151,7 @@ export function currentLine(
 
 /** Closes the beat on screen. A beat that waits for an action stays open, just out of sight. */
 export function storyAck(state: GameState, beatId: BeatId): CommandResult {
-  if (!state.company) return fail('NOT_FOUNDED');
+  if (!playerCompany(state)) return fail('NOT_FOUNDED');
   if (!state.story.queue.includes(beatId)) return OK;
   if (BEATS[beatId].ack) finish(state, beatId);
   else state.story.queue = state.story.queue.filter((b) => b !== beatId);
@@ -162,7 +163,7 @@ export function setHintMute(
   category: HintCategory,
   muted: boolean,
 ): CommandResult {
-  if (!state.company) return fail('NOT_FOUNDED');
+  if (!playerCompany(state)) return fail('NOT_FOUNDED');
   const story = state.story;
   story.muted = story.muted.filter((c) => c !== category);
   if (!muted) return OK;
@@ -176,7 +177,7 @@ export function setHintMute(
 }
 
 export function cameraTaught(state: GameState, panned = false, zoomed = false): CommandResult {
-  if (!state.company) return fail('NOT_FOUNDED');
+  if (!playerCompany(state)) return fail('NOT_FOUNDED');
   const taught = state.story.cameraTaught;
   taught.panned ||= panned;
   taught.zoomed ||= zoomed;
@@ -186,7 +187,7 @@ export function cameraTaught(state: GameState, panned = false, zoomed = false): 
 export const storySystem: System = {
   id: 'story',
   step(state, ctx) {
-    if (!state.company) return;
+    if (!playerCompany(state)) return;
     for (const e of ctx.events) onEvent(state, e);
     progressTutorial(state, ctx.events);
     if (state.tick % 60 === 0) unlockFromState(state);

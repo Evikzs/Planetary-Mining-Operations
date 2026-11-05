@@ -105,6 +105,8 @@ describe('views', () => {
       stageIndex: 0,
       plotId: plot.id,
       asset: 'commMast',
+      holder: null,
+      tenderTo: 0,
     });
     applyCommand(s, { t: 'acceptContract', contractId: s.contracts[0]!.id });
     const view = buildWorldView(s, 1);
@@ -178,6 +180,8 @@ describe('views', () => {
       stageIndex: 0,
       plotId: plot.id,
       asset: 'commMast',
+      holder: null,
+      tenderTo: 0,
     };
     s.contracts.push(c);
     expect(applyCommand(s, { t: 'acceptContract', contractId: c.id })).toEqual({ ok: true });

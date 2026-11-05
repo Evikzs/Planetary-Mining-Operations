@@ -32,6 +32,8 @@ import { fail, isValidCompanyName, OK, type Command, type CommandResult } from '
 import type { SimEvent } from './events';
 import { rngFromState, type Rng } from './rng';
 import { createInitialState, type GameState } from './state';
+import { activeCompany, makeCompany, PLAYER, playerCompany, type CompanyId } from './companies';
+import { worldOf } from './world/luna';
 
 export type StepMode = 'fine' | 'coarse';
 
@@ -83,52 +85,62 @@ export function createGame(seed: number): GameState {
   return createInitialState(seed);
 }
 
-export function applyCommand(state: GameState, cmd: Command): CommandResult {
+export function applyCommand(
+  state: GameState,
+  cmd: Command,
+  actor: CompanyId = PLAYER,
+): CommandResult {
   switch (cmd.t) {
     case 'foundCompany': {
-      if (state.company) return fail('ALREADY_FOUNDED');
+      if (actor !== PLAYER) return fail('NOT_OWNED');
+      if (playerCompany(state)) return fail('ALREADY_FOUNDED');
       if (!isValidCompanyName(cmd.name)) return fail('INVALID_NAME');
       if (cmd.companionId !== 'veteran') return fail('COMPANION_UNAVAILABLE');
-      state.company = { name: cmd.name.trim(), companionId: cmd.companionId };
-      grantCharter(state);
+      const charter = worldOf(state).foundingSectionId;
+      const company = makeCompany(state, PLAYER, cmd.name.trim(), 'player', charter);
+      company.companionId = cmd.companionId;
+      state.companies.push(company);
+      grantCharter(state, PLAYER, charter);
       startStory(state);
       state.pendingEvents.push({ t: 'founded' });
       return OK;
     }
     case 'build':
-      return build(state, cmd);
+      return build(state, cmd, actor);
     case 'upgrade':
-      return upgrade(state, cmd.buildingId);
+      return upgrade(state, cmd.buildingId, actor);
     case 'demolish':
-      return demolish(state, cmd.buildingId);
+      return demolish(state, cmd.buildingId, actor);
     case 'setRecipe':
-      return setRecipe(state, cmd.buildingId, cmd.recipeId);
+      return setRecipe(state, cmd.buildingId, cmd.recipeId, actor);
     case 'setPriority':
-      return setPriority(state, cmd.buildingId, cmd.priority);
+      return setPriority(state, cmd.buildingId, cmd.priority, actor);
     case 'buySection':
-      return buySection(state, cmd.sectionId);
+      return buySection(state, cmd.sectionId, actor);
     case 'storyAck':
-      return storyAck(state, cmd.beatId);
+      return actor === PLAYER ? storyAck(state, cmd.beatId) : fail('NOT_OWNED');
     case 'setHintMute':
-      return setHintMute(state, cmd.category, cmd.muted);
+      return actor === PLAYER ? setHintMute(state, cmd.category, cmd.muted) : fail('NOT_OWNED');
     case 'cameraTaught':
-      return cameraTaught(state, cmd.panned, cmd.zoomed);
+      return actor === PLAYER ? cameraTaught(state, cmd.panned, cmd.zoomed) : fail('NOT_OWNED');
     case 'acceptContract':
-      return acceptContract(state, cmd.contractId);
+      return acceptContract(state, cmd.contractId, actor);
     case 'deliverContract':
-      return deliverContract(state, cmd.contractId, cmd.sectionId);
+      return deliverContract(state, cmd.contractId, cmd.sectionId, actor);
     case 'abandonContract':
-      return abandonContract(state, cmd.contractId);
+      return abandonContract(state, cmd.contractId, actor);
     case 'placeOrder':
-      return placeOrder(state, cmd);
+      return placeOrder(state, cmd, actor);
     case 'cancelOrder':
-      return cancelOrder(state, cmd.orderId);
+      return cancelOrder(state, cmd.orderId, actor);
     case 'assignWorker':
-      return assignWorker(state, cmd);
-    case 'setWageLevel':
-      if (!state.company) return fail('NOT_FOUNDED');
-      state.wageLevel[cmd.skill] = cmd.level;
+      return assignWorker(state, cmd, actor);
+    case 'setWageLevel': {
+      const company = activeCompany(state, actor);
+      if (!company) return fail('NOT_FOUNDED');
+      company.wageLevel[cmd.skill] = cmd.level;
       return OK;
+    }
   }
 }
 

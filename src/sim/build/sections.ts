@@ -13,6 +13,7 @@ import { buildSectionGrid, createRoadNet, type SectionGrid } from '../world/road
 import { NO_POWER } from './power';
 import { ALL_MET } from '../people/needs';
 import type { Plot } from '../world/types';
+import type { CompanyId } from '../companies';
 
 export function sectionState(state: GameState, sectionId: number): SectionState | undefined {
   return state.sections.find((s) => s.id === sectionId);
@@ -67,11 +68,12 @@ export function addBuilding(
   return building;
 }
 
-/** Takes a section for the player: state, depot on the hub, and a road net seeded there. */
-export function ownSection(state: GameState, sectionId: number): SectionState {
+/** Takes a section for a company: state, depot on the hub, and a road net seeded there. */
+export function ownSection(state: GameState, sectionId: number, owner: CompanyId): SectionState {
   const world = worldOf(state);
   const section: SectionState = {
     id: sectionId,
+    owner,
     depot: {},
     roadNet: createRoadNet(gridFor(state, sectionId)),
     power: { ...NO_POWER },

@@ -170,7 +170,7 @@ describe('SimHost', () => {
     await h.init();
     await h.found();
     const saved = await h.saves.loadLatestValid();
-    expect((saved?.state as GameState | undefined)?.company?.name).toBe('Selene Rock Co');
+    expect((saved?.state as GameState | undefined)?.companies[0]?.name).toBe('Selene Rock Co');
   });
 
   it('saves each action at once: the save on leaving the page may not finish', async () => {
@@ -185,7 +185,7 @@ describe('SimHost', () => {
     });
     expect(h.saves.writes).toBe(writes + 1);
     const saved = (await h.saves.loadLatestValid())?.state as GameState | undefined;
-    expect(saved?.wageLevel.miner).toBe('high');
+    expect(saved?.companies[0]?.wageLevel.miner).toBe('high');
     // A refused command changes nothing, so nothing is saved.
     await h.host.handle({ t: 'command', id: 3, cmd: { t: 'demolish', buildingId: 99_999 } });
     expect(h.saves.writes).toBe(writes + 1);

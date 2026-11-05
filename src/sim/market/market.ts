@@ -5,6 +5,7 @@ import { minuteOfDay } from '../clock';
 import type { StepContext, System } from '../engine';
 import { add, take } from '../inventory';
 import { balance, transfer } from '../ledger';
+import { cashAccount, PLAYER } from '../companies';
 import type { GameState } from '../state';
 import { worldOf } from '../world/luna';
 import { clear, type Fill } from './clearing';
@@ -20,6 +21,7 @@ export function quote(
 ): { priceCents: number; filledKg: number } {
   const probe: Order = {
     id: -1,
+    companyId: PLAYER,
     goodId,
     side,
     kind: 'market',
@@ -52,9 +54,11 @@ function rearmStanding(state: GameState): void {
     } else if (o.side === 'buy') {
       const top = Math.min(
         buyEscrowCents(state, o) - o.escrowCents,
-        balance(state.ledger, 'player'),
+        balance(state.ledger, cashAccount(o.companyId)),
       );
-      if (top > 0 && transfer(state.ledger, 'player', `escrow:${o.id}`, top)) o.escrowCents += top;
+      if (top > 0 && transfer(state.ledger, cashAccount(o.companyId), `escrow:${o.id}`, top)) {
+        o.escrowCents += top;
+      }
     }
   }
 }
@@ -74,7 +78,7 @@ function settle(
     o.filledKg += f.kg;
     if (o.side === 'sell') {
       o.escrowKg -= f.kg;
-      transfer(state.ledger, 'world', 'player', cents);
+      transfer(state.ledger, 'world', cashAccount(o.companyId), cents);
       state.stats.soldKg[o.goodId] = (state.stats.soldKg[o.goodId] ?? 0) + f.kg;
       state.stats.incomeCents += cents;
       const plotId = worldOf(state).sections[o.sectionId]?.hubPlotId ?? null;

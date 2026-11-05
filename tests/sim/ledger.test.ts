@@ -5,7 +5,7 @@ import { add, moveKg, take, totalKg, type Inventory } from '../../src/sim/invent
 import { checkInvariants } from '../../src/sim/invariants';
 import { balance, createLedger, transfer, type AccountId } from '../../src/sim/ledger';
 
-const ACCOUNTS: AccountId[] = ['player', 'world', 'escrow:1', 'escrow:2'];
+const ACCOUNTS: AccountId[] = ['co:0', 'world', 'escrow:1', 'escrow:2'];
 const sum = (l: ReturnType<typeof createLedger>) =>
   Object.values(l.balances).reduce((a, b) => a + b, 0);
 
@@ -34,20 +34,20 @@ describe('ledger', () => {
 
   it('refuses overdraft except for world', () => {
     const l = createLedger();
-    expect(transfer(l, 'player', 'world', 1)).toBe(false);
-    expect(balance(l, 'player')).toBe(0);
-    expect(transfer(l, 'world', 'player', 500)).toBe(true);
+    expect(transfer(l, 'co:0', 'world', 1)).toBe(false);
+    expect(balance(l, 'co:0')).toBe(0);
+    expect(transfer(l, 'world', 'co:0', 500)).toBe(true);
     expect(balance(l, 'world')).toBe(-500);
-    expect(transfer(l, 'player', 'escrow:3', 500)).toBe(true);
+    expect(transfer(l, 'co:0', 'escrow:3', 500)).toBe(true);
     expect(balance(l, 'escrow:3')).toBe(500);
   });
 
   it('rejects fractional, negative and unsafe cents', () => {
     const l = createLedger();
-    expect(() => transfer(l, 'world', 'player', 1.5)).toThrow();
-    expect(() => transfer(l, 'world', 'player', -1)).toThrow();
-    expect(() => transfer(l, 'world', 'player', Number.NaN)).toThrow();
-    expect(() => transfer(l, 'world', 'player', 2 ** 60)).toThrow();
+    expect(() => transfer(l, 'world', 'co:0', 1.5)).toThrow();
+    expect(() => transfer(l, 'world', 'co:0', -1)).toThrow();
+    expect(() => transfer(l, 'world', 'co:0', Number.NaN)).toThrow();
+    expect(() => transfer(l, 'world', 'co:0', 2 ** 60)).toThrow();
   });
 });
 
@@ -104,7 +104,7 @@ describe('invariants', () => {
   it('a fresh game has none and a broken ledger is reported', () => {
     const s = createGame(1);
     expect(checkInvariants(s)).toEqual([]);
-    s.ledger.balances.player = -5;
-    expect(checkInvariants(s).join('\n')).toContain('player');
+    s.ledger.balances['co:0'] = -5;
+    expect(checkInvariants(s).join('\n')).toContain('co:0');
   });
 });

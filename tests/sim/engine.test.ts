@@ -15,7 +15,7 @@ describe('engine', () => {
     expect(
       applyCommand(s, { t: 'foundCompany', name: 'Selene Rock Co', companionId: 'veteran' }),
     ).toEqual({ ok: true });
-    expect(s.company).toEqual({ name: 'Selene Rock Co', companionId: 'veteran' });
+    expect(s.companies[0]).toMatchObject({ name: 'Selene Rock Co', companionId: 'veteran' });
     expect(applyCommand(s, { t: 'foundCompany', name: 'Other', companionId: 'veteran' })).toEqual({
       ok: false,
       error: 'ALREADY_FOUNDED',

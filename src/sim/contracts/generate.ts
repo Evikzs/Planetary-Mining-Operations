@@ -2,6 +2,7 @@ import { WAGE_CENTS_PER_DAY } from '../../data/balance';
 import { BUILDINGS } from '../../data/buildings';
 import type { Rng } from '../rng';
 import { newId, type GameState } from '../state';
+import { playerCompany, sectionOwner } from '../companies';
 import { worldOf } from '../world/luna';
 import type { Plot, RawGoodId } from '../world/types';
 import type { Asset, Contract, Issuer } from './contracts';
@@ -64,6 +65,7 @@ export function generateOffer(state: GameState, rng: Rng): Contract {
     offeredTick: state.tick,
     deadlineTick: state.tick + OFFER_HOURS * 60,
     stageIndex: 0,
+    holder: null,
   };
   const plots = freePublicPlots(state);
   if (plots.length && rng.next() < INFRASTRUCTURE_SHARE) {
@@ -87,7 +89,7 @@ export function generateOffer(state: GameState, rng: Rng): Contract {
         labourCents,
         margin,
         deadlineHours: hours,
-        reputation: state.reputation,
+        reputation: playerCompany(state)?.reputation.luna ?? 0,
       }),
       repGain: 5,
       repLoss: 8,
@@ -102,6 +104,7 @@ export function generateOffer(state: GameState, rng: Rng): Contract {
       ],
       plotId: plot.id,
       asset,
+      tenderTo: sectionOwner(state, plot.sectionId),
     };
   }
   const good = weighted(rng, ORE_WEIGHTS);
@@ -120,12 +123,13 @@ export function generateOffer(state: GameState, rng: Rng): Contract {
       pRefCents: state.market[good].pRefCents,
       margin,
       deadlineHours: hours,
-      reputation: state.reputation,
+      reputation: playerCompany(state)?.reputation.luna ?? 0,
     }),
     repGain: 3,
     repLoss: 5,
     stages: [{ kind: 'deliver', needKg: { [good]: Math.round(amountT * 1000) }, doneKg: {} }],
     plotId: null,
     asset: null,
+    tenderTo: null,
   };
 }
