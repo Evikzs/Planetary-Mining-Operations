@@ -59,6 +59,10 @@ export const UPGRADES: ((s: GameState) => void)[] = [
   (s) => {
     for (const c of s.companies) if (!(c as Partial<typeof c>).books) openBooks(s, c.id);
   },
+  // M2a C4: books opened before the monthly close have no closed months yet.
+  (s) => {
+    for (const c of s.companies) c.books.closed ??= [];
+  },
 ];
 
 export function deserializeState(data: unknown): GameState {

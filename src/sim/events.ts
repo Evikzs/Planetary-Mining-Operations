@@ -29,7 +29,8 @@ export type SimEvent =
   | Of<{ t: 'income'; plotId: number | null; cents: number; source: 'trade' | 'contract' }>
   | { t: 'priceMove'; goodId: GoodId; pct24h: number }
   | { t: 'contractOffered'; contractId: number; tenderTo: CompanyId | null }
-  | Of<{ t: 'contractCompleted' | 'contractFailed'; contractId: number }>;
+  | Of<{ t: 'contractCompleted' | 'contractFailed'; contractId: number }>
+  | Of<{ t: 'monthClosed'; label: string; netIncomeCents: number }>;
 
 /** Whether the player should hear of an event: its own, a public offer, or market-wide news. */
 export function forPlayer(e: SimEvent): boolean {

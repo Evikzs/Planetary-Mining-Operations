@@ -34,6 +34,7 @@ import { rngFromState, type Rng } from './rng';
 import { createInitialState, type GameState } from './state';
 import { activeCompany, makeCompany, PLAYER, playerCompany, type CompanyId } from './companies';
 import { worldOf } from './world/luna';
+import { closeSystem } from './finance/statements';
 
 export type StepMode = 'fine' | 'coarse';
 
@@ -77,6 +78,7 @@ export const SYSTEMS: System[] = [
   productionSystem,
   marketSystem,
   contractsSystem,
+  closeSystem,
   storySystem,
   alertsSystem,
 ];

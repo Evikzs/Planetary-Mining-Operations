@@ -4,6 +4,7 @@ import { GOODS, type GoodId } from '../../data/goods';
 import { cashAccount, companyOf, type CompanyId, type CompanyState } from '../companies';
 import { balance, transfer } from '../ledger';
 import type { Building, GameState } from '../state';
+import type { ClosedMonth } from './statements';
 
 /** Goods a company holds anywhere, at their average cost. */
 export interface CostPool {
@@ -35,6 +36,8 @@ export interface Books {
   treasuryCents: number;
   retainedCents: number;
   period: Period;
+  /** Closed months, newest first (latest 12). */
+  closed: ClosedMonth[];
 }
 /** Where a cash movement lands besides the cash account. */
 export type Posting =
@@ -72,6 +75,7 @@ export function emptyBooks(): Books {
     treasuryCents: 0,
     retainedCents: 0,
     period: emptyPeriod(),
+    closed: [],
   };
 }
 
