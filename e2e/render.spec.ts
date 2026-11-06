@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { gotoGame } from './helpers';
+import { foundCompany, gotoGame } from './helpers';
 
 test('the globe renders chunks', async ({ page }) => {
   await gotoGame(page);
@@ -16,4 +16,15 @@ test('?nowebgl=1 shows the WebGL 2 message', async ({ page }) => {
       { exact: true },
     ),
   ).toBeVisible();
+});
+
+test('at planetary altitude the ownership legend lists 6 companies', async ({ page }) => {
+  await gotoGame(page);
+  await foundCompany(page);
+  // From orbit, over the equator: phones start closer in.
+  await page.evaluate(() => window.__pmo.setCamera(0, 0, 200, 0));
+  const legend = page.getByRole('list', { name: 'Owners' });
+  await expect(legend.getByRole('listitem')).toHaveCount(6);
+  await expect(legend.getByRole('listitem').first()).toHaveText('You');
+  await expect(legend).toContainText('Tycho Deepworks');
 });

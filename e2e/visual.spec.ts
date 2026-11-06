@@ -38,9 +38,16 @@ const CAPTURE_MS = 20_000;
 
 // The interface chrome is masked: baselines judge the rendered map, not system font hinting.
 const chrome = (page: Page) =>
-  ['top-bar', 'tab-rail', 'bottom-tabs', 'map-filters', 'compass', 'news-ticker', 'companion'].map(
-    (id) => page.getByTestId(id),
-  );
+  [
+    'top-bar',
+    'tab-rail',
+    'bottom-tabs',
+    'map-filters',
+    'map-legend',
+    'compass',
+    'news-ticker',
+    'companion',
+  ].map((id) => page.getByTestId(id));
 
 test('poster look: the demo at bird’s-eye', async ({ page }) => {
   await frame(page, 4);

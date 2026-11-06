@@ -20,11 +20,11 @@ import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js
 import { LOCAL_MAX_ALT } from '../../shared/scale';
 import { HEIGHT_MAX, type Terrain } from '../../shared/terrain';
 import { angleBetween, type Vec3 } from '../../shared/vec3';
-import { PLAYER } from '../../sim/companies';
+import type { CompanyId } from '../../sim/companies';
 import type { WorldView } from '../../sim/views';
 import { palette } from '../../ui/tokens';
 import type { GlobeCameraState } from '../camera/globeCamera';
-import { DEFAULT_FILTER, type MapFilter } from './filters';
+import { DEFAULT_FILTER, ownerColour, type MapFilter } from './filters';
 import { greatCircleArc, sectionFill } from './geometry';
 
 // From orbit, borders and fills float just above the highest peak.
@@ -60,7 +60,9 @@ export class SectionOverlay {
   private readonly orbit = new Group();
   private borders: LineSegments | null = null;
   private buyable: LineSegments | null = null;
-  private fill: Mesh | null = null;
+  private lots: LineSegments | null = null;
+  /** One fill per owner, in its colour. */
+  private fills: Mesh[] = [];
   private markers: InstancedMesh | null = null;
   private pins: InstancedMesh | null = null;
   private draped: LineSegments | null = null;
@@ -96,10 +98,26 @@ export class SectionOverlay {
       this.buyable,
       lines(this.arcs(buyable, ORBIT_LIFT + 0.01), palette.mustard),
     );
-    this.fill = this.replace(
-      this.fill,
-      this.ownedFill(w.sections.filter((s) => s.owner === PLAYER)),
+    this.lots = this.replace(
+      this.lots,
+      lines(
+        this.arcs(
+          w.sections.filter((s) => s.onAuction),
+          ORBIT_LIFT + 0.01,
+        ),
+        palette.cream,
+      ),
     );
+    for (const f of this.fills) this.release(f);
+    const byOwner = new Map<CompanyId, Section[]>();
+    for (const s of w.sections) {
+      if (s.owner !== null) byOwner.set(s.owner, [...(byOwner.get(s.owner) ?? []), s]);
+    }
+    this.fills = [...byOwner].map(([owner, owned]) => {
+      const mesh = this.ownedFill(owned, ownerColour(owner, w.companies) ?? palette.cream);
+      this.orbit.add(mesh);
+      return mesh;
+    });
     this.pins = this.replace(this.pins, this.contractPins(w));
     this.markers = this.replace(this.markers, this.depositMarkers(w));
     this.applyFilter();
@@ -119,16 +137,18 @@ export class SectionOverlay {
   }
 
   dispose(): void {
-    for (const o of [this.borders, this.buyable, this.fill, this.markers, this.pins, this.draped]) {
+    for (const o of [this.borders, this.buyable, this.lots, this.markers, this.pins, this.draped]) {
       if (o) this.release(o);
     }
+    for (const f of this.fills) this.release(f);
     this.root.removeFromParent();
   }
 
   private applyFilter(): void {
     const p = this.filter.planetary;
-    if (this.fill) this.fill.visible = p === 'ownership';
+    for (const f of this.fills) f.visible = p === 'ownership';
     if (this.buyable) this.buyable.visible = p === 'ownership';
+    if (this.lots) this.lots.visible = p === 'ownership';
     if (this.pins) this.pins.visible = p === 'contracts';
     if (this.markers) this.markers.visible = typeof p === 'object';
   }
@@ -168,7 +188,7 @@ export class SectionOverlay {
     return out;
   }
 
-  private ownedFill(owned: Section[]): Mesh {
+  private ownedFill(owned: Section[], color: string): Mesh {
     const r = this.radius + ORBIT_LIFT - 0.01;
     const positions: number[] = [];
     const indices: number[] = [];
@@ -182,7 +202,7 @@ export class SectionOverlay {
     g.setAttribute('position', new Float32BufferAttribute(positions, 3));
     g.setIndex(new Uint32BufferAttribute(indices, 1));
     const material = new MeshBasicMaterial({
-      color: palette.burntOrange,
+      color,
       transparent: true,
       opacity: 0.35,
       depthWrite: false,

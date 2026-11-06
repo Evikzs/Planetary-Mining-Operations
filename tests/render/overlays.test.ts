@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { greatCircleArc, sectionFill } from '../../src/render/overlays/geometry';
-import { DEFAULT_FILTER, filterTint } from '../../src/render/overlays/filters';
+import { DEFAULT_FILTER, filterTint, ownerColour } from '../../src/render/overlays/filters';
 import {
   angleBetween,
   len,
@@ -51,6 +51,19 @@ describe('overlay geometry', () => {
 describe('map filters', () => {
   it('defaults to ownership from orbit and nothing up close', () => {
     expect(DEFAULT_FILTER).toEqual({ planetary: 'ownership', local: 'none' });
+  });
+
+  it('ownerColour gives the player burntOrange, rivals their colour and the Authority null', () => {
+    const companies = [
+      { id: 0, name: 'Selene Rock Co', colour: 'burntOrange', status: 'active' },
+      { id: 1, name: 'Tycho Deepworks', colour: 'teal', status: 'active' },
+      { id: 4, name: 'Blackrim Salvage', colour: 'rust', status: 'bankrupt' },
+    ] as const;
+    expect(ownerColour(0, [...companies])).toBe(palette.burntOrange);
+    expect(ownerColour(1, [...companies])).toBe(palette.teal);
+    expect(ownerColour(4, [...companies])).toBe(palette.rust);
+    expect(ownerColour(null, [...companies])).toBeNull();
+    expect(ownerColour(9, [...companies])).toBeNull();
   });
 
   it('tints teal when fine, mustard when strained, rust when failing', () => {

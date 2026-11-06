@@ -516,6 +516,63 @@ h3 {
   min-height: 44px;
 }
 
+/* The ownership legend: a swatch and a name per company, under the chips. */
+.map-legend {
+  position: absolute;
+  top: 106px;
+  left: 84px;
+  right: 372px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  z-index: 1;
+  font-family: var(--font-text);
+  font-size: 13px;
+  color: var(--c-cream);
+  text-shadow: 0 1px 2px var(--c-offBlack);
+}
+
+.map-legend li {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.map-legend .swatch {
+  width: 12px;
+  height: 12px;
+  /* Cream keeps the navy swatch visible against the night sky. */
+  border: 1px solid var(--c-cream);
+}
+
+.map-legend .swatch[data-colour='burntOrange'] {
+  background: var(--c-burntOrange);
+}
+.map-legend .swatch[data-colour='teal'] {
+  background: var(--c-teal);
+}
+.map-legend .swatch[data-colour='mustard'] {
+  background: var(--c-mustard);
+}
+.map-legend .swatch[data-colour='dustyPink'] {
+  background: var(--c-dustyPink);
+}
+.map-legend .swatch[data-colour='rust'] {
+  background: var(--c-rust);
+}
+.map-legend .swatch[data-colour='navy'] {
+  background: var(--c-navy);
+}
+
+.shell[data-layout='phone'] .map-legend {
+  top: 104px;
+  left: 8px;
+  right: 8px;
+}
+
 .context-panel .body p {
   margin: 0 0 var(--space-2);
 }
