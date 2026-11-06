@@ -81,8 +81,9 @@ describe('statements', () => {
 
   it('ratios are null when there is nothing to divide by', () => {
     const s = founded();
+    // Shares are listed (C6), so EPS is a number; with no earnings there is no P/E.
     expect(ratios(s, PLAYER)).toMatchObject({
-      eps: null,
+      eps: 0,
       pe: null,
       interestCover: null,
       currentRatio: null,

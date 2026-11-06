@@ -119,9 +119,12 @@ export function ratios(state: GameState, co: CompanyId): Ratios {
   const income = last ? last.income : incomeStatement(books.period);
   const balance = last ? last.balance : balanceSheet(state, co);
   const interest = income.expense.interest;
+  const listing = state.listings.find((l) => l.companyId === co);
+  const shares = listing ? listing.outstanding - listing.treasury : 0;
+  const eps = shares > 0 ? income.netIncome / shares : null;
   return {
-    eps: null,
-    pe: null,
+    eps,
+    pe: listing && eps !== null && eps > 0 ? listing.priceCents / (eps * 12) : null,
     roe: ratio(income.netIncome * 12, balance.equity),
     debtToEquity: ratio(balance.loans + balance.credit, balance.equity),
     interestCover: ratio(income.netIncome + interest, interest),
@@ -154,7 +157,7 @@ export function closeMonth(
     income: incomeStatement(books.period),
     cashFlow: cashFlowStatement(books.period),
     balance: balanceSheet(state, co),
-    sharePriceCents: null,
+    sharePriceCents: state.listings.find((l) => l.companyId === co)?.priceCents ?? null,
   };
   books.closed.unshift(month);
   books.closed.length = Math.min(books.closed.length, CLOSED_KEPT);

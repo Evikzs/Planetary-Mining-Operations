@@ -6,6 +6,7 @@ import {
   LOAN_FACTOR,
   MIN_LOAN_CENTS,
   SPREAD,
+  VALUATION,
 } from '../../data/finance';
 import { NEEDS_KG_PER_DAY } from '../../data/balance';
 import type { GoodId } from '../../data/goods';
@@ -19,6 +20,7 @@ import type { SimEvent } from '../events';
 import { newId, type GameState } from '../state';
 import { assets, cashIn, cashOut, liabilities, type FlowClass, type Posting } from './books';
 import { balanceSheet, CLOSE_HOOKS, incomeStatement } from './statements';
+import { pricePoints, shockSentiment } from './shares';
 
 export type Rating = 'AAA' | 'AA' | 'A' | 'BBB' | 'BB' | 'B' | 'CCC' | 'D';
 export const RATINGS: Rating[] = ['AAA', 'AA', 'A', 'BBB', 'BB', 'B', 'CCC', 'D'];
@@ -123,7 +125,7 @@ export function rateCompany(state: GameState, co: CompanyId): Rating {
   const cover = interest > 0 ? (income.netIncome + interest) / interest : Infinity;
   points += cover >= 8 ? 3 : cover >= 4 ? 2 : cover >= 1.5 ? 1 : 0;
   if (c.books.period.cash.operating > 0) points += 2;
-  points += 1; // the share price holds up: C6 measures it
+  points += pricePoints(state, co);
   const rating: Rating =
     points >= 9
       ? 'AAA'
@@ -146,6 +148,12 @@ function setRating(state: GameState, co: CompanyId, to: Rating, events: SimEvent
   const c = companyOf(state, co)!;
   if (c.credit.rating === to) return;
   events.push({ t: 'ratingChanged', companyId: co, from: c.credit.rating, to });
+  // Each notch moves the market's mood: up for an upgrade, down for a cut.
+  shockSentiment(
+    state,
+    co,
+    (RATINGS.indexOf(c.credit.rating) - RATINGS.indexOf(to)) * VALUATION.notchShock,
+  );
   c.credit.rating = to;
 }
 
@@ -235,6 +243,7 @@ function miss(state: GameState, co: CompanyId, cents: number, events: SimEvent[]
   if (c.credit.default) return;
   c.credit.default = { sinceTick: state.tick };
   events.push({ t: 'defaulted', companyId: co, owedCents: c.credit.overdueCents });
+  shockSentiment(state, co, VALUATION.defaultShock);
   setRating(state, co, 'D', events);
 }
 

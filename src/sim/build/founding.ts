@@ -18,6 +18,7 @@ import { connectToNetwork } from '../world/roads';
 import { addBuilding, gridFor, hubDir, ownSection } from './sections';
 import { companyOf, PLAYER, type CompanyId } from '../companies';
 import { baseValueCents, cashIn, listCostCents, receiveGoods } from '../finance/books';
+import { listCompany } from '../finance/shares';
 
 /** A founding charter: one section with starter buildings, cash, stock and workers. */
 export function grantCharter(state: GameState, companyId: CompanyId, sid: number): void {
@@ -60,6 +61,7 @@ export function grantCharter(state: GameState, companyId: CompanyId, sid: number
     contributed += b.costCents;
   }
   companyOf(state, companyId)!.books.shareCapitalCents += contributed;
+  listCompany(state, companyId);
   const quarters = state.buildings.find((b) => b.type === 'crewQuarters' && b.sectionId === sid);
   // The player keeps the M1 stream, so existing seeds keep their founders' names.
   const stream = companyId === PLAYER ? 'founders' : `founders:${companyId}`;

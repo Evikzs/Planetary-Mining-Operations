@@ -36,6 +36,13 @@ import { activeCompany, makeCompany, PLAYER, playerCompany, type CompanyId } fro
 import { worldOf } from './world/luna';
 import { closeSystem } from './finance/statements';
 import { creditSystem, drawCredit, repayCredit, repayLoan, takeLoan } from './finance/credit';
+import {
+  cancelShareOrder,
+  issueShares,
+  placeShareOrder,
+  setDividendRatio,
+  sharesSystem,
+} from './finance/shares';
 
 export type StepMode = 'fine' | 'coarse';
 
@@ -79,6 +86,7 @@ export const SYSTEMS: System[] = [
   beltsSystem,
   productionSystem,
   marketSystem,
+  sharesSystem,
   contractsSystem,
   closeSystem,
   storySystem,
@@ -147,6 +155,14 @@ export function applyCommand(
       return drawCredit(state, cmd.amountCents, actor);
     case 'repayCredit':
       return repayCredit(state, cmd.amountCents, actor);
+    case 'placeShareOrder':
+      return placeShareOrder(state, cmd, actor);
+    case 'cancelShareOrder':
+      return cancelShareOrder(state, cmd.orderId, actor);
+    case 'issueShares':
+      return issueShares(state, cmd.qty, actor);
+    case 'setDividendRatio':
+      return setDividendRatio(state, cmd.ratio, actor);
     case 'setWageLevel': {
       const company = activeCompany(state, actor);
       if (!company) return fail('NOT_FOUNDED');

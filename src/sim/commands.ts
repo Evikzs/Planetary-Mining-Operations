@@ -3,6 +3,7 @@ import type { WageLevel } from '../data/balance';
 import type { GoodId } from '../data/goods';
 import type { BeatId, HintCategory } from './story/beats';
 import type { CompanionId, Priority } from './state';
+import type { CompanyId } from './companies';
 
 // Later tasks add members to these unions.
 export type Command =
@@ -40,7 +41,18 @@ export type Command =
   | { t: 'takeLoan'; amountCents: number; months: 3 | 6 | 12 }
   | { t: 'repayLoan'; loanId: number; amountCents: number }
   | { t: 'drawCredit'; amountCents: number }
-  | { t: 'repayCredit'; amountCents: number };
+  | { t: 'repayCredit'; amountCents: number }
+  | {
+      t: 'placeShareOrder';
+      target: CompanyId;
+      side: 'buy' | 'sell';
+      kind: 'market' | 'limit';
+      qty: number;
+      limitCents?: number;
+    }
+  | { t: 'cancelShareOrder'; orderId: number }
+  | { t: 'issueShares'; qty: number }
+  | { t: 'setDividendRatio'; ratio: number };
 
 export type CommandError =
   | 'ALREADY_FOUNDED'
@@ -68,7 +80,9 @@ export type CommandError =
   | 'CONTRACT_LIMIT'
   | 'NOT_ACTIVE'
   | 'CREDIT_LIMIT'
-  | 'NO_CREDIT';
+  | 'NO_CREDIT'
+  | 'INSUFFICIENT_SHARES'
+  | 'ISSUE_LIMIT';
 
 export type CommandResult = { ok: true } | { ok: false; error: CommandError };
 

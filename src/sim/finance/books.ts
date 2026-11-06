@@ -223,13 +223,17 @@ export function assets(state: GameState, co: CompanyId): Assets {
   for (const o of state.orders) {
     if (o.companyId === co) cash += balance(state.ledger, `escrow:${o.id}`);
   }
+  for (const o of state.shareOrders) {
+    if (o.companyId === co) cash += balance(state.ledger, `escrow:${o.id}`);
+  }
   let inventory = 0;
   for (const pool of Object.values(books.pools)) inventory += pool.basisCents;
   const mine = new Set(state.sections.filter((s) => s.owner === co).map((s) => s.id));
   let buildings = 0;
   for (const b of state.buildings) if (mine.has(b.sectionId)) buildings += b.bookCents;
   const land = books.landCents;
-  const investments = 0;
+  let investments = 0;
+  for (const h of state.holdings) if (h.holder === co) investments += h.costCents;
   return {
     cash,
     inventory,

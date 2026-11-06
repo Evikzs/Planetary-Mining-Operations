@@ -18,6 +18,7 @@ import type { Need, NeedsMet } from './people/needs';
 import { createPeople, type People } from './people/store';
 import type { CompanyId, CompanyState } from './companies';
 import type { Loan } from './finance/credit';
+import type { Holding, Listing, ShareOrder } from './finance/shares';
 
 export type CompanionId = 'veteran' | 'shipAi' | 'coFounder' | 'pirate';
 
@@ -103,6 +104,9 @@ export interface GameState {
   market: Record<GoodId, GoodMarket>;
   orders: Order[];
   loans: Loan[];
+  listings: Listing[];
+  holdings: Holding[];
+  shareOrders: ShareOrder[];
   /** People in the Lunar colony who buy what the market sells. */
   colonyPop: number;
   contracts: Contract[];
@@ -148,6 +152,9 @@ export function createInitialState(seed: number): GameState {
     market: freshMarkets(),
     orders: [],
     loans: [],
+    listings: [],
+    holdings: [],
+    shareOrders: [],
     colonyPop: COLONY.startPop,
     contracts: [],
     clientAssets: [],

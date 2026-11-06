@@ -29,6 +29,8 @@ describe('copy', () => {
       CANNOT_DEMOLISH: 'This building cannot be demolished.',
       CREDIT_LIMIT: 'That is more than your credit allows.',
       NO_CREDIT: 'Lenders give no credit at rating D.',
+      INSUFFICIENT_SHARES: 'You do not hold that many shares.',
+      ISSUE_LIMIT: 'You can issue at most 20% more shares each month.',
       NO_OPEN_SLOT: 'This building has no open job for this worker.',
     });
   });

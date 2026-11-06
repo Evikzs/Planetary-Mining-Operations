@@ -2,6 +2,7 @@ import type { GameState } from '../sim/state';
 import { base64ToBytes, bytesToBase64 } from './base64';
 import { openBooks } from '../sim/finance/books';
 import { freshCredit } from '../sim/finance/credit';
+import { listCompany } from '../sim/finance/shares';
 
 /** Top-level state keys rebuilt on load instead of saved (task 9 adds 'world'). */
 export const DERIVED_KEYS: string[] = [];
@@ -56,9 +57,12 @@ export function serializeState(state: GameState): unknown {
  * state appends its step.
  */
 export const UPGRADES: ((s: GameState) => void)[] = [
-  // M2a C5: no loans or credit before lending arrived. First: opening books reads them.
+  // Defaults that later steps read go first: no loans, credit or shares before M2a C5–C6.
   (s) => {
     s.loans ??= [];
+    s.listings ??= [];
+    s.holdings ??= [];
+    s.shareOrders ??= [];
     for (const c of s.companies) c.credit ??= freshCredit();
   },
   // M2a C3: companies without books open them from what they hold.
@@ -68,6 +72,12 @@ export const UPGRADES: ((s: GameState) => void)[] = [
   // M2a C4: books opened before the monthly close have no closed months yet.
   (s) => {
     for (const c of s.companies) c.books.closed ??= [];
+  },
+  // M2a C6: companies founded before shares get listed now.
+  (s) => {
+    for (const c of s.companies) {
+      if (!s.listings.some((l) => l.companyId === c.id)) listCompany(s, c.id);
+    }
   },
 ];
 

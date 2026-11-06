@@ -44,6 +44,16 @@ export function checkInvariants(state: GameState): string[] {
     if (!Number.isSafeInteger(o.escrowKg) || o.escrowKg < 0)
       problems.push(`order ${o.id} holds invalid goods: ${o.escrowKg}`);
   }
+  for (const o of state.shareOrders) {
+    if (o.escrowCents !== balance(state.ledger, `escrow:${o.id}`))
+      problems.push(`share order ${o.id} escrow ${o.escrowCents} does not match its account`);
+  }
+  for (const l of state.listings) {
+    let held = l.treasury;
+    for (const h of state.holdings) if (h.companyId === l.companyId) held += h.shares;
+    if (held > l.outstanding)
+      problems.push(`company ${l.companyId}: ${held} shares held of ${l.outstanding} outstanding`);
+  }
   for (const c of state.companies) problems.push(...booksBalanced(state, c.id));
   return problems;
 }

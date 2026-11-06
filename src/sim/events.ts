@@ -34,7 +34,17 @@ export type SimEvent =
   | Of<{ t: 'monthClosed'; label: string; netIncomeCents: number }>
   | Of<{ t: 'ratingChanged'; from: Rating; to: Rating }>
   | Of<{ t: 'defaulted'; owedCents: number }>
-  | Of<{ t: 'defaultCured' }>;
+  | Of<{ t: 'defaultCured' }>
+  | Of<{
+      t: 'shareTrade';
+      orderId: number;
+      target: CompanyId;
+      side: 'buy' | 'sell';
+      qty: number;
+      cents: number;
+    }>
+  | { t: 'stakeDisclosed'; holder: CompanyId; companyId: CompanyId; pct: number }
+  | Of<{ t: 'dividendPaid'; perShareCents: number }>;
 
 /** Whether the player should hear of an event: its own, a public offer, or market-wide news. */
 export function forPlayer(e: SimEvent): boolean {

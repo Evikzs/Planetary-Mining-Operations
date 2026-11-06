@@ -33,3 +33,28 @@ export const DAYS_PER_LOAN_MONTH = 30;
 export const DEFAULT_GRACE_HOURS = 24;
 /** Closes a rating stays at D after a default is cured. */
 export const D_RATING_CLOSES = 3;
+
+/** Listed shares: how many, how the public trades them, and the issue and disclosure limits. */
+export const SHARES = {
+  outstandingAtListing: 100_000,
+  /** Share of the float NPC investors trade each game hour at fair value. */
+  npcTurnoverPerHour: 0.005,
+  elasticity: 2,
+  /** Prices stay within fair value / 5 and × 5. */
+  boundsFactor: 5,
+  maxIssuePerMonth: 0.2,
+  disclosureStake: 0.2,
+  /** A market buy holds cash for twice the last price. */
+  marketBuyEscrowFactor: 2,
+} as const;
+
+/** Fair value: book value plus a few months of earnings, moved by reputation and mood. */
+export const VALUATION = {
+  earningsMonths: 3,
+  bookFloor: 0.5,
+  sentimentDecay: 0.95,
+  sentimentSigma: 0.03,
+  defaultShock: -0.5,
+  notchShock: 0.1,
+  dividendShock: 0.05,
+} as const;
