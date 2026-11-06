@@ -36,7 +36,11 @@ export type Command =
   | { t: 'abandonContract'; contractId: number }
   | { t: 'storyAck'; beatId: BeatId }
   | { t: 'setHintMute'; category: HintCategory; muted: boolean }
-  | { t: 'cameraTaught'; panned?: boolean; zoomed?: boolean };
+  | { t: 'cameraTaught'; panned?: boolean; zoomed?: boolean }
+  | { t: 'takeLoan'; amountCents: number; months: 3 | 6 | 12 }
+  | { t: 'repayLoan'; loanId: number; amountCents: number }
+  | { t: 'drawCredit'; amountCents: number }
+  | { t: 'repayCredit'; amountCents: number };
 
 export type CommandError =
   | 'ALREADY_FOUNDED'
@@ -62,7 +66,9 @@ export type CommandError =
   | 'INVALID_ORDER'
   | 'STORAGE_FULL'
   | 'CONTRACT_LIMIT'
-  | 'NOT_ACTIVE';
+  | 'NOT_ACTIVE'
+  | 'CREDIT_LIMIT'
+  | 'NO_CREDIT';
 
 export type CommandResult = { ok: true } | { ok: false; error: CommandError };
 

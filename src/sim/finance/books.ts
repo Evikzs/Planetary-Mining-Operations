@@ -79,7 +79,8 @@ export function emptyBooks(): Books {
   };
 }
 
-const booksOf = (state: GameState, co: CompanyId): Books => companyOf(state, co)!.books;
+const booksCompany = (state: GameState, co: CompanyId): CompanyState => companyOf(state, co)!;
+const booksOf = (state: GameState, co: CompanyId): Books => booksCompany(state, co).books;
 
 /** The other side of a cash movement: income, equity, or nothing for assets and debts. */
 function post(books: Books, cents: number, posting: Posting, flow: FlowClass, sign: 1 | -1): void {
@@ -239,11 +240,12 @@ export function assets(state: GameState, co: CompanyId): Assets {
   };
 }
 
-/** Debts: none until loans arrive. */
+/** Debts: loans, the drawn credit line, and payments overdue. */
 export function liabilities(state: GameState, co: CompanyId): number {
-  void state;
-  void co;
-  return 0;
+  const credit = booksCompany(state, co).credit;
+  let debt = credit.creditDrawnCents + credit.overdueCents;
+  for (const l of state.loans) if (l.companyId === co) debt += l.principalCents;
+  return debt;
 }
 
 export function equityAccounts(c: CompanyState): number {

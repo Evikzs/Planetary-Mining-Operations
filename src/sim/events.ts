@@ -1,5 +1,6 @@
 import type { GoodId } from '../data/goods';
 import { PLAYER, type CompanyId } from './companies';
+import type { Rating } from './finance/credit';
 
 /** Events about one company's sections, buildings, workers, orders or contracts name it. */
 type Of<E> = E & { companyId: CompanyId };
@@ -30,7 +31,10 @@ export type SimEvent =
   | { t: 'priceMove'; goodId: GoodId; pct24h: number }
   | { t: 'contractOffered'; contractId: number; tenderTo: CompanyId | null }
   | Of<{ t: 'contractCompleted' | 'contractFailed'; contractId: number }>
-  | Of<{ t: 'monthClosed'; label: string; netIncomeCents: number }>;
+  | Of<{ t: 'monthClosed'; label: string; netIncomeCents: number }>
+  | Of<{ t: 'ratingChanged'; from: Rating; to: Rating }>
+  | Of<{ t: 'defaulted'; owedCents: number }>
+  | Of<{ t: 'defaultCured' }>;
 
 /** Whether the player should hear of an event: its own, a public offer, or market-wide news. */
 export function forPlayer(e: SimEvent): boolean {

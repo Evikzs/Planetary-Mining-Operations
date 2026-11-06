@@ -201,6 +201,8 @@ describe('payroll', () => {
     run(s, 60);
     // Migration can add a worker on the hour, before payroll runs: payroll pays the books as they stand.
     expect(cash - balance(s.ledger, 'co:0')).toBe(payrollCentsPerHour(s));
+    // No credit line to fall back on: rating D lends nothing.
+    s.companies[0]!.credit.rating = 'D';
     transfer(s.ledger, 'co:0', 'world', balance(s.ledger, 'co:0'));
     run(s, 60);
     expect(s.companies[0]!.payrollShortfall).toBe(true);

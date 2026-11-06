@@ -12,6 +12,7 @@ import {
   type Period,
   type RevenueLine,
 } from './books';
+import type { SimEvent } from '../events';
 
 export interface IncomeStatement {
   revenue: Record<RevenueLine, number>;
@@ -69,8 +70,16 @@ export function cashFlowStatement(p: Period): CashFlowStatement {
   return { operating, investing, financing, net: operating + investing + financing };
 }
 
+/** Loans outstanding plus payments overdue. */
+function loansOwed(state: GameState, co: CompanyId): number {
+  let owed = companyOf(state, co)!.credit.overdueCents;
+  for (const l of state.loans) if (l.companyId === co) owed += l.principalCents;
+  return owed;
+}
+
 export function balanceSheet(state: GameState, co: CompanyId): BalanceSheet {
-  const books = companyOf(state, co)!.books;
+  const company = companyOf(state, co)!;
+  const books = company.books;
   const a = assets(state, co);
   const debt = liabilities(state, co);
   const income = netIncome(books.period);
@@ -81,8 +90,8 @@ export function balanceSheet(state: GameState, co: CompanyId): BalanceSheet {
     land: a.land,
     investments: a.investments,
     assets: a.total,
-    loans: 0,
-    credit: 0,
+    loans: loansOwed(state, co),
+    credit: company.credit.creditDrawnCents,
     liabilities: debt,
     shareCapital: books.shareCapitalCents,
     treasury: books.treasuryCents,
@@ -93,6 +102,15 @@ export function balanceSheet(state: GameState, co: CompanyId): BalanceSheet {
 }
 
 const ratio = (a: number, b: number): number | null => (b > 0 ? a / b : null);
+
+/** Loans due within 30 days, and payments overdue. */
+function dueSoon(state: GameState, co: CompanyId): number {
+  let owed = companyOf(state, co)!.credit.overdueCents;
+  for (const l of state.loans) {
+    if (l.companyId === co && l.dueTick <= state.tick + 30 * 1440) owed += l.principalCents;
+  }
+  return owed;
+}
 
 /** Ratios from the last closed month, or from the month so far before the first close. */
 export function ratios(state: GameState, co: CompanyId): Ratios {
@@ -107,15 +125,20 @@ export function ratios(state: GameState, co: CompanyId): Ratios {
     roe: ratio(income.netIncome * 12, balance.equity),
     debtToEquity: ratio(balance.loans + balance.credit, balance.equity),
     interestCover: ratio(income.netIncome + interest, interest),
-    currentRatio: ratio(balance.cash + balance.inventory, balance.credit),
+    currentRatio: ratio(balance.cash + balance.inventory, balance.credit + dueSoon(state, co)),
   };
 }
 
 /** Steps that run at each close, after depreciation and before the record: dividends, rating. */
-export const CLOSE_HOOKS: ((state: GameState, co: CompanyId) => void)[] = [];
+export const CLOSE_HOOKS: ((state: GameState, co: CompanyId, events: SimEvent[]) => void)[] = [];
 
 /** Closes one company's month: depreciation, the hooks, the record, retained earnings. */
-export function closeMonth(state: GameState, co: CompanyId, label: string): ClosedMonth {
+export function closeMonth(
+  state: GameState,
+  co: CompanyId,
+  label: string,
+  events: SimEvent[] = [],
+): ClosedMonth {
   const company = companyOf(state, co)!;
   const books = company.books;
   const mine = new Set(state.sections.filter((s) => s.owner === co).map((s) => s.id));
@@ -125,7 +148,7 @@ export function closeMonth(state: GameState, co: CompanyId, label: string): Clos
     b.bookCents -= share;
     books.period.expense.depreciation += share;
   }
-  for (const hook of CLOSE_HOOKS) hook(state, co);
+  for (const hook of CLOSE_HOOKS) hook(state, co, events);
   const month: ClosedMonth = {
     label,
     income: incomeStatement(books.period),
@@ -154,7 +177,7 @@ export const closeSystem: System = {
     const ended = label(state.tick - 1);
     for (const c of state.companies) {
       if (c.status !== 'active') continue;
-      const month = closeMonth(state, c.id, ended);
+      const month = closeMonth(state, c.id, ended, ctx.events);
       ctx.events.push({
         t: 'monthClosed',
         companyId: c.id,

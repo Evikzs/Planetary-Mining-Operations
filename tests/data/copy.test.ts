@@ -27,6 +27,8 @@ describe('copy', () => {
       NOT_ACTIVE: 'This contract is not active.',
       ALREADY_OWNED: 'You already own this section.',
       CANNOT_DEMOLISH: 'This building cannot be demolished.',
+      CREDIT_LIMIT: 'That is more than your credit allows.',
+      NO_CREDIT: 'Lenders give no credit at rating D.',
       NO_OPEN_SLOT: 'This building has no open job for this worker.',
     });
   });

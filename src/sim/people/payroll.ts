@@ -5,6 +5,7 @@ import { balance } from '../ledger';
 import { cashOut } from '../finance/books';
 import type { GameState } from '../state';
 import { SKILL_OF } from './store';
+import { payDue } from '../finance/credit';
 
 /** What one game hour of wages costs each company, at its head count and wage levels. */
 export function payrollByCompany(state: GameState): Map<CompanyId, number> {
@@ -36,8 +37,13 @@ export const payrollSystem: System = {
       if (company.status !== 'active') continue;
       const cents = due.get(company.id) ?? 0;
       const cash = balance(state.ledger, cashAccount(company.id));
-      const paid = Math.min(cents, cash);
-      cashOut(state, company.id, paid, { to: 'expense', line: 'wages' }, 'operating');
+      const wages = { to: 'expense', line: 'wages' } as const;
+      // Wages draw on the credit line before any worker goes unpaid.
+      if (payDue(state, company.id, cents, wages, 'operating')) {
+        company.payrollShortfall = false;
+        continue;
+      }
+      cashOut(state, company.id, Math.min(cents, cash), wages, 'operating');
       company.payrollShortfall = cash < cents;
     }
   },

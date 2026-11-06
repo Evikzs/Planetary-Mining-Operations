@@ -1,6 +1,7 @@
 import type { GameState } from '../sim/state';
 import { base64ToBytes, bytesToBase64 } from './base64';
 import { openBooks } from '../sim/finance/books';
+import { freshCredit } from '../sim/finance/credit';
 
 /** Top-level state keys rebuilt on load instead of saved (task 9 adds 'world'). */
 export const DERIVED_KEYS: string[] = [];
@@ -55,6 +56,11 @@ export function serializeState(state: GameState): unknown {
  * state appends its step.
  */
 export const UPGRADES: ((s: GameState) => void)[] = [
+  // M2a C5: no loans or credit before lending arrived. First: opening books reads them.
+  (s) => {
+    s.loans ??= [];
+    for (const c of s.companies) c.credit ??= freshCredit();
+  },
   // M2a C3: companies without books open them from what they hold.
   (s) => {
     for (const c of s.companies) if (!(c as Partial<typeof c>).books) openBooks(s, c.id);

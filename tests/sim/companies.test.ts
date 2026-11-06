@@ -161,6 +161,8 @@ describe('per-company systems', () => {
   it("a company short of cash lowers only its own workers' morale", () => {
     const s = founded();
     addTestCompany(s, 1, otherSection(s));
+    // No credit line to fall back on: rating D lends nothing.
+    s.companies[1]!.credit.rating = 'D';
     transfer(s.ledger, cashAccount(1), 'world', balance(s.ledger, cashAccount(1)));
     for (let h = 0; h < 4; h++) toNextHour(s);
     expect(s.companies[1]!.payrollShortfall).toBe(true);
