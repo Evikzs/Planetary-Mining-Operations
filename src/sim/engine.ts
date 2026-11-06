@@ -45,6 +45,7 @@ import {
 } from './finance/shares';
 import { auctionsSystem, openAuction, placeBid, setProxy } from './auctions';
 import { foundRivals } from './rivals/founding';
+import { rivalsSystem } from './rivals/ai';
 
 export type StepMode = 'fine' | 'coarse';
 
@@ -91,6 +92,7 @@ export const SYSTEMS: System[] = [
   sharesSystem,
   contractsSystem,
   auctionsSystem,
+  rivalsSystem,
   closeSystem,
   storySystem,
   alertsSystem,

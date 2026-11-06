@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { START_CASH_CENTS, START_WORKERS } from '../../../src/data/balance';
 import { REPLACEMENT_NAMES, RIVALS } from '../../../src/data/companies';
 import { cashAccount, PLAYER, playerCompany } from '../../../src/sim/companies';
-import { applyCommand, createGame, step } from '../../../src/sim/engine';
+import { applyCommand, createGame, step, SYSTEMS } from '../../../src/sim/engine';
 import { booksBalanced } from '../../../src/sim/finance/books';
 import { listingOf } from '../../../src/sim/finance/shares';
 import { hashState } from '../../../src/sim/hash';
@@ -84,7 +84,15 @@ describe('rival companies', () => {
 
   it('rival workers ride rival buses and are paid from rival cash', () => {
     const s = founded();
-    for (let i = 0; i < 60; i++) step(s, { mode: 'fine' });
+    // The AI off, so cash moves by payroll alone.
+    const k = SYSTEMS.findIndex((x) => x.id === 'rivals');
+    const ai = SYSTEMS[k]!;
+    SYSTEMS[k] = { id: 'rivals', step: () => {} };
+    try {
+      for (let i = 0; i < 60; i++) step(s, { mode: 'fine' });
+    } finally {
+      SYSTEMS[k] = ai;
+    }
     for (const c of s.companies.slice(1)) {
       expect(s.trips.some((t) => t.sectionId === c.charterSectionId) || s.tick > 60).toBe(true);
       expect(c.books.period.expense.wages).toBeGreaterThan(0);

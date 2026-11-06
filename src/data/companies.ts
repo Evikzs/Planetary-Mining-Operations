@@ -16,6 +16,12 @@ export const RIVALS: { name: string; archetype: Archetype; colour: CompanyColour
 ];
 
 /** Names for rivals founded later, and for a rival whose name the player took. */
+/**
+ * Game hours a public ore offer stands on the board before rivals consider it: the player, who
+ * plays in sessions, gets first look. Unclaimed offers then go to whoever can fill them.
+ */
+export const OFFER_WAIT_HOURS = 12;
+
 export const REPLACEMENT_NAMES = [
   'Aitken Basin Resources',
   'Clavius Ridge Ventures',
