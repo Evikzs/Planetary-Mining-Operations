@@ -51,6 +51,9 @@ export interface Building {
   /** Minutes the crew's average morale has stayed below the strike line. */
   lowMoraleMinutes: number;
   strike: boolean;
+  /** What putting it up and raising it cost, cash and materials; and that less depreciation. */
+  costCents: number;
+  bookCents: number;
   /** Job slots that replace the type's own, as on a contract site. */
   jobs?: Partial<Record<Skill, number>>;
 }

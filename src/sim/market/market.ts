@@ -11,6 +11,7 @@ import { worldOf } from '../world/luna';
 import { clear, type Fill } from './clearing';
 import { colonyScale, npcDemandTph, npcSupplyTph } from './curves';
 import { buyEscrowCents, closeOrder, type GoodMarket, type Order } from './orders';
+import { cashIn, receiveGoods, recordCashOut, releaseGoods } from '../finance/books';
 
 /** The price and fill a market order of this size would get at the next clearing, as things stand. */
 export function quote(
@@ -78,7 +79,8 @@ function settle(
     o.filledKg += f.kg;
     if (o.side === 'sell') {
       o.escrowKg -= f.kg;
-      transfer(state.ledger, 'world', cashAccount(o.companyId), cents);
+      cashIn(state, o.companyId, cents, { to: 'revenue', line: 'sales' }, 'operating');
+      releaseGoods(state, o.companyId, o.goodId, f.kg, 'cogs');
       if (o.companyId === PLAYER) {
         state.stats.soldKg[o.goodId] = (state.stats.soldKg[o.goodId] ?? 0) + f.kg;
         state.stats.incomeCents += cents;
@@ -91,8 +93,12 @@ function settle(
         throw new Error(`order ${o.id} cannot pay ${cents} cents`);
       }
       o.escrowCents -= cents;
+      recordCashOut(state, o.companyId, cents, { to: 'asset' }, 'operating');
       const depot = sectionState(state, o.sectionId)?.depot;
-      if (depot) add(depot, o.goodId, f.kg);
+      if (depot) {
+        add(depot, o.goodId, f.kg);
+        receiveGoods(state, o.companyId, o.goodId, f.kg, cents);
+      }
       if (o.companyId === PLAYER) {
         state.stats.boughtKg[o.goodId] = (state.stats.boughtKg[o.goodId] ?? 0) + f.kg;
       }

@@ -1,5 +1,6 @@
 import type { GameState } from '../sim/state';
 import { base64ToBytes, bytesToBase64 } from './base64';
+import { openBooks } from '../sim/finance/books';
 
 /** Top-level state keys rebuilt on load instead of saved (task 9 adds 'world'). */
 export const DERIVED_KEYS: string[] = [];
@@ -49,9 +50,21 @@ export function serializeState(state: GameState): unknown {
   return encode(copy);
 }
 
+/**
+ * Fills fields that saves from earlier pushes lack, in order, after migration. Each task that adds
+ * state appends its step.
+ */
+export const UPGRADES: ((s: GameState) => void)[] = [
+  // M2a C3: companies without books open them from what they hold.
+  (s) => {
+    for (const c of s.companies) if (!(c as Partial<typeof c>).books) openBooks(s, c.id);
+  },
+];
+
 export function deserializeState(data: unknown): GameState {
   const state = decode(data) as GameState;
   rebuildDerived(state);
+  for (const upgrade of UPGRADES) upgrade(state);
   return state;
 }
 

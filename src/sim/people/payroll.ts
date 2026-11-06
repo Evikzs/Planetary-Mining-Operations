@@ -1,7 +1,8 @@
 import { WAGE_CENTS_PER_DAY, WAGE_LEVEL } from '../../data/balance';
 import { cashAccount, ownersByBuilding, PLAYER, type CompanyId } from '../companies';
 import type { System } from '../engine';
-import { balance, transfer } from '../ledger';
+import { balance } from '../ledger';
+import { cashOut } from '../finance/books';
 import type { GameState } from '../state';
 import { SKILL_OF } from './store';
 
@@ -35,7 +36,8 @@ export const payrollSystem: System = {
       if (company.status !== 'active') continue;
       const cents = due.get(company.id) ?? 0;
       const cash = balance(state.ledger, cashAccount(company.id));
-      transfer(state.ledger, cashAccount(company.id), 'world', Math.min(cents, cash));
+      const paid = Math.min(cents, cash);
+      cashOut(state, company.id, paid, { to: 'expense', line: 'wages' }, 'operating');
       company.payrollShortfall = cash < cents;
     }
   },

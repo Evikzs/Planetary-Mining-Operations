@@ -1,8 +1,9 @@
 import { LAND_PRICE } from '../../data/balance';
 import { fail, OK, type CommandResult } from '../commands';
-import { balance, transfer } from '../ledger';
+import { balance } from '../ledger';
 import type { GameState } from '../state';
-import { activeCompany, cashAccount, PLAYER, type CompanyId } from '../companies';
+import { activeCompany, cashAccount, companyOf, PLAYER, type CompanyId } from '../companies';
+import { cashOut } from '../finance/books';
 import { worldOf } from '../world/luna';
 import { ownSection } from './sections';
 
@@ -31,7 +32,8 @@ export function buySection(
   if (!buyableSections(state, actor).includes(sectionId)) return fail('NOT_ADJACENT');
   const price = landPrice(state.landPurchases);
   if (balance(state.ledger, cashAccount(actor)) < price) return fail('INSUFFICIENT_CASH');
-  transfer(state.ledger, cashAccount(actor), 'world', price);
+  cashOut(state, actor, price, { to: 'asset' }, 'investing');
+  companyOf(state, actor)!.books.landCents += price;
   state.landPurchases++;
   ownSection(state, sectionId, actor);
   state.pendingEvents.push({ t: 'sectionBought', sectionId, companyId: actor });

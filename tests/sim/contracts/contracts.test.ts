@@ -13,6 +13,7 @@ import { addWorker, SKILL_CODE } from '../../../src/sim/people/store';
 import { createRng } from '../../../src/sim/rng';
 import type { GameState } from '../../../src/sim/state';
 import { worldOf } from '../../../src/sim/world/luna';
+import { openBooks } from '../../../src/sim/finance/books';
 
 const world = worldOf({ seed: 42 });
 const home = world.foundingSectionId;
@@ -194,6 +195,8 @@ describe('contracts', () => {
     const site = s.buildings.find((b) => b.plotId === plot.id)!;
     expect(site.type).toBe('contractSite');
     sectionState(s, home)!.depot.steel = 1_000;
+    // Goods set by hand: open the books from what the company now holds.
+    openBooks(s, 0);
     expect(deliver(s, c)).toEqual({ ok: true });
     expect(c.stageIndex).toBe(1);
     const pop = s.colonyPop;

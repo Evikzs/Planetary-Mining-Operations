@@ -3,6 +3,7 @@ import type { GoodId } from '../../data/goods';
 import type { System } from '../engine';
 import { take } from '../inventory';
 import { residentsBySection } from './housing';
+import { releaseGoods } from '../finance/books';
 
 export type Need = 'air' | 'water' | 'food';
 
@@ -36,9 +37,11 @@ export const needsSystem: System = {
         if (stock >= due) {
           const whole = Math.floor(due);
           take(section.depot, good, whole);
+          releaseGoods(state, section.owner, good, whole, 'lifeSupport');
           section.consumeRemainder[good] = due - whole;
         } else {
           take(section.depot, good, stock);
+          releaseGoods(state, section.owner, good, stock, 'lifeSupport');
           section.consumeRemainder[good] = 0;
         }
         const daysLeft = (section.depot[good] ?? 0) / (r * kgPerDay);

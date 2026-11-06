@@ -63,6 +63,8 @@ export function addBuilding(
     beltId: null,
     lowMoraleMinutes: 0,
     strike: false,
+    costCents: 0,
+    bookCents: 0,
   };
   state.buildings.push(building);
   return building;

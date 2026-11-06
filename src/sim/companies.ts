@@ -1,6 +1,7 @@
 import type { WageLevel } from '../data/balance';
 import type { Skill } from '../data/buildings';
 import type { Building, CompanionId, GameState } from './state';
+import { emptyBooks, type Books } from './finance/books';
 
 export type CompanyId = number;
 /** The player's company; rivals get ids from 1 up, never reused. */
@@ -21,6 +22,7 @@ export interface CompanyState {
   reputation: { group: number; luna: number };
   wageLevel: Record<Skill, WageLevel>;
   payrollShortfall: boolean;
+  books: Books;
 }
 
 export type CashAccount = `co:${number}`;
@@ -47,6 +49,7 @@ export function makeCompany(
     reputation: { group: 20, luna: 20 },
     wageLevel: { miner: 'standard', technician: 'standard', engineer: 'standard' },
     payrollShortfall: false,
+    books: emptyBooks(),
   };
 }
 

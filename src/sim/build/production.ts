@@ -8,6 +8,7 @@ import { worldOf } from '../world/luna';
 import { nominalOutputTph, outputCapsKg } from './buffers';
 import { sectionState } from './sections';
 import { buildingOwner, PLAYER } from '../companies';
+import { receiveGoods, releaseGoods } from '../finance/books';
 
 const busy = (b: Building) => b.status === 'constructing' || b.status === 'upgrading';
 
@@ -74,12 +75,17 @@ function produce(state: GameState, b: Building, ctx: StepContext): boolean {
   }
   scale = Math.max(0, scale);
 
-  for (const [g, t] of inputs)
-    take(b.input, g, Math.min(b.input[g] ?? 0, emit(b, g, t * level * 1000 * hours * scale)));
-  const player = buildingOwner(state, b) === PLAYER;
+  const owner = buildingOwner(state, b);
+  for (const [g, t] of inputs) {
+    const used = Math.min(b.input[g] ?? 0, emit(b, g, t * level * 1000 * hours * scale));
+    take(b.input, g, used);
+    if (owner !== null) releaseGoods(state, owner, g, used, 'materials');
+  }
+  const player = owner === PLAYER;
   for (const g of goods) {
     const kg = emit(b, g, nominal[g]! * 1000 * hours * scale);
     add(b.output, g, kg);
+    if (owner !== null) receiveGoods(state, owner, g, kg, 0);
     if (player) state.stats.producedKg[g] = (state.stats.producedKg[g] ?? 0) + kg;
   }
   return blocked;

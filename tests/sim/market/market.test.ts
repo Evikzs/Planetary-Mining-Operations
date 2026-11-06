@@ -10,6 +10,7 @@ import { quote } from '../../../src/sim/market/market';
 import type { GoodMarket, Order } from '../../../src/sim/market/orders';
 import type { GameState } from '../../../src/sim/state';
 import { worldOf } from '../../../src/sim/world/luna';
+import { openBooks } from '../../../src/sim/finance/books';
 
 const world = worldOf({ seed: 42 });
 const home = world.foundingSectionId;
@@ -103,6 +104,8 @@ describe('market', () => {
     const s = founded();
     const depot = sectionState(s, home)!.depot;
     depot.helium3 = 5000;
+    // Goods set by hand: open the books from what the company now holds.
+    openBooks(s, 0);
     expect(
       applyCommand(s, {
         t: 'placeOrder',
@@ -131,6 +134,8 @@ describe('market', () => {
     applyCommand(s, { t: 'demolish', buildingId: quarters.id });
     const depot = sectionState(s, home)!.depot;
     depot.ilmenite = 20_000;
+    // Goods set by hand: open the books from what the company now holds.
+    openBooks(s, 0);
     const steel0 = depot.steel ?? 0;
     const cash0 = balance(s.ledger, 'co:0');
     const place = (side: 'buy' | 'sell', goodId: GoodId, kind: 'market' | 'limit', kg: number) =>

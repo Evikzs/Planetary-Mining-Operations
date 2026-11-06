@@ -4,7 +4,7 @@ import type { GoodId } from '../../data/goods';
 import { fail, OK, type CommandResult } from '../commands';
 import type { System } from '../engine';
 import { add, take, type Inventory } from '../inventory';
-import { balance, transfer } from '../ledger';
+import { balance } from '../ledger';
 import { activeCompany, buildingOwner, cashAccount, PLAYER, type CompanyId } from '../companies';
 import { newId, type Building, type GameState, type Priority } from '../state';
 import { evictResidents } from '../people/housing';
@@ -13,6 +13,7 @@ import { worldOf } from '../world/luna';
 import { connectToNetwork } from '../world/roads';
 import { createBelt, removeBelt, returnInputs } from './belts';
 import { addBuilding, gridFor, sectionState } from './sections';
+import { cashIn, cashOut, recognize, releaseGoods } from '../finance/books';
 
 const kg = (t: number) => Math.round(t * 1000);
 
@@ -20,8 +21,19 @@ function hasMaterials(depot: Inventory, materials: Partial<Record<GoodId, number
   return Object.entries(materials).every(([g, t]) => (depot[g as GoodId] ?? 0) >= kg(t));
 }
 
-function consume(depot: Inventory, materials: Partial<Record<GoodId, number>>): void {
-  for (const [g, t] of Object.entries(materials)) take(depot, g as GoodId, kg(t));
+/** Uses the materials up and returns their cost, which goes into the building's. */
+function consume(
+  state: GameState,
+  co: CompanyId,
+  depot: Inventory,
+  materials: Partial<Record<GoodId, number>>,
+): number {
+  let basis = 0;
+  for (const [g, t] of Object.entries(materials)) {
+    take(depot, g as GoodId, kg(t));
+    basis += releaseGoods(state, co, g as GoodId, kg(t), 'capitalise');
+  }
+  return basis;
 }
 
 const busy = (b: Building) => b.status === 'constructing' || b.status === 'upgrading';
@@ -69,9 +81,11 @@ export function build(
     newId(state),
   );
   if (!road) return fail('NO_ROAD_ACCESS');
-  transfer(state.ledger, cash, 'world', def.cost.cents);
-  consume(section.depot, def.cost.materials);
+  cashOut(state, actor, def.cost.cents, { to: 'asset' }, 'investing');
+  const materials = consume(state, actor, section.depot, def.cost.materials);
   const building = addBuilding(state, plot, cmd.type, 'constructing', recipeId);
+  building.costCents = def.cost.cents + materials;
+  building.bookCents = building.costCents;
   if (def.belt) createBelt(state, building);
   state.pendingEvents.push({ t: 'constructionStarted', buildingId: building.id, companyId: actor });
   return OK;
@@ -92,8 +106,10 @@ export function upgrade(
   const cash = cashAccount(actor);
   if (balance(state.ledger, cash) < cost.cents) return fail('INSUFFICIENT_CASH');
   if (!hasMaterials(section.depot, cost.materials)) return fail('INSUFFICIENT_MATERIALS');
-  transfer(state.ledger, cash, 'world', cost.cents);
-  consume(section.depot, cost.materials);
+  cashOut(state, actor, cost.cents, { to: 'asset' }, 'investing');
+  const spent = cost.cents + consume(state, actor, section.depot, cost.materials);
+  b.costCents += spent;
+  b.bookCents += spent;
   b.status = 'upgrading';
   b.progress = 0;
   b.workHours = upgradeHours(def, b.level);
@@ -125,12 +141,9 @@ export function demolish(
   releaseWorkers(state, b.id);
   const left = evictResidents(state, b);
   if (left > 0) state.pendingEvents.push({ t: 'emigration', count: left, companyId: actor });
-  transfer(
-    state.ledger,
-    'world',
-    cashAccount(actor),
-    Math.round(BUILDINGS[b.type].cost.cents * 0.25),
-  );
+  const refund = Math.round(BUILDINGS[b.type].cost.cents * 0.25);
+  cashIn(state, actor, refund, { to: 'asset' }, 'investing');
+  recognize(state, actor, refund - b.bookCents);
   state.buildings = state.buildings.filter((x) => x.id !== b.id);
   return OK;
 }

@@ -4,11 +4,9 @@ import { addBuilding, gridFor, sectionState } from '../build/sections';
 import { fail, OK, type CommandResult } from '../commands';
 import type { StepContext, System } from '../engine';
 import { take } from '../inventory';
-import { transfer } from '../ledger';
 import {
   activeCompany,
   bestReputation,
-  cashAccount,
   changeReputation,
   PLAYER,
   type CompanyId,
@@ -19,6 +17,7 @@ import { worldOf } from '../world/luna';
 import { connectToNetwork } from '../world/roads';
 import { generateOffer } from './generate';
 import { boardSize, maxActive } from './rewards';
+import { cashIn, releaseGoods } from '../finance/books';
 
 export type ContractType = 'oreDelivery' | 'infrastructure';
 export type Issuer = 'Lunar Authority' | 'Shackleton Colony' | 'Peary Settlement';
@@ -142,6 +141,7 @@ export function deliverContract(
     const kg = Math.min(need - (stage.doneKg[g] ?? 0), depot[g] ?? 0);
     if (kg <= 0) continue;
     take(depot, g, kg);
+    releaseGoods(state, actor, g, kg, 'cogs');
     stage.doneKg[g] = (stage.doneKg[g] ?? 0) + kg;
     moved += kg;
   }
@@ -185,7 +185,7 @@ function progress(state: GameState, c: Contract, hours: number): void {
 function complete(state: GameState, ctx: StepContext, c: Contract): void {
   c.status = 'completed';
   const holder = c.holder ?? PLAYER;
-  transfer(state.ledger, 'world', cashAccount(holder), c.rewardCents);
+  cashIn(state, holder, c.rewardCents, { to: 'revenue', line: 'contracts' }, 'operating');
   if (holder === PLAYER) state.stats.incomeCents += c.rewardCents;
   changeReputation(state, holder, c.repGain);
   if (c.plotId !== null && c.asset) state.clientAssets.push({ plotId: c.plotId, asset: c.asset });

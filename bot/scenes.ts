@@ -13,6 +13,7 @@ import { addWorker, SKILL_CODE } from '../src/sim/people/store';
 import { createRng, deriveSeed, type Rng } from '../src/sim/rng';
 import { newId, type GameState } from '../src/sim/state';
 import { PLAYER } from '../src/sim/companies';
+import { openBooks } from '../src/sim/finance/books';
 import { worldOf } from '../src/sim/world/luna';
 import { connectToNetwork } from '../src/sim/world/roads';
 import type { Plot, RawGoodId } from '../src/sim/world/types';
@@ -36,6 +37,11 @@ function newcomer(s: GameState, rng: Rng, skill: number, home: number): void {
  * A young company a day in: mine, ice drill, smelter, water plant and a second crew quarters,
  * full homes, one ore delivery taken, 30 t of ilmenite in stock, 05:30 with buses on the road.
  */
+/** Scenes set state up by hand, so their books open from what each company holds at the end. */
+function openAllBooks(s: GameState): void {
+  for (const c of s.companies) openBooks(s, c.id);
+}
+
 export function makeDemoState(seed: number): GameState {
   const s = founded(seed);
   const home = worldOf(s).foundingSectionId;
@@ -76,6 +82,7 @@ export function makeDemoState(seed: number): GameState {
   for (let i = 0; i < 30; i++) step(s, { mode: 'fine' });
   const depot = sectionState(s, home)!.depot;
   depot.ilmenite = Math.max(depot.ilmenite ?? 0, 30_000);
+  openAllBooks(s);
   return s;
 }
 
@@ -180,5 +187,6 @@ export function makeBenchState(seed: number): GameState {
   }
   autoAssign(s); // refreshes commute times
   seatCurrentShift(s);
+  openAllBooks(s);
   return s;
 }

@@ -12,12 +12,12 @@ import { createRng, deriveSeed } from '../rng';
 import type { GoodId } from '../../data/goods';
 import { angleBetween } from '../../shared/vec3';
 import { add } from '../inventory';
-import { transfer } from '../ledger';
 import { newId, type GameState } from '../state';
 import { worldOf } from '../world/luna';
 import { connectToNetwork } from '../world/roads';
 import { addBuilding, gridFor, hubDir, ownSection } from './sections';
-import { cashAccount, PLAYER, type CompanyId } from '../companies';
+import { companyOf, PLAYER, type CompanyId } from '../companies';
+import { baseValueCents, cashIn, listCostCents, receiveGoods } from '../finance/books';
 
 /** A founding charter: one section with starter buildings, cash, stock and workers. */
 export function grantCharter(state: GameState, companyId: CompanyId, sid: number): void {
@@ -38,10 +38,28 @@ export function grantCharter(state: GameState, companyId: CompanyId, sid: number
       }
     }
   }
-  transfer(state.ledger, 'world', cashAccount(companyId), START_CASH_CENTS);
+  // The founders put in the cash, the stock and the starter buildings: all share capital.
+  cashIn(
+    state,
+    companyId,
+    START_CASH_CENTS,
+    { to: 'equity', account: 'shareCapital' },
+    'financing',
+  );
+  let contributed = 0;
   for (const [g, t] of Object.entries(START_STOCK_T)) {
-    add(section.depot, g as GoodId, Math.round(t * 1000));
+    const kg = Math.round(t * 1000);
+    add(section.depot, g as GoodId, kg);
+    receiveGoods(state, companyId, g as GoodId, kg, baseValueCents(g as GoodId, kg));
+    contributed += baseValueCents(g as GoodId, kg);
   }
+  for (const b of state.buildings) {
+    if (b.sectionId !== sid) continue;
+    b.costCents = listCostCents(b);
+    b.bookCents = b.costCents;
+    contributed += b.costCents;
+  }
+  companyOf(state, companyId)!.books.shareCapitalCents += contributed;
   const quarters = state.buildings.find((b) => b.type === 'crewQuarters' && b.sectionId === sid);
   // The player keeps the M1 stream, so existing seeds keep their founders' names.
   const stream = companyId === PLAYER ? 'founders' : `founders:${companyId}`;

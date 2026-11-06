@@ -1,5 +1,6 @@
 import { balance } from './ledger';
 import type { GameState } from './state';
+import { booksBalanced } from './finance/books';
 
 /** Debug checks run after every tick in dev builds. */
 export function checkInvariants(state: GameState): string[] {
@@ -43,5 +44,6 @@ export function checkInvariants(state: GameState): string[] {
     if (!Number.isSafeInteger(o.escrowKg) || o.escrowKg < 0)
       problems.push(`order ${o.id} holds invalid goods: ${o.escrowKg}`);
   }
+  for (const c of state.companies) problems.push(...booksBalanced(state, c.id));
   return problems;
 }
