@@ -34,6 +34,11 @@ export const ERROR_COPY: Record<CommandError, string> = {
   NO_CREDIT: 'Lenders give no credit at rating D.',
   INSUFFICIENT_SHARES: 'You do not hold that many shares.',
   ISSUE_LIMIT: 'You can issue at most 20% more shares each month.',
+  NOT_FOR_SALE: 'This section is not for sale now.',
+  BID_TOO_LOW: 'Bid at least the minimum shown.',
+  AUCTION_CLOSED: 'This auction has ended.',
+  AUCTION_LIMIT: 'Too many auctions are open. Wait until one ends.',
+  LOW_REPUTATION: 'Your reputation is too low to bid.',
   NO_OPEN_SLOT: 'This building has no open job for this worker.',
 };
 

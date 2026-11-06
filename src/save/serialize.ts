@@ -63,6 +63,7 @@ export const UPGRADES: ((s: GameState) => void)[] = [
     s.listings ??= [];
     s.holdings ??= [];
     s.shareOrders ??= [];
+    s.auctions ??= [];
     for (const c of s.companies) c.credit ??= freshCredit();
   },
   // M2a C3: companies without books open them from what they hold.

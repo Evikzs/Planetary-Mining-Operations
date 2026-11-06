@@ -43,6 +43,7 @@ import {
   setDividendRatio,
   sharesSystem,
 } from './finance/shares';
+import { auctionsSystem, openAuction, placeBid, setProxy } from './auctions';
 
 export type StepMode = 'fine' | 'coarse';
 
@@ -88,6 +89,7 @@ export const SYSTEMS: System[] = [
   marketSystem,
   sharesSystem,
   contractsSystem,
+  auctionsSystem,
   closeSystem,
   storySystem,
   alertsSystem,
@@ -163,6 +165,12 @@ export function applyCommand(
       return issueShares(state, cmd.qty, actor);
     case 'setDividendRatio':
       return setDividendRatio(state, cmd.ratio, actor);
+    case 'openAuction':
+      return openAuction(state, cmd.sectionId, actor);
+    case 'placeBid':
+      return placeBid(state, cmd.auctionId, cmd.amountCents, actor);
+    case 'setProxy':
+      return setProxy(state, cmd.auctionId, cmd.ceilingCents, actor);
     case 'setWageLevel': {
       const company = activeCompany(state, actor);
       if (!company) return fail('NOT_FOUNDED');

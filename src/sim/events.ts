@@ -44,7 +44,12 @@ export type SimEvent =
       cents: number;
     }>
   | { t: 'stakeDisclosed'; holder: CompanyId; companyId: CompanyId; pct: number }
-  | Of<{ t: 'dividendPaid'; perShareCents: number }>;
+  | Of<{ t: 'dividendPaid'; perShareCents: number }>
+  | { t: 'auctionOpened'; auctionId: number; sectionId: number; companyId: CompanyId | null }
+  | Of<{ t: 'bidPlaced'; auctionId: number; amountCents: number }>
+  | Of<{ t: 'auctionWon'; auctionId: number; sectionId: number; amountCents: number }>
+  | { t: 'auctionUnsold'; auctionId: number; sectionId: number }
+  | Of<{ t: 'bidDefaulted'; auctionId: number }>;
 
 /** Whether the player should hear of an event: its own, a public offer, or market-wide news. */
 export function forPlayer(e: SimEvent): boolean {

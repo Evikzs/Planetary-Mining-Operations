@@ -52,7 +52,10 @@ export type Command =
     }
   | { t: 'cancelShareOrder'; orderId: number }
   | { t: 'issueShares'; qty: number }
-  | { t: 'setDividendRatio'; ratio: number };
+  | { t: 'setDividendRatio'; ratio: number }
+  | { t: 'openAuction'; sectionId: number }
+  | { t: 'placeBid'; auctionId: number; amountCents: number }
+  | { t: 'setProxy'; auctionId: number; ceilingCents: number | null };
 
 export type CommandError =
   | 'ALREADY_FOUNDED'
@@ -82,7 +85,12 @@ export type CommandError =
   | 'CREDIT_LIMIT'
   | 'NO_CREDIT'
   | 'INSUFFICIENT_SHARES'
-  | 'ISSUE_LIMIT';
+  | 'ISSUE_LIMIT'
+  | 'NOT_FOR_SALE'
+  | 'BID_TOO_LOW'
+  | 'AUCTION_CLOSED'
+  | 'AUCTION_LIMIT'
+  | 'LOW_REPUTATION';
 
 export type CommandResult = { ok: true } | { ok: false; error: CommandError };
 
