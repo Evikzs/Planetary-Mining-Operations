@@ -23,7 +23,13 @@ import { housingCapacity } from './people/housing';
 import { presentCrew, slotsPerShift, staffing } from './people/jobs';
 import { indexOfId, SKILL_CODE, SKILL_OF, workerName } from './people/store';
 import type { Building, BuildingStatus, Company, GameState, Priority } from './state';
-import { cashAccount, PLAYER, playerCompany, type CompanyState } from './companies';
+import {
+  cashAccount,
+  ownersByBuilding,
+  PLAYER,
+  playerCompany,
+  type CompanyState,
+} from './companies';
 import type { BeatId, HintCategory } from './story/beats';
 import { currentLine } from './story/story';
 import { worldOf } from './world/luna';
@@ -259,6 +265,10 @@ export function buildMotionView(state: GameState): MotionView {
   };
 }
 
+/** A contract the player holds, or an offer open to it. */
+const seenByPlayer = (c: Contract) =>
+  c.holder === PLAYER || (c.status === 'offered' && (c.tenderTo ?? PLAYER) === PLAYER);
+
 export function buildUiSnapshot(state: GameState): UiSnapshot {
   const player = playerCompany(state);
   const p = state.people;
@@ -274,7 +284,12 @@ export function buildUiSnapshot(state: GameState): UiSnapshot {
   const shift = shiftAt(state.tick);
   const tally = new Uint32Array(state.nextId * 9);
   let employed = 0;
+  let total = 0;
+  // The player sees its own people, buildings, orders and contracts; rivals reach it as news.
+  const owners = ownersByBuilding(state);
   for (let i = 0; i < p.count; i++) {
+    if (owners.get(p.home[i]!) !== PLAYER) continue;
+    total++;
     const skill = bySkill[SKILL_OF[p.skill[i]!]!];
     skill.total++;
     const morale = p.morale[i]!;
@@ -333,9 +348,9 @@ export function buildUiSnapshot(state: GameState): UiSnapshot {
         storageCapKg: storageCapKg(state, s.id),
         needsMet: { ...s.needsMet },
       })),
-    workforce: { total: p.count, employed, bySkill },
+    workforce: { total, employed, bySkill },
     buildings: state.buildings
-      .filter((b) => !isSite(b))
+      .filter((b) => !isSite(b) && owners.get(b.id) === PLAYER)
       .map((b) => {
         return {
           id: b.id,
@@ -365,21 +380,23 @@ export function buildUiSnapshot(state: GameState): UiSnapshot {
         volume24hKg: Math.round(m.volume24hKg),
       };
     }),
-    orders: state.orders.map((o) => ({ ...o })),
-    contracts: structuredClone(state.contracts),
-    sites: state.contracts.flatMap((c) => {
-      const site =
-        c.status === 'active' && state.buildings.find((b) => b.plotId === c.plotId && isSite(b));
-      if (!site) return [];
-      const at = presentCrew(state, site.id);
-      const crew: UiSnapshot['sites'][number]['crew'] = {};
-      for (const skill of SKILLS) {
-        const n = slotsPerShift(site)[skill];
-        const on = (s: number) => tally[(site.id * 3 + s) * 3 + SKILL_CODE[skill]]!;
-        if (n) crew[skill] = { slots: n, shifts: [on(0), on(1), on(2)], present: at[skill] };
-      }
-      return [{ contractId: c.id, buildingId: site.id, sectionId: site.sectionId, crew }];
-    }),
+    orders: state.orders.filter((o) => o.companyId === PLAYER).map((o) => ({ ...o })),
+    contracts: structuredClone(state.contracts.filter(seenByPlayer)),
+    sites: state.contracts
+      .filter((c) => c.holder === PLAYER)
+      .flatMap((c) => {
+        const site =
+          c.status === 'active' && state.buildings.find((b) => b.plotId === c.plotId && isSite(b));
+        if (!site) return [];
+        const at = presentCrew(state, site.id);
+        const crew: UiSnapshot['sites'][number]['crew'] = {};
+        for (const skill of SKILLS) {
+          const n = slotsPerShift(site)[skill];
+          const on = (s: number) => tally[(site.id * 3 + s) * 3 + SKILL_CODE[skill]]!;
+          if (n) crew[skill] = { slots: n, shifts: [on(0), on(1), on(2)], present: at[skill] };
+        }
+        return [{ contractId: c.id, buildingId: site.id, sectionId: site.sectionId, crew }];
+      }),
     story: {
       line: currentLine(state, VETERAN_LINES, NARRATOR_LINES),
       codex: [...state.story.codex],
@@ -413,7 +430,9 @@ export function queryPeople(
   const p = state.people;
   const byId = new Map(state.buildings.map((b) => [b.id, b]));
   const matches: number[] = [];
+  const owners = ownersByBuilding(state);
   for (let i = 0; i < p.count; i++) {
+    if (owners.get(p.home[i]!) !== PLAYER) continue;
     const home = byId.get(p.home[i]!);
     if (filter.sectionId !== undefined && home?.sectionId !== filter.sectionId) continue;
     if (filter.skill !== undefined && SKILL_OF[p.skill[i]!] !== filter.skill) continue;

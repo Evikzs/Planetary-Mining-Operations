@@ -13,7 +13,7 @@ import { balance } from '../../../src/sim/ledger';
 import type { GameState } from '../../../src/sim/state';
 
 function founded(): GameState {
-  const s = createGame(42);
+  const s = createGame(42, { rivals: false });
   applyCommand(s, { t: 'foundCompany', name: 'Selene Rock Co', companionId: 'veteran' });
   return s;
 }

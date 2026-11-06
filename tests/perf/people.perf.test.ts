@@ -4,7 +4,7 @@ import { addWorker } from '../../src/sim/people/store';
 
 describe('people performance', () => {
   it('needs, morale and payroll at 10,000 workers: median fine tick < 2 ms', () => {
-    const s = createGame(42);
+    const s = createGame(42, { rivals: false });
     applyCommand(s, { t: 'foundCompany', name: 'Selene Rock Co', companionId: 'veteran' });
     const home = s.buildings.find((b) => b.type === 'crewQuarters')!.id;
     for (let i = s.people.count; i < 10_000; i++) {

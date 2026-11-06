@@ -14,7 +14,7 @@ import v2fixture from '../fixtures/saves/v2-founding.json';
 import { checkInvariants } from '../../src/sim/invariants';
 
 function foundedState(ticks = 200) {
-  const s = createGame(42);
+  const s = createGame(42, { rivals: false });
   applyCommand(s, { t: 'foundCompany', name: 'Selene Rock Co', companionId: 'veteran' });
   for (let i = 0; i < ticks; i++) step(s, { mode: 'fine' });
   return s;
@@ -101,7 +101,8 @@ describe('save files', () => {
 
   it('a version-1 save gains a trip counter that starts above every id it holds', () => {
     const res = fromSaveFile(fixture);
-    expect(res.ok && res.state.nextTripId).toBe(res.ok && res.state.nextId);
+    // Rivals founded on load take ids after it, so compare with the id counter the save held.
+    expect(res.ok && res.state.nextTripId).toBe((fixture.state as { nextId: number }).nextId);
   });
 });
 

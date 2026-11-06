@@ -4,7 +4,7 @@ import { hashState } from '../../src/sim/hash';
 
 describe('engine', () => {
   it('founds a company once, with validation', () => {
-    const s = createGame(42);
+    const s = createGame(42, { rivals: false });
     expect(applyCommand(s, { t: 'foundCompany', name: 'ab', companionId: 'veteran' })).toEqual({
       ok: false,
       error: 'INVALID_NAME',
@@ -23,17 +23,17 @@ describe('engine', () => {
   });
 
   it('fine adds 1 tick, coarse adds 60 and must start on the hour', () => {
-    const s = createGame(1);
+    const s = createGame(1, { rivals: false });
     step(s, { mode: 'fine' });
     expect(s.tick).toBe(1);
     expect(() => step(s, { mode: 'coarse' })).toThrow('coarse step must start on the hour');
-    const t = createGame(1);
+    const t = createGame(1, { rivals: false });
     step(t, { mode: 'coarse' });
     expect(t.tick).toBe(60);
   });
 
   it('emits shiftChange at 06:00, 14:00, 22:00', () => {
-    const s = createGame(1);
+    const s = createGame(1, { rivals: false });
     const at: number[] = [];
     for (let i = 0; i < 1440; i++) {
       for (const e of step(s, { mode: 'fine' })) if (e.t === 'shiftChange') at.push(s.tick);
@@ -42,7 +42,7 @@ describe('engine', () => {
   });
 
   it('delivers command events with the next step', () => {
-    const s = createGame(5);
+    const s = createGame(5, { rivals: false });
     applyCommand(s, { t: 'foundCompany', name: 'Selene Rock Co', companionId: 'veteran' });
     expect(step(s, { mode: 'fine' }).map((e) => e.t)).toContain('founded');
     expect(step(s, { mode: 'fine' }).map((e) => e.t)).not.toContain('founded');
@@ -50,7 +50,7 @@ describe('engine', () => {
 
   it('is deterministic', () => {
     const run = (seed: number) => {
-      const s = createGame(seed);
+      const s = createGame(seed, { rivals: false });
       applyCommand(s, { t: 'foundCompany', name: 'Selene Rock Co', companionId: 'veteran' });
       for (let i = 0; i < 2000; i++) step(s, { mode: 'fine' });
       return hashState(s);

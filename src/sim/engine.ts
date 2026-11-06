@@ -44,6 +44,7 @@ import {
   sharesSystem,
 } from './finance/shares';
 import { auctionsSystem, openAuction, placeBid, setProxy } from './auctions';
+import { foundRivals } from './rivals/founding';
 
 export type StepMode = 'fine' | 'coarse';
 
@@ -95,8 +96,11 @@ export const SYSTEMS: System[] = [
   alertsSystem,
 ];
 
-export function createGame(seed: number): GameState {
-  return createInitialState(seed);
+/** A new game; `rivals: false` founds the player alone (single-company tests and benches). */
+export function createGame(seed: number, opts: { rivals?: boolean } = {}): GameState {
+  const state = createInitialState(seed);
+  state.withRivals = opts.rivals ?? true;
+  return state;
 }
 
 export function applyCommand(
@@ -115,6 +119,7 @@ export function applyCommand(
       company.companionId = cmd.companionId;
       state.companies.push(company);
       grantCharter(state, PLAYER, charter);
+      if (state.withRivals) foundRivals(state);
       startStory(state);
       state.pendingEvents.push({ t: 'founded', companyId: PLAYER });
       return OK;

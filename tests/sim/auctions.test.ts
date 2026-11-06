@@ -12,7 +12,7 @@ import { worldOf } from '../../src/sim/world/luna';
 import { addTestCompany } from '../helpers/companies';
 
 function twoCompanies(): GameState {
-  const s = createGame(42);
+  const s = createGame(42, { rivals: false });
   applyCommand(s, { t: 'foundCompany', name: 'Selene Rock Co', companionId: 'veteran' });
   const w = worldOf(s);
   const sid = w.sections.find(

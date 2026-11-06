@@ -40,7 +40,7 @@ function order(o: Partial<Order> & Pick<Order, 'goodId' | 'side' | 'qtyKg'>): Or
 }
 
 function founded(): GameState {
-  const s = createGame(42);
+  const s = createGame(42, { rivals: false });
   applyCommand(s, { t: 'foundCompany', name: 'Selene Rock Co', companionId: 'veteran' });
   return s;
 }

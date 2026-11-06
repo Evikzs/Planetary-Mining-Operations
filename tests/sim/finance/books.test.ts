@@ -18,7 +18,7 @@ import { fromSaveFile } from '../../../src/save/saveFile';
 import v2fixture from '../../fixtures/saves/v2-founding.json';
 
 function founded(): GameState {
-  const s = createGame(42);
+  const s = createGame(42, { rivals: false });
   applyCommand(s, { t: 'foundCompany', name: 'Selene Rock Co', companionId: 'veteran' });
   return s;
 }

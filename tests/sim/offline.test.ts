@@ -17,7 +17,7 @@ const HOUR_MS = 60_000; // one game hour of real time at timescale 1
 
 /** A founded company with a fully staffed mine on ilmenite. */
 function withMine(): GameState {
-  const s = createGame(42);
+  const s = createGame(42, { rivals: false });
   applyCommand(s, { t: 'foundCompany', name: 'Selene Rock Co', companionId: 'veteran' });
   const plot = world.plots.find((p) => p.sectionId === home && p.deposit?.goodId === 'ilmenite')!;
   applyCommand(s, { t: 'build', plotId: plot.id, type: 'mine' });

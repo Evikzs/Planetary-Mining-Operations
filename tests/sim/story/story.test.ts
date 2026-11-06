@@ -19,7 +19,7 @@ const deposit = (good: string) =>
   world.plots.find((p) => p.sectionId === home && p.deposit?.goodId === good)!;
 
 function founded(): GameState {
-  const s = createGame(42);
+  const s = createGame(42, { rivals: false });
   applyCommand(s, { t: 'foundCompany', name: 'Selene Rock Co', companionId: 'veteran' });
   return s;
 }

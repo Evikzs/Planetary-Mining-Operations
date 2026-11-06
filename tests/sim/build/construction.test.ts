@@ -10,7 +10,7 @@ import { worldOf } from '../../../src/sim/world/luna';
 import type { Plot } from '../../../src/sim/world/types';
 
 function founded(seed = 42): GameState {
-  const s = createGame(seed);
+  const s = createGame(seed, { rivals: false });
   applyCommand(s, { t: 'foundCompany', name: 'Selene Rock Co', companionId: 'veteran' });
   return s;
 }

@@ -423,7 +423,7 @@ describe('SimHost', () => {
 
   it('builds a debug scene through the loader instead of loading the save', async () => {
     const saves = createMemorySaveStore();
-    await saves.writeAuto(codec.encode(createGame(1), 0));
+    await saves.writeAuto(codec.encode(createGame(1, { rivals: false }), 0));
     const posted: FromWorker[] = [];
     const asked: string[] = [];
     const host = new SimHost({
@@ -433,7 +433,7 @@ describe('SimHost', () => {
       codec,
       loadScene: (scene, seed) => {
         asked.push(`${scene}:${seed}`);
-        const s = createGame(seed);
+        const s = createGame(seed, { rivals: false });
         applyCommand(s, { t: 'foundCompany', name: 'Scene Rock Co', companionId: 'veteran' });
         return Promise.resolve(s);
       },

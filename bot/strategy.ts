@@ -265,7 +265,8 @@ export interface BotResult {
 }
 
 export function runBot(seed: number, hours: number): BotResult {
-  const s = createGame(seed);
+  // Alone until C12 teaches the bot to share the Moon with rivals.
+  const s = createGame(seed, { rivals: false });
   applyCommand(s, { t: 'foundCompany', name: 'Selene Rock Co', companionId: 'veteran' });
   let completed = 0;
   let worst = 0;

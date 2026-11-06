@@ -19,7 +19,7 @@ import { connectToNetwork } from '../src/sim/world/roads';
 import type { Plot, RawGoodId } from '../src/sim/world/types';
 
 function founded(seed: number): GameState {
-  const s = createGame(seed);
+  const s = createGame(seed, { rivals: false });
   applyCommand(s, { t: 'foundCompany', name: 'Selene Rock Co', companionId: 'veteran' });
   return s;
 }

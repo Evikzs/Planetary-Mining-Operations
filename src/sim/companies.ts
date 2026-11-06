@@ -3,6 +3,7 @@ import type { Skill } from '../data/buildings';
 import type { Building, CompanionId, GameState } from './state';
 import { emptyBooks, type Books } from './finance/books';
 import { freshCredit, type CreditState } from './finance/credit';
+import { PLAYER_COLOUR, type CompanyColour } from '../data/companies';
 
 export type CompanyId = number;
 /** The player's company; rivals get ids from 1 up, never reused. */
@@ -25,6 +26,7 @@ export interface CompanyState {
   payrollShortfall: boolean;
   books: Books;
   credit: CreditState;
+  colour: CompanyColour;
 }
 
 export type CashAccount = `co:${number}`;
@@ -53,6 +55,7 @@ export function makeCompany(
     payrollShortfall: false,
     books: emptyBooks(),
     credit: freshCredit(),
+    colour: kind === 'player' ? PLAYER_COLOUR : 'teal',
   };
 }
 

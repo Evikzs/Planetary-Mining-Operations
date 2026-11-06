@@ -23,7 +23,7 @@ import { worldOf } from '../../src/sim/world/luna';
 import { addTestCompany } from '../helpers/companies';
 
 function founded(seed = 42): GameState {
-  const s = createGame(seed);
+  const s = createGame(seed, { rivals: false });
   const res = applyCommand(s, {
     t: 'foundCompany',
     name: 'Selene Rock Co',
@@ -121,7 +121,7 @@ describe('companies', () => {
   });
 
   it('only the player founds a company, and a company that does not exist cannot act', () => {
-    const s = createGame(42);
+    const s = createGame(42, { rivals: false });
     const found = { t: 'foundCompany', name: 'Selene Rock Co', companionId: 'veteran' } as const;
     expect(applyCommand(s, found, 1)).toEqual({ ok: false, error: 'NOT_OWNED' });
     expect(applyCommand(s, { t: 'setWageLevel', skill: 'miner', level: 'low' }, 3)).toEqual({

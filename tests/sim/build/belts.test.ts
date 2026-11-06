@@ -15,7 +15,7 @@ const home = world.foundingSectionId;
 const ilmenite = world.plots.find((p) => p.sectionId === home && p.deposit?.goodId === 'ilmenite')!;
 
 function withMine(): { s: GameState; mine: Building } {
-  const s = createGame(42);
+  const s = createGame(42, { rivals: false });
   applyCommand(s, { t: 'foundCompany', name: 'Selene Rock Co', companionId: 'veteran' });
   applyCommand(s, { t: 'build', plotId: ilmenite.id, type: 'mine' });
   const mine = s.buildings.find((b) => b.type === 'mine')!;

@@ -7,7 +7,7 @@ import { workplaces } from '../../src/ui/tabs/PeopleTab';
 
 describe('People tab workplaces', () => {
   it('a contract site that needs engineers is a workplace for an engineer', () => {
-    const s = createGame(42);
+    const s = createGame(42, { rivals: false });
     applyCommand(s, { t: 'foundCompany', name: 'Selene Rock Co', companionId: 'veteran' });
     const w = worldOf(s);
     const plot = w.plots.find((p) => p.sectionId === w.foundingSectionId && p.kind === 'public')!;

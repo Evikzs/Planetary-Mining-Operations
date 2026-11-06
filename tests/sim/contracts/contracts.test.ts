@@ -19,7 +19,7 @@ const world = worldOf({ seed: 42 });
 const home = world.foundingSectionId;
 
 function founded(): GameState {
-  const s = createGame(42);
+  const s = createGame(42, { rivals: false });
   applyCommand(s, { t: 'foundCompany', name: 'Selene Rock Co', companionId: 'veteran' });
   return s;
 }

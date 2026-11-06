@@ -3,6 +3,7 @@ import { base64ToBytes, bytesToBase64 } from './base64';
 import { openBooks } from '../sim/finance/books';
 import { freshCredit } from '../sim/finance/credit';
 import { listCompany } from '../sim/finance/shares';
+import { ensureRivals } from '../sim/rivals/founding';
 
 /** Top-level state keys rebuilt on load instead of saved (task 9 adds 'world'). */
 export const DERIVED_KEYS: string[] = [];
@@ -74,12 +75,18 @@ export const UPGRADES: ((s: GameState) => void)[] = [
   (s) => {
     for (const c of s.companies) c.books.closed ??= [];
   },
+  // M2a C8: games from before rivals get them now.
+  (s) => {
+    s.withRivals ??= true;
+    for (const c of s.companies) c.colour ??= c.kind === 'player' ? 'burntOrange' : 'teal';
+  },
   // M2a C6: companies founded before shares get listed now.
   (s) => {
     for (const c of s.companies) {
       if (!s.listings.some((l) => l.companyId === c.id)) listCompany(s, c.id);
     }
   },
+  ensureRivals,
 ];
 
 export function deserializeState(data: unknown): GameState {

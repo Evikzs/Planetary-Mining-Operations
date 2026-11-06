@@ -86,6 +86,8 @@ export interface GameState {
   tick: number;
   rng: RngState;
   companies: CompanyState[];
+  /** Whether founding brings the five rivals: off only for single-company tests. */
+  withRivals: boolean;
   nextId: number;
   /** Bus trips count apart: they come and go by the thousand, and arrays are sized by nextId. */
   nextTripId: number;
@@ -140,6 +142,7 @@ export function createInitialState(seed: number): GameState {
     tick: 0,
     rng: createRng(deriveSeed(seed, 'main')).getState(),
     companies: [],
+    withRivals: true,
     nextId: 1,
     nextTripId: 1,
     ledger: createLedger(),

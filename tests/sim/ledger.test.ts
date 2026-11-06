@@ -102,7 +102,7 @@ describe('inventory', () => {
 
 describe('invariants', () => {
   it('a fresh game has none and a broken ledger is reported', () => {
-    const s = createGame(1);
+    const s = createGame(1, { rivals: false });
     expect(checkInvariants(s)).toEqual([]);
     s.ledger.balances['co:0'] = -5;
     expect(checkInvariants(s).join('\n')).toContain('co:0');
