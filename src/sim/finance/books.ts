@@ -180,25 +180,34 @@ export function netIncome(p: Period): number {
   return n;
 }
 
-/** Kg of every good a company holds: depots, building buffers, belts, and sell orders' escrow. */
-export function holdings(state: GameState, co: CompanyId): Partial<Record<GoodId, number>> {
-  const mine = new Set(state.sections.filter((s) => s.owner === co).map((s) => s.id));
+/** Kg of every good in some sections: depots, building buffers and belts. */
+export function sectionGoods(
+  state: GameState,
+  sectionIds: ReadonlySet<number>,
+): Partial<Record<GoodId, number>> {
   const out: Partial<Record<GoodId, number>> = {};
   const count = (inv: Partial<Record<GoodId, number>>) => {
     for (const [g, kg] of Object.entries(inv) as [GoodId, number][]) out[g] = (out[g] ?? 0) + kg;
   };
-  for (const s of state.sections) if (mine.has(s.id)) count(s.depot);
+  for (const s of state.sections) if (sectionIds.has(s.id)) count(s.depot);
   for (const b of state.buildings) {
-    if (!mine.has(b.sectionId)) continue;
+    if (!sectionIds.has(b.sectionId)) continue;
     count(b.input);
     count(b.output);
   }
   for (const belt of state.belts) {
-    if (!mine.has(belt.sectionId)) continue;
+    if (!sectionIds.has(belt.sectionId)) continue;
     for (const lane of [belt.out, belt.in]) {
       for (const batch of lane.batches) out[batch.goodId] = (out[batch.goodId] ?? 0) + batch.kg;
     }
   }
+  return out;
+}
+
+/** Kg of every good a company holds: its sections' goods, and sell orders' escrow. */
+export function holdings(state: GameState, co: CompanyId): Partial<Record<GoodId, number>> {
+  const mine = new Set(state.sections.filter((s) => s.owner === co).map((s) => s.id));
+  const out = sectionGoods(state, mine);
   for (const o of state.orders) {
     if (o.companyId === co && o.escrowKg > 0) out[o.goodId] = (out[o.goodId] ?? 0) + o.escrowKg;
   }

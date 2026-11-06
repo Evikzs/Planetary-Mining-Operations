@@ -33,6 +33,9 @@ export const DAYS_PER_LOAN_MONTH = 30;
 export const DEFAULT_GRACE_HOURS = 24;
 /** Closes a rating stays at D after a default is cured. */
 export const D_RATING_CLOSES = 3;
+/** C11: a bankrupt rival's successor comes 48 game hours later; a seized player loses 20
+ * reputation; an assets lot's reserve is half the book value of the land and buildings in it. */
+export const SOLVENCY = { replacementHours: 48, writeOffRepLoss: 20, assetsReserveShare: 0.5 };
 
 /** Listed shares: how many, how the public trades them, and the issue and disclosure limits. */
 export const SHARES = {

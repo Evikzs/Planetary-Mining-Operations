@@ -12,6 +12,7 @@ import type { System } from './engine';
 import type { SimEvent } from './events';
 import { cashOut } from './finance/books';
 import { payDue } from './finance/credit';
+import { returnSection, takeOverSection } from './rivals/solvency';
 import { createRng, deriveSeed } from './rng';
 import { newId, type GameState } from './state';
 import { worldOf } from './world/luna';
@@ -139,6 +140,19 @@ function resolveProxies(state: GameState, a: Auction, events: SimEvent[]): void 
   }
 }
 
+/** A bankrupt company's bids and proxies leave every open lot; the other proxies bid on. */
+export function withdrawBids(state: GameState, co: CompanyId, events: SimEvent[]): void {
+  for (const a of state.auctions) {
+    if (a.status !== 'open') continue;
+    if (!a.bids.some((b) => b.companyId === co) && !a.proxies.some((p) => p.companyId === co)) {
+      continue;
+    }
+    a.bids = a.bids.filter((b) => b.companyId !== co);
+    a.proxies = a.proxies.filter((p) => p.companyId !== co);
+    resolveProxies(state, a, events);
+  }
+}
+
 export function openAuction(state: GameState, sectionId: number, actor: CompanyId): CommandResult {
   if (!activeCompany(state, actor)) return fail('NOT_FOUNDED');
   if (!worldOf(state).sections[sectionId]) return fail('UNKNOWN_ID');
@@ -167,6 +181,8 @@ function biddable(state: GameState, auctionId: number, actor: CompanyId): Auctio
   if (!a) return fail('UNKNOWN_ID');
   if (a.status !== 'open') return fail('AUCTION_CLOSED');
   if (reputationOf(state, actor) < AUCTION.minReputation) return fail('LOW_REPUTATION');
+  // A seized company cannot buy back its own assets.
+  if (a.lot.kind === 'assets' && a.lot.fromCompanyId === actor) return fail('NOT_FOR_SALE');
   return a;
 }
 
@@ -207,8 +223,9 @@ export function setProxy(
 
 /** The leader pays, else the next company in line, each at its own best bid. */
 function settle(state: GameState, a: Auction, events: SimEvent[]): void {
-  // Sold elsewhere meanwhile (the land office, until C16 closes it): nothing left to sell.
-  if (a.lot.kind === 'section' && sectionOwner(state, a.lot.sectionId) !== null) {
+  // Changed hands meanwhile (the land office, until C16 closes it): nothing left to sell.
+  const seller = a.lot.kind === 'assets' ? a.lot.fromCompanyId : null;
+  if (sectionOwner(state, a.lot.sectionId) !== seller) {
     a.status = 'unsold';
     events.push({ t: 'auctionUnsold', auctionId: a.id, sectionId: a.lot.sectionId });
     return;
@@ -226,8 +243,12 @@ function settle(state: GameState, a: Auction, events: SimEvent[]): void {
       events.push({ t: 'bidDefaulted', auctionId: a.id, companyId: b.companyId });
       continue;
     }
-    companyOf(state, b.companyId)!.books.landCents += b.amountCents;
-    ownSection(state, a.lot.sectionId, b.companyId);
+    if (a.lot.kind === 'assets') {
+      takeOverSection(state, a.lot.sectionId, b.companyId, b.amountCents);
+    } else {
+      companyOf(state, b.companyId)!.books.landCents += b.amountCents;
+      ownSection(state, a.lot.sectionId, b.companyId).landCents = b.amountCents;
+    }
     a.status = 'won';
     a.winner = b.companyId;
     a.priceCents = b.amountCents;
@@ -243,6 +264,7 @@ function settle(state: GameState, a: Auction, events: SimEvent[]): void {
   }
   a.status = 'unsold';
   events.push({ t: 'auctionUnsold', auctionId: a.id, sectionId: a.lot.sectionId });
+  if (a.lot.kind === 'assets') returnSection(state, a.lot.sectionId);
 }
 
 /** Every 12 game hours the Lunar Authority puts one section next to an owned one on auction. */

@@ -3,6 +3,7 @@ import { plotOccupied } from '../build/construction';
 import { addBuilding, gridFor, sectionState } from '../build/sections';
 import { fail, OK, type CommandResult } from '../commands';
 import type { StepContext, System } from '../engine';
+import type { SimEvent } from '../events';
 import { take } from '../inventory';
 import {
   activeCompany,
@@ -201,11 +202,11 @@ function complete(state: GameState, ctx: StepContext, c: Contract): void {
   ctx.events.push({ t: 'contractCompleted', contractId: c.id, companyId: holder });
 }
 
-function failContract(state: GameState, ctx: StepContext, c: Contract): void {
+export function failContract(state: GameState, events: SimEvent[], c: Contract): void {
   c.status = 'failed';
   changeReputation(state, c.holder ?? PLAYER, -c.repLoss);
   closeSite(state, c);
-  ctx.events.push({ t: 'contractFailed', contractId: c.id, companyId: c.holder ?? PLAYER });
+  events.push({ t: 'contractFailed', contractId: c.id, companyId: c.holder ?? PLAYER });
 }
 
 export const contractsSystem: System = {
@@ -216,7 +217,7 @@ export const contractsSystem: System = {
       if (c.status !== 'active') continue;
       progress(state, c, ctx.dtMinutes / 60);
       if (c.stageIndex >= c.stages.length) complete(state, ctx, c);
-      else if (now > c.deadlineTick) failContract(state, ctx, c);
+      else if (now > c.deadlineTick) failContract(state, ctx.events, c);
     }
     state.contracts = state.contracts.filter((c) => c.status !== 'offered' || now < c.deadlineTick);
     if (now % 60 === 0) {

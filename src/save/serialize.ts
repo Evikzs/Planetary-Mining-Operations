@@ -87,6 +87,22 @@ export const UPGRADES: ((s: GameState) => void)[] = [
     }
   },
   ensureRivals,
+  // M2a C11: bankruptcy fields, and land on each bought section: earlier purchases share the
+  // land on the books.
+  (s) => {
+    for (const c of s.companies) {
+      c.bankruptTick ??= null;
+      c.successorId ??= null;
+    }
+    for (const sec of s.sections) sec.landCents ??= 0;
+    for (const c of s.companies) {
+      const bought = s.sections.filter((x) => x.owner === c.id && x.id !== c.charterSectionId);
+      const rest = c.books.landCents - bought.reduce((n, x) => n + x.landCents, 0);
+      if (rest <= 0 || bought.length === 0) continue;
+      const each = Math.floor(rest / bought.length);
+      bought.forEach((x, i) => (x.landCents += each + (i === 0 ? rest - each * bought.length : 0)));
+    }
+  },
 ];
 
 export function deserializeState(data: unknown): GameState {

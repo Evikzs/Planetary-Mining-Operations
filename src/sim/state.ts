@@ -71,6 +71,8 @@ export interface SectionState {
   needsMet: NeedsMet;
   consumeRemainder: Partial<Record<GoodId, number>>;
   shortageWarned: Partial<Record<Need, boolean>>;
+  /** What its owner paid for it, on its books as land; 0 for a charter. */
+  landCents: number;
 }
 
 export interface Stats {

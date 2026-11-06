@@ -82,6 +82,7 @@ export function ownSection(state: GameState, sectionId: number, owner: CompanyId
     needsMet: { ...ALL_MET },
     consumeRemainder: {},
     shortageWarned: {},
+    landCents: 0,
   };
   state.sections.push(section);
   addBuilding(state, world.plots[world.sections[sectionId]!.hubPlotId]!, 'depot', 'active');

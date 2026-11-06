@@ -49,7 +49,10 @@ export type SimEvent =
   | Of<{ t: 'bidPlaced'; auctionId: number; amountCents: number }>
   | Of<{ t: 'auctionWon'; auctionId: number; sectionId: number; amountCents: number }>
   | { t: 'auctionUnsold'; auctionId: number; sectionId: number }
-  | Of<{ t: 'bidDefaulted'; auctionId: number }>;
+  | Of<{ t: 'bidDefaulted'; auctionId: number }>
+  | Of<{ t: 'bankrupt' }>
+  | Of<{ t: 'rivalFounded' }>
+  | Of<{ t: 'debtWrittenOff'; cents: number }>;
 
 /** Whether the player should hear of an event: its own, a public offer, or market-wide news. */
 export function forPlayer(e: SimEvent): boolean {

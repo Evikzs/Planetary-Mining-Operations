@@ -211,6 +211,21 @@ export function cancelShareOrder(
   return OK;
 }
 
+/**
+ * A bankrupt company leaves the market: open share orders in it and by it come back, and every
+ * stake in it or held by it is written off. Its own stakes' shares return to the public.
+ */
+export function delist(state: GameState, co: CompanyId): void {
+  for (const o of state.shareOrders.filter((x) => x.companyId === co || x.target === co)) {
+    closeShareOrder(state, o);
+  }
+  for (const h of state.holdings) {
+    if (h.companyId === co || h.holder === co) recognize(state, h.holder, -h.costCents);
+  }
+  state.holdings = state.holdings.filter((h) => h.companyId !== co && h.holder !== co);
+  state.listings = state.listings.filter((l) => l.companyId !== co);
+}
+
 /** Sells new shares at market, at most 20% of those outstanding each calendar month. */
 export function issueShares(state: GameState, qty: number, actor: CompanyId): CommandResult {
   if (!activeCompany(state, actor)) return fail('NOT_FOUNDED');

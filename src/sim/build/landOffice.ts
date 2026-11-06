@@ -35,7 +35,7 @@ export function buySection(
   cashOut(state, actor, price, { to: 'asset' }, 'investing');
   companyOf(state, actor)!.books.landCents += price;
   state.landPurchases++;
-  ownSection(state, sectionId, actor);
+  ownSection(state, sectionId, actor).landCents = price;
   state.pendingEvents.push({ t: 'sectionBought', sectionId, companyId: actor });
   return OK;
 }

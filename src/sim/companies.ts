@@ -27,6 +27,10 @@ export interface CompanyState {
   books: Books;
   credit: CreditState;
   colour: CompanyColour;
+  /** When it went bankrupt; null while it trades. */
+  bankruptTick: number | null;
+  /** The rival founded in its place, once one is. */
+  successorId: CompanyId | null;
 }
 
 export type CashAccount = `co:${number}`;
@@ -56,6 +60,8 @@ export function makeCompany(
     books: emptyBooks(),
     credit: freshCredit(),
     colour: kind === 'player' ? PLAYER_COLOUR : 'teal',
+    bankruptTick: null,
+    successorId: null,
   };
 }
 
