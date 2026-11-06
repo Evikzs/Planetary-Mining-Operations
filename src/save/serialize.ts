@@ -95,6 +95,7 @@ export const UPGRADES: ((s: GameState) => void)[] = [
       c.successorId ??= null;
     }
     for (const sec of s.sections) sec.landCents ??= 0;
+    s.news ??= [];
     for (const c of s.companies) {
       const bought = s.sections.filter((x) => x.owner === c.id && x.id !== c.charterSectionId);
       const rest = c.books.landCents - bought.reduce((n, x) => n + x.landCents, 0);

@@ -1,8 +1,11 @@
 import type { Alert } from '../sim/alerts';
 import type { CommandError } from '../sim/commands';
+import type { CompanyId } from '../sim/companies';
 import type { SimEvent } from '../sim/events';
 import type { BuildingStatus, Priority } from '../sim/state';
+import type { NewsItem } from '../sim/news';
 import type { PlotKind } from '../sim/world/types';
+import { formatMoney } from '../ui/format';
 import type { Skill } from './buildings';
 import { GOODS } from './goods';
 
@@ -111,5 +114,41 @@ export function alertText(alert: Alert | SimEvent, names: AlertNames): string {
     }
     default:
       return 'Something needs your attention.';
+  }
+}
+
+const RATING_ORDER = ['AAA', 'AA', 'A', 'BBB', 'BB', 'B', 'CCC', 'D'];
+
+/** One plain sentence per piece of news; `name` gives a company's name ("You" for the player). */
+export function newsText(item: NewsItem, name: (id: CompanyId) => string): string {
+  switch (item.t) {
+    case 'auctionOpened':
+      return `${item.companyId === null ? 'The Lunar Authority' : name(item.companyId)} put section ${item.sectionId} up for auction.`;
+    case 'auctionWon':
+      return `${name(item.companyId)} won section ${item.sectionId} for ${formatMoney(item.amountCents)}.`;
+    case 'auctionUnsold':
+      return `Section ${item.sectionId} found no buyer.`;
+    case 'stakeDisclosed':
+      return `${name(item.holder)} now holds ${Math.round(item.pct * 100)}% of ${name(item.companyId)}.`;
+    case 'defaulted':
+      return `${name(item.companyId)} missed a payment of ${formatMoney(item.owedCents)}.`;
+    case 'defaultCured':
+      return `${name(item.companyId)} paid what it owed.`;
+    case 'ratingChanged': {
+      const fell = RATING_ORDER.indexOf(item.to) > RATING_ORDER.indexOf(item.from);
+      return `${name(item.companyId)}'s credit rating ${fell ? 'fell' : 'rose'} from ${item.from} to ${item.to}.`;
+    }
+    case 'bankrupt':
+      return `${name(item.companyId)} went bankrupt. Its sections go to auction.`;
+    case 'rivalFounded':
+      return `${name(item.companyId)} was founded.`;
+    case 'dividendPaid':
+      return `${name(item.companyId)} paid a dividend of ${formatMoney(item.perShareCents)} a share.`;
+    case 'monthClosed':
+      return `${name(item.companyId)} closed ${item.label} with a ${item.netIncomeCents < 0 ? 'loss' : 'profit'} of ${formatMoney(Math.abs(item.netIncomeCents))}.`;
+    case 'debtWrittenOff':
+      return `Lenders wrote off ${formatMoney(item.cents)} that ${name(item.companyId)} owed.`;
+    default:
+      return 'News from the Moon.';
   }
 }

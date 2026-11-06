@@ -11,6 +11,7 @@ import {
 import { GOOD_IDS, GOODS } from '../../data/goods';
 import type { MapPick } from '../../render/renderer';
 import { busLoad, type Trip } from '../../shared/trips';
+import { PLAYER } from '../../sim/companies';
 import type { Inventory } from '../../sim/inventory';
 import type { UiSnapshot, WorldView } from '../../sim/views';
 import { BuySection } from '../components/BuySection';
@@ -135,7 +136,15 @@ function sectionView(id: number, w: WorldView, snap: UiSnapshot | null): View | 
   const s = w.sections.find((x) => x.id === id);
   if (!s) return null;
   const facts: Fact[] = [
-    { label: 'Owner', value: s.owner === 'player' ? 'You' : 'Lunar Authority' },
+    {
+      label: 'Owner',
+      value:
+        s.owner === PLAYER
+          ? 'You'
+          : s.owner === null
+            ? 'Lunar Authority'
+            : (w.companies.find((c) => c.id === s.owner)?.name ?? 'A rival'),
+    },
   ];
   const mine = snap?.sections.find((x) => x.id === id);
   if (mine) {

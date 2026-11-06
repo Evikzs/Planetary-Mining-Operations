@@ -23,13 +23,33 @@ import { housingCapacity } from './people/housing';
 import { presentCrew, slotsPerShift, staffing } from './people/jobs';
 import { indexOfId, SKILL_CODE, SKILL_OF, workerName } from './people/store';
 import type { Building, BuildingStatus, Company, GameState, Priority } from './state';
+import type { CompanyColour } from '../data/companies';
+import { leadingBid, minBidCents, type Auction, type Lot } from './auctions';
 import {
+  activeCompany,
   cashAccount,
   ownersByBuilding,
   PLAYER,
   playerCompany,
+  type Archetype,
+  type CompanyId,
   type CompanyState,
 } from './companies';
+import { assets, liabilities } from './finance/books';
+import { borrowingRoomCents, creditLimitCents, type Loan, type Rating } from './finance/credit';
+import { listingOf, type Holding, type Listing, type ShareOrder } from './finance/shares';
+import {
+  balanceSheet,
+  cashFlowStatement,
+  incomeStatement,
+  ratios,
+  type BalanceSheet,
+  type CashFlowStatement,
+  type ClosedMonth,
+  type IncomeStatement,
+  type Ratios,
+} from './finance/statements';
+import type { NewsItem } from './news';
 import type { BeatId, HintCategory } from './story/beats';
 import { currentLine } from './story/story';
 import { worldOf } from './world/luna';
@@ -44,8 +64,10 @@ export interface WorldView {
     id: number;
     center: Vec3;
     polygon: Vec3[];
-    owner: 'player' | 'authority';
+    /** Null: the Lunar Authority's. */
+    owner: CompanyId | null;
     buyable: boolean;
+    onAuction: boolean;
   }[];
   plots: {
     id: number;
@@ -61,11 +83,73 @@ export interface WorldView {
     level: number;
     status: BuildingStatus;
     progress: number;
+    owner: CompanyId | null;
   }[];
   roads: { id: number; sectionId: number; points: Vec3[] }[];
   belts: { id: number; buildingId: number; points: Vec3[]; length: number }[];
   clientAssets: { plotId: number; asset: string }[];
   contractSites: { contractId: number; plotId: number }[];
+  companies: {
+    id: CompanyId;
+    name: string;
+    colour: CompanyColour;
+    status: CompanyState['status'];
+  }[];
+}
+
+export interface CompanySummary {
+  id: CompanyId;
+  name: string;
+  kind: CompanyState['kind'];
+  archetype: Archetype | null;
+  colour: CompanyColour;
+  status: CompanyState['status'];
+  sections: number;
+  equityCents: number;
+  rating: Rating;
+}
+
+/** The player's books, debts and dividend policy. */
+export interface FinanceView {
+  period: IncomeStatement;
+  cashFlow: CashFlowStatement;
+  balance: BalanceSheet;
+  closed: ClosedMonth[];
+  ratios: Ratios;
+  rating: Rating;
+  loans: Loan[];
+  creditDrawnCents: number;
+  creditLimitCents: number;
+  borrowingRoomCents: number;
+  inDefault: boolean;
+  dividendRatio: number;
+}
+
+export interface ListingView {
+  companyId: CompanyId;
+  priceCents: number;
+  change24h: number;
+  /** Hourly prices, latest 168 (a game week). */
+  history: number[];
+  outstanding: number;
+  treasury: number;
+  marketCapCents: number;
+  pe: number | null;
+}
+
+export interface AuctionView {
+  id: number;
+  lot: Lot;
+  status: Auction['status'];
+  endTick: number;
+  reserveCents: number;
+  leader: CompanyId | null;
+  leaderAmountCents: number | null;
+  bids: number;
+  myProxyCents: number | null;
+  myMinBidCents: number | null;
+  winner: CompanyId | null;
+  priceCents: number | null;
 }
 
 /** Everything that moves: buses and the crates on each belt lane. */
@@ -86,7 +170,7 @@ export interface UiSnapshot {
   date: string;
   company: Company | null;
   cashCents: number;
-  reputation: number;
+  reputation: { group: number; luna: number };
   landPriceCents: number;
   sections: {
     id: number;
@@ -150,6 +234,16 @@ export interface UiSnapshot {
   };
   alerts: Alert[];
   wageLevel: CompanyState['wageLevel'];
+  companies: CompanySummary[];
+  /** Null before founding. */
+  finance: FinanceView | null;
+  listings: ListingView[];
+  /** The player's holdings, and every holder of more than 1% of the player's shares. */
+  holdings: Holding[];
+  shareOrders: ShareOrder[];
+  /** Open lots, then the latest 10 closed. */
+  auctions: AuctionView[];
+  news: NewsItem[];
 }
 
 export type MoraleBand = 'lt25' | '25to50' | '50to75' | 'ge75';
@@ -182,7 +276,9 @@ const isSite = (b: Building) => b.type === 'contractSite';
 /** Everything the world view shows except construction progress, as a comparable string. */
 export function worldSignature(state: GameState): string {
   return JSON.stringify([
-    state.sections.map((s) => [s.id, s.roadNet?.polylines.length ?? 0]),
+    state.sections.map((s) => [s.id, s.owner, s.roadNet?.polylines.length ?? 0]),
+    state.auctions.filter((a) => a.status === 'open').map((a) => a.lot.sectionId),
+    state.companies.map((c) => c.status),
     state.buildings.map((b) => [
       b.id,
       b.type,
@@ -196,7 +292,10 @@ export function worldSignature(state: GameState): string {
 
 export function buildWorldView(state: GameState, version: number): WorldView {
   const world = worldOf(state);
-  const owned = new Set(state.sections.filter((s) => s.owner === PLAYER).map((s) => s.id));
+  const ownerOf = new Map(state.sections.map((s) => [s.id, s.owner]));
+  const onAuction = new Set(
+    state.auctions.filter((a) => a.status === 'open').map((a) => a.lot.sectionId),
+  );
   const buyable = new Set(buyableSections(state));
   return {
     version,
@@ -206,8 +305,9 @@ export function buildWorldView(state: GameState, version: number): WorldView {
       id: s.id,
       center: s.center,
       polygon: s.polygon,
-      owner: owned.has(s.id) ? 'player' : 'authority',
+      owner: ownerOf.get(s.id) ?? null,
       buyable: buyable.has(s.id),
+      onAuction: onAuction.has(s.id),
     })),
     plots: world.plots.map((p) => ({
       id: p.id,
@@ -225,6 +325,7 @@ export function buildWorldView(state: GameState, version: number): WorldView {
         level: b.level,
         status: b.status,
         progress: b.progress,
+        owner: ownerOf.get(b.sectionId) ?? null,
       })),
     roads: state.sections.flatMap(
       (s) =>
@@ -240,6 +341,12 @@ export function buildWorldView(state: GameState, version: number): WorldView {
     contractSites: state.contracts
       .filter((c) => c.status === 'active' && c.plotId !== null)
       .map((c) => ({ contractId: c.id, plotId: c.plotId! })),
+    companies: state.companies.map((c) => ({
+      id: c.id,
+      name: c.name,
+      colour: c.colour,
+      status: c.status,
+    })),
   };
 }
 
@@ -263,6 +370,62 @@ export function buildMotionView(state: GameState): MotionView {
       })),
     ),
   };
+}
+
+const CHART_HOURS = 168;
+
+function financeView(state: GameState, c: CompanyState): FinanceView {
+  return {
+    period: incomeStatement(c.books.period),
+    cashFlow: cashFlowStatement(c.books.period),
+    balance: balanceSheet(state, c.id),
+    closed: structuredClone(c.books.closed),
+    ratios: ratios(state, c.id),
+    rating: c.credit.rating,
+    loans: state.loans.filter((l) => l.companyId === c.id).map((l) => ({ ...l })),
+    creditDrawnCents: c.credit.creditDrawnCents,
+    creditLimitCents: creditLimitCents(state, c.id),
+    borrowingRoomCents: borrowingRoomCents(state, c.id),
+    inDefault: c.credit.default !== null,
+    dividendRatio: listingOf(state, c.id)?.dividendRatio ?? 0,
+  };
+}
+
+function listingView(state: GameState, l: Listing): ListingView {
+  const h = l.history;
+  return {
+    companyId: l.companyId,
+    priceCents: l.priceCents,
+    change24h: h.length > 24 ? h[h.length - 1]! / h[h.length - 25]! - 1 : 0,
+    history: h.slice(-CHART_HOURS),
+    outstanding: l.outstanding,
+    treasury: l.treasury,
+    marketCapCents: l.priceCents * (l.outstanding - l.treasury),
+    pe: ratios(state, l.companyId).pe,
+  };
+}
+
+function auctionViews(state: GameState): AuctionView[] {
+  const bidding = activeCompany(state, PLAYER) !== undefined;
+  const open = state.auctions.filter((a) => a.status === 'open');
+  const closed = state.auctions.filter((a) => a.status !== 'open').slice(-10);
+  return [...open, ...closed].map((a) => {
+    const lead = leadingBid(a);
+    return {
+      id: a.id,
+      lot: { ...a.lot },
+      status: a.status,
+      endTick: a.endTick,
+      reserveCents: a.reserveCents,
+      leader: lead?.companyId ?? null,
+      leaderAmountCents: lead?.amountCents ?? null,
+      bids: a.bids.length,
+      myProxyCents: a.proxies.find((p) => p.companyId === PLAYER)?.ceilingCents ?? null,
+      myMinBidCents: a.status === 'open' && bidding ? minBidCents(state, a, PLAYER) : null,
+      winner: a.winner,
+      priceCents: a.priceCents,
+    };
+  });
 }
 
 /** A contract the player holds, or an offer open to it. */
@@ -332,7 +495,7 @@ export function buildUiSnapshot(state: GameState): UiSnapshot {
     date: formatGameDate(state.tick),
     company: player ? { name: player.name, companionId: player.companionId ?? 'veteran' } : null,
     cashCents: balance(state.ledger, cashAccount(PLAYER)),
-    reputation: player?.reputation.luna ?? 0,
+    reputation: { ...(player?.reputation ?? { group: 0, luna: 0 }) },
     landPriceCents: landPrice(state.landPurchases),
     sections: state.sections
       .filter((s) => s.owner === PLAYER)
@@ -406,6 +569,30 @@ export function buildUiSnapshot(state: GameState): UiSnapshot {
     wageLevel: {
       ...(player?.wageLevel ?? { miner: 'standard', technician: 'standard', engineer: 'standard' }),
     },
+    companies: state.companies.map((c) => ({
+      id: c.id,
+      name: c.name,
+      kind: c.kind,
+      archetype: c.archetype,
+      colour: c.colour,
+      status: c.status,
+      sections: state.sections.filter((s) => s.owner === c.id).length,
+      equityCents: assets(state, c.id).total - liabilities(state, c.id),
+      rating: c.credit.rating,
+    })),
+    finance: player ? financeView(state, player) : null,
+    listings: state.listings.map((l) => listingView(state, l)),
+    holdings: state.holdings
+      .filter(
+        (h) =>
+          h.holder === PLAYER ||
+          (h.companyId === PLAYER &&
+            h.shares > 0.01 * (listingOf(state, PLAYER)?.outstanding ?? Infinity)),
+      )
+      .map((h) => ({ ...h })),
+    shareOrders: state.shareOrders.filter((o) => o.companyId === PLAYER).map((o) => ({ ...o })),
+    auctions: auctionViews(state),
+    news: structuredClone(state.news),
   };
 }
 

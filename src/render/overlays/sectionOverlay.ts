@@ -20,6 +20,7 @@ import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js
 import { LOCAL_MAX_ALT } from '../../shared/scale';
 import { HEIGHT_MAX, type Terrain } from '../../shared/terrain';
 import { angleBetween, type Vec3 } from '../../shared/vec3';
+import { PLAYER } from '../../sim/companies';
 import type { WorldView } from '../../sim/views';
 import { palette } from '../../ui/tokens';
 import type { GlobeCameraState } from '../camera/globeCamera';
@@ -97,7 +98,7 @@ export class SectionOverlay {
     );
     this.fill = this.replace(
       this.fill,
-      this.ownedFill(w.sections.filter((s) => s.owner === 'player')),
+      this.ownedFill(w.sections.filter((s) => s.owner === PLAYER)),
     );
     this.pins = this.replace(this.pins, this.contractPins(w));
     this.markers = this.replace(this.markers, this.depositMarkers(w));

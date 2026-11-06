@@ -26,6 +26,6 @@ test('accepting and delivering an ore contract completes it and pays', async ({ 
     timeout: 15_000,
   });
   const after = await page.evaluate(() => window.__pmo.ui()!);
-  expect(after.reputation).toBeGreaterThan(before.reputation);
+  expect(after.reputation.luna).toBeGreaterThan(before.reputation.luna);
   expect(after.cashCents).toBeGreaterThan(before.cashCents);
 });

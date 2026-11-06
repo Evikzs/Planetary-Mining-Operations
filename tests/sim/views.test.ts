@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { makeBenchState } from '../../bot/scenes';
+import { makeBenchState, makeRivalBenchState } from '../../bot/scenes';
+import { openLot } from '../../src/sim/auctions';
+import { ownersByBuilding, PLAYER } from '../../src/sim/companies';
 import { applyCommand, createGame, step } from '../../src/sim/engine';
 import type { Contract } from '../../src/sim/contracts/contracts';
 import { addWorker, indexOfId, SKILL_CODE } from '../../src/sim/people/store';
@@ -231,6 +233,98 @@ describe('views', () => {
     expect(page.total).toBe(1);
     expect(page.rows[0]).toMatchObject({ id: p.id[i], sectionId: home, jobId: p.job[i] });
   });
+
+  it("the snapshot lists only the player's sections, buildings, orders and contracts", () => {
+    const s = createGame(42);
+    applyCommand(s, { t: 'foundCompany', name: 'Selene Rock Co', companionId: 'veteran' });
+    const rivalSection = s.companies.find((c) => c.id === 1)!.charterSectionId;
+    expect(
+      applyCommand(
+        s,
+        {
+          t: 'placeOrder',
+          goodId: 'prefabStructures',
+          side: 'sell',
+          kind: 'limit',
+          qtyKg: 1000,
+          limitCents: 90_000_000,
+          sectionId: rivalSection,
+        },
+        1,
+      ),
+    ).toEqual({ ok: true });
+    const snap = buildUiSnapshot(s);
+    const owners = ownersByBuilding(s);
+    expect(snap.sections.map((x) => x.id)).toEqual([home]);
+    expect(snap.buildings.every((b) => owners.get(b.id) === PLAYER)).toBe(true);
+    expect(snap.orders).toEqual([]);
+    expect(snap.reputation).toEqual({ group: 20, luna: 20 });
+    expect(snap.companies.map((c) => c.id)).toEqual([0, 1, 2, 3, 4, 5]);
+    expect(snap.companies[0]).toMatchObject({ kind: 'player', sections: 1, rating: 'BBB' });
+    expect(snap.finance!.balance.equity).toBe(snap.companies[0]!.equityCents);
+    expect(snap.listings).toHaveLength(6);
+    expect(snap.listings[0]!.marketCapCents).toBe(
+      snap.listings[0]!.priceCents * snap.listings[0]!.outstanding,
+    );
+  });
+
+  it("the world view carries every company's buildings with their owner", () => {
+    const s = createGame(42);
+    applyCommand(s, { t: 'foundCompany', name: 'Selene Rock Co', companionId: 'veteran' });
+    const view = buildWorldView(s, 1);
+    const owners = ownersByBuilding(s);
+    expect(view.companies.map((c) => [c.id, c.status])).toEqual(
+      [0, 1, 2, 3, 4, 5].map((id) => [id, 'active']),
+    );
+    expect(view.companies[0]!.colour).toBe('burntOrange');
+    for (const b of view.buildings) expect(b.owner).toBe(owners.get(b.id));
+    expect(new Set(view.buildings.map((b) => b.owner))).toEqual(new Set([0, 1, 2, 3, 4, 5]));
+    const rival = s.companies.find((c) => c.id === 2)!.charterSectionId;
+    expect(view.sections.find((x) => x.id === rival)!.owner).toBe(2);
+    expect(view.sections.filter((x) => x.owner === null)).toHaveLength(54);
+  });
+
+  it('the world version bumps when a section changes owner', () => {
+    const s = founded();
+    let sig = worldSignature(s);
+    const changed = () => {
+      const next = worldSignature(s);
+      const moved = next !== sig;
+      sig = next;
+      return moved;
+    };
+    const next = world.sections[home]!.neighbors[0]!;
+    openLot(s, { kind: 'section', sectionId: next }, null, 3_000_000, []);
+    expect(changed()).toBe(true);
+    expect(buildWorldView(s, 1).sections.find((x) => x.id === next)!.onAuction).toBe(true);
+    expect(
+      applyCommand(s, { t: 'setProxy', auctionId: s.auctions[0]!.id, ceilingCents: 3_000_000 }),
+    ).toEqual({
+      ok: true,
+    });
+    expect(changed()).toBe(false);
+    for (let i = 0; i < 4; i++) step(s, { mode: 'coarse' });
+    expect(s.sections.some((x) => x.id === next)).toBe(true);
+    expect(changed()).toBe(true);
+  });
+
+  it('views survive structuredClone; the rival-bench snapshot is under 200 KB and builds in under 2 ms', async () => {
+    const s = makeRivalBenchState(1);
+    step(s, { mode: 'fine' });
+    for (const view of [buildWorldView(s, 1), buildUiSnapshot(s)]) {
+      expect(hasTypedArray(view)).toBe(false);
+      expect(structuredClone(view)).toEqual(view);
+    }
+    const times: number[] = [];
+    for (let k = 0; k < 41; k++) {
+      await new Promise((r) => setTimeout(r, 5));
+      const start = performance.now();
+      buildUiSnapshot(s);
+      times.push(performance.now() - start);
+    }
+    expect(Math.min(...times)).toBeLessThan(2);
+    expect(JSON.stringify(buildUiSnapshot(s)).length).toBeLessThan(200_000);
+  }, 60_000);
 
   it('ui snapshot for the bench state is < 200 KB JSON and builds in < 2 ms', async () => {
     const s = makeBenchState(42);

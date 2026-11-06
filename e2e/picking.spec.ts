@@ -8,13 +8,11 @@ test('tapping a deposit near the hub shows it in the context panel', async ({ pa
     window.__pmo.send({ t: 'foundCompany', name: 'Selene Rock Co', companionId: 'veteran' }),
   );
   await expect
-    .poll(() =>
-      page.evaluate(() => window.__pmo.world()?.sections.some((s) => s.owner === 'player')),
-    )
+    .poll(() => page.evaluate(() => window.__pmo.world()?.sections.some((s) => s.owner === 0)))
     .toBe(true);
   const plotId = await page.evaluate(() => {
     const w = window.__pmo.world()!;
-    const home = w.sections.find((s) => s.owner === 'player')!;
+    const home = w.sections.find((s) => s.owner === 0)!;
     const used = new Set(w.buildings.map((b) => b.plotId));
     const plot = w.plots.find(
       (p) => p.sectionId === home.id && p.deposit?.goodId === 'ilmenite' && !used.has(p.id),

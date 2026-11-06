@@ -241,7 +241,7 @@ export function ContractsTab() {
   const finished = snap.contracts.filter(
     (c): c is Contract & { status: keyof typeof STATUS_NAME } => c.status in STATUS_NAME,
   );
-  const full = active.length >= maxActive(snap.reputation);
+  const full = active.length >= maxActive(snap.reputation.luna);
   return (
     <div class="contracts-tab">
       <section aria-labelledby="contracts-active">

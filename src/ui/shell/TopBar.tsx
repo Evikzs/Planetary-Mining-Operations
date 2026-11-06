@@ -107,7 +107,7 @@ function Readouts({ snap }: { snap: UiSnapshot }) {
       <span class="slot" title="Reputation">
         <span class="visually-hidden">Reputation</span>
         <Icon name="reputation" size={18} />
-        <span class="num">{Math.round(snap.reputation)}</span>
+        <span class="num">{Math.round(snap.reputation.luna)}</span>
       </span>
     </>
   );

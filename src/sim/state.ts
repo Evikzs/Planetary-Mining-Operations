@@ -20,6 +20,7 @@ import type { CompanyId, CompanyState } from './companies';
 import type { Loan } from './finance/credit';
 import type { Holding, Listing, ShareOrder } from './finance/shares';
 import type { Auction } from './auctions';
+import type { NewsItem } from './news';
 
 export type CompanionId = 'veteran' | 'shipAi' | 'coFounder' | 'pirate';
 
@@ -114,6 +115,8 @@ export interface GameState {
   shareOrders: ShareOrder[];
   /** Open lots and the latest closed ones. */
   auctions: Auction[];
+  /** The latest 30 public events, newest first. */
+  news: NewsItem[];
   /** People in the Lunar colony who buy what the market sells. */
   colonyPop: number;
   contracts: Contract[];
@@ -164,6 +167,7 @@ export function createInitialState(seed: number): GameState {
     holdings: [],
     shareOrders: [],
     auctions: [],
+    news: [],
     colonyPop: COLONY.startPop,
     contracts: [],
     clientAssets: [],
