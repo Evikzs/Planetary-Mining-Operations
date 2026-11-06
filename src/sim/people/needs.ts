@@ -49,6 +49,7 @@ export const needsSystem: System = {
             sectionId: section.id,
             need,
             daysLeft: Math.floor(daysLeft * 10) / 10,
+            companyId: section.owner,
           });
         } else if (daysLeft > 5) {
           section.shortageWarned[need] = false;

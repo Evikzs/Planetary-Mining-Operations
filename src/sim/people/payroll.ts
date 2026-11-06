@@ -1,34 +1,42 @@
 import { WAGE_CENTS_PER_DAY, WAGE_LEVEL } from '../../data/balance';
+import { cashAccount, ownersByBuilding, PLAYER, type CompanyId } from '../companies';
 import type { System } from '../engine';
 import { balance, transfer } from '../ledger';
 import type { GameState } from '../state';
 import { SKILL_OF } from './store';
-import { cashAccount, PLAYER, playerCompany } from '../companies';
 
-/** What one game hour of wages costs at the current head count and wage levels. */
-export function payrollCentsPerHour(state: GameState): number {
-  const company = playerCompany(state);
-  if (!company) return 0;
+/** What one game hour of wages costs each company, at its head count and wage levels. */
+export function payrollByCompany(state: GameState): Map<CompanyId, number> {
   const p = state.people;
-  let total = 0;
+  const owners = ownersByBuilding(state);
+  const levels = new Map(state.companies.map((c) => [c.id, c.wageLevel]));
+  const due = new Map<CompanyId, number>();
   for (let i = 0; i < p.count; i++) {
+    const co = owners.get(p.home[i]!);
+    const level = co === undefined ? undefined : levels.get(co);
+    if (co === undefined || !level) continue;
     const skill = SKILL_OF[p.skill[i]!]!;
-    total += Math.round(
-      (WAGE_CENTS_PER_DAY[skill] * WAGE_LEVEL[company.wageLevel[skill]].factor) / 24,
-    );
+    const cents = Math.round((WAGE_CENTS_PER_DAY[skill] * WAGE_LEVEL[level[skill]].factor) / 24);
+    due.set(co, (due.get(co) ?? 0) + cents);
   }
-  return total;
+  return due;
 }
+
+/** What one game hour of wages costs a company at its current head count and wage levels. */
+export const payrollCentsPerHour = (state: GameState, co: CompanyId = PLAYER): number =>
+  payrollByCompany(state).get(co) ?? 0;
 
 export const payrollSystem: System = {
   id: 'payroll',
   step(state) {
     if (state.tick % 60 !== 0) return;
-    const company = playerCompany(state);
-    if (!company) return;
-    const due = payrollCentsPerHour(state);
-    const cash = balance(state.ledger, cashAccount(PLAYER));
-    transfer(state.ledger, cashAccount(PLAYER), 'world', Math.min(due, cash));
-    company.payrollShortfall = cash < due;
+    const due = payrollByCompany(state);
+    for (const company of state.companies) {
+      if (company.status !== 'active') continue;
+      const cents = due.get(company.id) ?? 0;
+      const cash = balance(state.ledger, cashAccount(company.id));
+      transfer(state.ledger, cashAccount(company.id), 'world', Math.min(cents, cash));
+      company.payrollShortfall = cash < cents;
+    }
   },
 };

@@ -34,6 +34,6 @@ export function buySection(
   transfer(state.ledger, cashAccount(actor), 'world', price);
   state.landPurchases++;
   ownSection(state, sectionId, actor);
-  state.pendingEvents.push({ t: 'sectionBought', sectionId });
+  state.pendingEvents.push({ t: 'sectionBought', sectionId, companyId: actor });
   return OK;
 }

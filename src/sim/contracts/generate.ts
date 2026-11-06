@@ -2,7 +2,7 @@ import { WAGE_CENTS_PER_DAY } from '../../data/balance';
 import { BUILDINGS } from '../../data/buildings';
 import type { Rng } from '../rng';
 import { newId, type GameState } from '../state';
-import { playerCompany, sectionOwner } from '../companies';
+import { bestReputation, companyOf, PLAYER, sectionOwner } from '../companies';
 import { worldOf } from '../world/luna';
 import type { Plot, RawGoodId } from '../world/types';
 import type { Asset, Contract, Issuer } from './contracts';
@@ -89,7 +89,8 @@ export function generateOffer(state: GameState, rng: Rng): Contract {
         labourCents,
         margin,
         deadlineHours: hours,
-        reputation: playerCompany(state)?.reputation.luna ?? 0,
+        reputation:
+          companyOf(state, sectionOwner(state, plot.sectionId) ?? PLAYER)?.reputation.luna ?? 0,
       }),
       repGain: 5,
       repLoss: 8,
@@ -123,7 +124,7 @@ export function generateOffer(state: GameState, rng: Rng): Contract {
       pRefCents: state.market[good].pRefCents,
       margin,
       deadlineHours: hours,
-      reputation: playerCompany(state)?.reputation.luna ?? 0,
+      reputation: bestReputation(state),
     }),
     repGain: 3,
     repLoss: 5,

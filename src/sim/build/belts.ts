@@ -8,6 +8,7 @@ import { newId, type Building, type GameState } from '../state';
 import { worldOf } from '../world/luna';
 import { inputTargetsKg } from './buffers';
 import { hubDir, sectionState, storageCapKg } from './sections';
+import { PLAYER } from '../companies';
 
 export interface Batch {
   enterTick: number;
@@ -188,7 +189,10 @@ function stepLane(state: GameState, belt: Belt, b: Building, lane: 'out' | 'in',
       l.jammed = lane === 'out' && totalKg(b.output) > 0 && dest.space('regolith') === 0;
     }
   }
-  if (l.jammed && !wasJammed) ctx.events.push({ t: 'beltJammed', beltId: belt.id });
+  if (l.jammed && !wasJammed) {
+    const companyId = sectionState(state, belt.sectionId)?.owner ?? PLAYER;
+    ctx.events.push({ t: 'beltJammed', beltId: belt.id, companyId });
+  }
 }
 
 export const beltsSystem: System = {

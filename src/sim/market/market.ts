@@ -79,10 +79,12 @@ function settle(
     if (o.side === 'sell') {
       o.escrowKg -= f.kg;
       transfer(state.ledger, 'world', cashAccount(o.companyId), cents);
-      state.stats.soldKg[o.goodId] = (state.stats.soldKg[o.goodId] ?? 0) + f.kg;
-      state.stats.incomeCents += cents;
+      if (o.companyId === PLAYER) {
+        state.stats.soldKg[o.goodId] = (state.stats.soldKg[o.goodId] ?? 0) + f.kg;
+        state.stats.incomeCents += cents;
+      }
       const plotId = worldOf(state).sections[o.sectionId]?.hubPlotId ?? null;
-      ctx.events.push({ t: 'income', plotId, cents, source: 'trade' });
+      ctx.events.push({ t: 'income', plotId, cents, source: 'trade', companyId: o.companyId });
       sold += f.kg;
     } else {
       if (!transfer(state.ledger, `escrow:${o.id}`, 'world', cents)) {
@@ -91,10 +93,20 @@ function settle(
       o.escrowCents -= cents;
       const depot = sectionState(state, o.sectionId)?.depot;
       if (depot) add(depot, o.goodId, f.kg);
-      state.stats.boughtKg[o.goodId] = (state.stats.boughtKg[o.goodId] ?? 0) + f.kg;
+      if (o.companyId === PLAYER) {
+        state.stats.boughtKg[o.goodId] = (state.stats.boughtKg[o.goodId] ?? 0) + f.kg;
+      }
       bought += f.kg;
     }
-    ctx.events.push({ t: 'trade', orderId: o.id, goodId: o.goodId, side: o.side, kg: f.kg, cents });
+    ctx.events.push({
+      t: 'trade',
+      orderId: o.id,
+      goodId: o.goodId,
+      side: o.side,
+      kg: f.kg,
+      cents,
+      companyId: o.companyId,
+    });
   }
   return { bought, sold };
 }

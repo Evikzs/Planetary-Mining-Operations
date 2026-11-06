@@ -70,6 +70,32 @@ export function sectionOwner(state: GameState, sectionId: number): CompanyId | n
 export const buildingOwner = (state: GameState, b: Building): CompanyId | null =>
   sectionOwner(state, b.sectionId);
 
+/** Each building's owner by building id; workers belong to the owner of their home. */
+export function ownersByBuilding(state: GameState): Map<number, CompanyId> {
+  const owner = new Map(state.sections.map((s) => [s.id, s.owner]));
+  const out = new Map<number, CompanyId>();
+  for (const b of state.buildings) {
+    const o = owner.get(b.sectionId);
+    if (o !== undefined) out.set(b.id, o);
+  }
+  return out;
+}
+
+/** The company a worker works for: the owner of the section they live in. */
+export function workerCompany(state: GameState, index: number): CompanyId | null {
+  const home = state.buildings.find((b) => b.id === state.people.home[index]);
+  return home ? buildingOwner(state, home) : null;
+}
+
+/** The best Lunar reputation among active companies: the shared board grows with it. */
+export function bestReputation(state: GameState): number {
+  let best = 0;
+  for (const c of state.companies) {
+    if (c.status === 'active') best = Math.max(best, c.reputation.luna);
+  }
+  return best;
+}
+
 /** Moves both reputation values, each kept within 0..100. */
 export function changeReputation(state: GameState, id: CompanyId, delta: number): void {
   const c = companyOf(state, id);

@@ -101,16 +101,16 @@ describe('offline catch-up', () => {
 
   it('keeps one alert per type and section', () => {
     const alerts = awayAlerts([
-      { t: 'brownout', sectionId: 1, factor: 0.5 },
-      { t: 'brownout', sectionId: 1, factor: 0.4 },
-      { t: 'brownout', sectionId: 2, factor: 0.9 },
-      { t: 'shortage', sectionId: 1, need: 'food', daysLeft: 2 },
-      { t: 'shortage', sectionId: 1, need: 'air', daysLeft: 1 },
-      { t: 'shortage', sectionId: 1, need: 'food', daysLeft: 0 },
-      { t: 'emigration', count: 2 },
-      { t: 'emigration', count: 3 },
-      { t: 'contractFailed', contractId: 7 },
-      { t: 'buildingCompleted', buildingId: 4 },
+      { t: 'brownout', companyId: 0, sectionId: 1, factor: 0.5 },
+      { t: 'brownout', companyId: 0, sectionId: 1, factor: 0.4 },
+      { t: 'brownout', companyId: 0, sectionId: 2, factor: 0.9 },
+      { t: 'shortage', companyId: 0, sectionId: 1, need: 'food', daysLeft: 2 },
+      { t: 'shortage', companyId: 0, sectionId: 1, need: 'air', daysLeft: 1 },
+      { t: 'shortage', companyId: 0, sectionId: 1, need: 'food', daysLeft: 0 },
+      { t: 'emigration', companyId: 0, count: 2 },
+      { t: 'emigration', companyId: 0, count: 3 },
+      { t: 'contractFailed', companyId: 0, contractId: 7 },
+      { t: 'buildingCompleted', companyId: 0, buildingId: 4 },
     ]);
     expect(alerts.map((e) => e.t)).toEqual([
       'brownout',

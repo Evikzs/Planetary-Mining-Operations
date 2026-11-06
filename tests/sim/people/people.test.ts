@@ -85,7 +85,13 @@ describe('needs', () => {
     delete depot.hydroponicProduce;
     const events = run(s, 2);
     expect(sectionState(s, home)!.needsMet.food).toBe(0);
-    expect(events).toContainEqual({ t: 'shortage', sectionId: home, need: 'food', daysLeft: 0 });
+    expect(events).toContainEqual({
+      t: 'shortage',
+      companyId: 0,
+      sectionId: home,
+      need: 'food',
+      daysLeft: 0,
+    });
   });
 });
 
@@ -119,9 +125,9 @@ describe('strikes', () => {
       if (s.people.job[i] === -1) s.people.job[i] = garage.id;
       if (s.people.job[i] === garage.id) s.people.morale[i] = 0;
     }
-    expect(run(s, 360)).toContainEqual({ t: 'strike', buildingId: garage.id });
+    expect(run(s, 360)).toContainEqual({ t: 'strike', companyId: 0, buildingId: garage.id });
     expect(garage.status).toBe('striking');
-    expect(run(s, 720)).toContainEqual({ t: 'strikeEnded', buildingId: garage.id });
+    expect(run(s, 720)).toContainEqual({ t: 'strikeEnded', companyId: 0, buildingId: garage.id });
     expect(garage.status).toBe('active');
   });
 });
@@ -146,7 +152,7 @@ describe('housing', () => {
     expect(checkInvariants(s)).toEqual([]);
     expect(applyCommand(s, { t: 'demolish', buildingId: fresh.id })).toEqual({ ok: true });
     expect(s.people.count).toBe(0);
-    expect(run(s, 1)).toContainEqual({ t: 'emigration', count: 33 });
+    expect(run(s, 1)).toContainEqual({ t: 'emigration', companyId: 0, count: 33 });
     expect(checkInvariants(s)).toEqual([]);
   });
 });

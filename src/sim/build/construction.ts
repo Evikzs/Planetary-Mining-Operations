@@ -73,7 +73,7 @@ export function build(
   consume(section.depot, def.cost.materials);
   const building = addBuilding(state, plot, cmd.type, 'constructing', recipeId);
   if (def.belt) createBelt(state, building);
-  state.pendingEvents.push({ t: 'constructionStarted', buildingId: building.id });
+  state.pendingEvents.push({ t: 'constructionStarted', buildingId: building.id, companyId: actor });
   return OK;
 }
 
@@ -97,7 +97,7 @@ export function upgrade(
   b.status = 'upgrading';
   b.progress = 0;
   b.workHours = upgradeHours(def, b.level);
-  state.pendingEvents.push({ t: 'constructionStarted', buildingId: b.id });
+  state.pendingEvents.push({ t: 'constructionStarted', buildingId: b.id, companyId: actor });
   return OK;
 }
 
@@ -124,7 +124,7 @@ export function demolish(
   removeBelt(state, b);
   releaseWorkers(state, b.id);
   const left = evictResidents(state, b);
-  if (left > 0) state.pendingEvents.push({ t: 'emigration', count: left });
+  if (left > 0) state.pendingEvents.push({ t: 'emigration', count: left, companyId: actor });
   transfer(
     state.ledger,
     'world',
@@ -176,7 +176,8 @@ export const constructionSystem: System = {
         b.status = 'active';
         b.progress = 1;
         b.workHours = 0;
-        ctx.events.push({ t: 'buildingCompleted', buildingId: b.id });
+        const companyId = buildingOwner(state, b) ?? PLAYER;
+        ctx.events.push({ t: 'buildingCompleted', buildingId: b.id, companyId });
         state.jobsDirty = true;
       }
     }

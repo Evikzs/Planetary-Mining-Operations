@@ -7,7 +7,8 @@ import { balance } from '../ledger';
 import type { GameState } from '../state';
 import { BEATS, TUTORIAL, type BeatId, type HintCategory } from './beats';
 import { unlockCodex, unlockFromState } from './codex';
-import { cashAccount, PLAYER, playerCompany } from '../companies';
+import { buildingOwner, cashAccount, PLAYER, playerCompany } from '../companies';
+import { forPlayer } from '../events';
 
 export interface StoryState {
   /** Every beat that has started, in order. */
@@ -44,10 +45,12 @@ const SHORTAGE_BEATS = {
   food: 'ev.shortageFood',
 } as const;
 
+const playerBuildings = (s: GameState) => s.buildings.filter((b) => buildingOwner(s, b) === PLAYER);
+
 /** Tutorial beats that wait for more than the previous beat. */
 const TRIGGER: Partial<Record<BeatId, (s: GameState, events: SimEvent[]) => boolean>> = {
   'ch1.belts': (s) =>
-    s.buildings.some((b) => BUILDINGS[b.type].belt && b.status !== 'constructing'),
+    playerBuildings(s).some((b) => BUILDINGS[b.type].belt && b.status !== 'constructing'),
   'ch1.shiftChange': (_s, events) => events.some((e) => e.t === 'shiftChange'),
   'ch1.expansion': (s) => balance(s.ledger, cashAccount(PLAYER)) >= landPrice(s.landPurchases),
 };
@@ -55,9 +58,10 @@ const TRIGGER: Partial<Record<BeatId, (s: GameState, events: SimEvent[]) => bool
 /** Beats that end when something happens rather than when the player closes them. */
 const COMPLETE: Partial<Record<BeatId, (s: GameState) => boolean>> = {
   'ch1.camera': (s) => s.story.cameraTaught.panned && s.story.cameraTaught.zoomed,
-  'ch1.firstMine': (s) => s.buildings.some((b) => RIGS.includes(b.type)),
+  'ch1.firstMine': (s) => playerBuildings(s).some((b) => RIGS.includes(b.type)),
   'ch1.firstSale': (s) => Object.values(s.stats.soldKg).some((kg) => (kg ?? 0) > 0),
-  'ch1.firstContract': (s) => s.contracts.some((c) => c.status === 'completed'),
+  'ch1.firstContract': (s) =>
+    s.contracts.some((c) => c.status === 'completed' && c.holder === PLAYER),
   'ch1.firstRefinery': (s) => (s.stats.producedKg.steel ?? 0) > 0,
   'ch1.expansion': (s) => s.landPurchases > 0,
 };
@@ -188,8 +192,9 @@ export const storySystem: System = {
   id: 'story',
   step(state, ctx) {
     if (!playerCompany(state)) return;
-    for (const e of ctx.events) onEvent(state, e);
-    progressTutorial(state, ctx.events);
+    const mine = ctx.events.filter(forPlayer);
+    for (const e of mine) onEvent(state, e);
+    progressTutorial(state, mine);
     if (state.tick % 60 === 0) unlockFromState(state);
   },
 };

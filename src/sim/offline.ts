@@ -1,7 +1,7 @@
 import { OFFLINE } from '../data/balance';
 import type { GoodId } from '../data/goods';
 import { step } from './engine';
-import type { SimEvent } from './events';
+import { forPlayer, type SimEvent } from './events';
 import { balance } from './ledger';
 import type { GameState } from './state';
 import { cashAccount, PLAYER } from './companies';
@@ -79,8 +79,9 @@ export function runCatchUp(
   const produced = { ...state.stats.producedKg };
   const sold = { ...state.stats.soldKg };
   const events: SimEvent[] = [];
+  // The summary reports the player's company; rivals' events reach the player as news.
   const run = (mode: 'fine' | 'coarse') =>
-    events.push(...step(state, { mode, offlineEfficiency: OFFLINE.efficiency }));
+    events.push(...step(state, { mode, offlineEfficiency: OFFLINE.efficiency }).filter(forPlayer));
 
   let left = total;
   while (left > 0 && state.tick % 60 !== 0) {

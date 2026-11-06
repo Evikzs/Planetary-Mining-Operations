@@ -5,20 +5,28 @@ import type { GameState } from '../state';
 import { housingCapacity, residentsByHome } from './housing';
 import { slotsPerShift } from './jobs';
 import { addWorker, removeWorkerAt, SKILL_CODE } from './store';
+import { ownersByBuilding, PLAYER, type CompanyId } from '../companies';
 
 const isHour = (state: GameState) => state.tick % 60 === 0;
 
-/** The skill whose job slots, contract sites' included, are least filled; ties go miner, technician, engineer. */
-export function arrivalSkill(state: GameState): Skill {
+/**
+ * The skill whose job slots at one company, contract sites' included, are least filled; ties go
+ * miner, technician, engineer.
+ */
+export function arrivalSkill(state: GameState, co: CompanyId = PLAYER): Skill {
+  const owners = ownersByBuilding(state);
   const slots: Record<Skill, number> = { miner: 0, technician: 0, engineer: 0 };
   for (const b of state.buildings) {
+    if (owners.get(b.id) !== co) continue;
     for (const [skill, n] of Object.entries(slotsPerShift(b)) as [Skill, number][]) {
       slots[skill] += n * 3;
     }
   }
   const filled: Record<Skill, number> = { miner: 0, technician: 0, engineer: 0 };
   const p = state.people;
-  for (let i = 0; i < p.count; i++) filled[SKILLS[p.skill[i]!]!]++;
+  for (let i = 0; i < p.count; i++) {
+    if (owners.get(p.home[i]!) === co) filled[SKILLS[p.skill[i]!]!]++;
+  }
   let best: Skill = 'miner';
   let bestRatio = -Infinity;
   for (const skill of SKILLS) {
@@ -33,15 +41,19 @@ export function arrivalSkill(state: GameState): Skill {
 
 function emigrate(state: GameState, ctx: StepContext): void {
   const p = state.people;
-  let left = 0;
+  const owners = ownersByBuilding(state);
+  const left = new Map<CompanyId, number>();
   for (let i = p.count - 1; i >= 0; i--) {
     if (p.morale[i]! < MORALE.emigrateBelow && ctx.rng.next() < MORALE.emigrateChancePerHour) {
+      const co = owners.get(p.home[i]!) ?? PLAYER;
       removeWorkerAt(p, i);
-      left++;
+      left.set(co, (left.get(co) ?? 0) + 1);
     }
   }
-  if (!left) return;
-  ctx.events.push({ t: 'emigration', count: left });
+  if (!left.size) return;
+  for (const [companyId, count] of [...left].sort((a, b) => a[0] - b[0])) {
+    ctx.events.push({ t: 'emigration', companyId, count });
+  }
   state.jobsDirty = true;
 }
 
@@ -71,13 +83,13 @@ function arrive(state: GameState, ctx: StepContext): void {
       addWorker(p, {
         first: ctx.rng.int(0, 159),
         last: ctx.rng.int(0, 159),
-        skill: SKILL_CODE[arrivalSkill(state)],
+        skill: SKILL_CODE[arrivalSkill(state, section.owner)],
         level: 1,
         home: home.id,
       });
     }
     if (count === 0) continue;
-    ctx.events.push({ t: 'arrivals', sectionId: section.id, count });
+    ctx.events.push({ t: 'arrivals', sectionId: section.id, count, companyId: section.owner });
     state.jobsDirty = true;
   }
 }

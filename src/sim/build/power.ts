@@ -38,7 +38,12 @@ export const powerSystem: System = {
       const wasOut = section.power.brownout;
       section.power = { ...p, brownout: p.factor < 1 };
       if (p.factor < 1 && !wasOut) {
-        ctx.events.push({ t: 'brownout', sectionId: section.id, factor: p.factor });
+        ctx.events.push({
+          t: 'brownout',
+          sectionId: section.id,
+          factor: p.factor,
+          companyId: section.owner,
+        });
       }
       for (const b of state.buildings) {
         if (b.sectionId !== section.id || !working(b) || BUILDINGS[b.type].powerKw > 0) continue;

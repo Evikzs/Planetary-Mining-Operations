@@ -1,9 +1,20 @@
 import { expect, type Page } from '@playwright/test';
 
-/** Opens the game with e2e debug flags; defaults speed time up 60x on seed 42. */
-export async function gotoGame(page: Page, params: Record<string, string> = {}): Promise<void> {
+/**
+ * Opens the game with e2e debug flags; defaults speed time up 60x on seed 42. Waits for the test
+ * API, which arrives once the page holds the game's tab lock, a moment after load; `api: false`
+ * skips that for pages that never start the game.
+ */
+export async function gotoGame(
+  page: Page,
+  params: Record<string, string> = {},
+  opts: { api?: boolean } = {},
+): Promise<void> {
   const query = new URLSearchParams({ timescale: '60', seed: '42', ...params });
   await page.goto(`/?${query.toString()}`);
+  if (opts.api ?? params.nowebgl !== '1') {
+    await page.waitForFunction(() => window.__pmo !== undefined);
+  }
 }
 
 /** Founds Selene Rock Co with the veteran through the test API, once the worker is ready. */

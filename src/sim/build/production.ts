@@ -7,6 +7,7 @@ import type { Building, GameState } from '../state';
 import { worldOf } from '../world/luna';
 import { nominalOutputTph, outputCapsKg } from './buffers';
 import { sectionState } from './sections';
+import { buildingOwner, PLAYER } from '../companies';
 
 const busy = (b: Building) => b.status === 'constructing' || b.status === 'upgrading';
 
@@ -21,7 +22,8 @@ function speed(state: GameState, b: Building, ctx: StepContext): number {
     staffing(state, b) *
     power *
     workforceProductivity(state, b) *
-    ctx.offlineEfficiency *
+    // Only the player's crews work skeleton shifts while away (spec 11.1).
+    (buildingOwner(state, b) === PLAYER ? ctx.offlineEfficiency : 1) *
     strike
   );
 }
@@ -74,10 +76,11 @@ function produce(state: GameState, b: Building, ctx: StepContext): boolean {
 
   for (const [g, t] of inputs)
     take(b.input, g, Math.min(b.input[g] ?? 0, emit(b, g, t * level * 1000 * hours * scale)));
+  const player = buildingOwner(state, b) === PLAYER;
   for (const g of goods) {
     const kg = emit(b, g, nominal[g]! * 1000 * hours * scale);
     add(b.output, g, kg);
-    state.stats.producedKg[g] = (state.stats.producedKg[g] ?? 0) + kg;
+    if (player) state.stats.producedKg[g] = (state.stats.producedKg[g] ?? 0) + kg;
   }
   return blocked;
 }

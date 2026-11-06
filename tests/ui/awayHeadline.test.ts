@@ -33,7 +33,9 @@ describe('away headline', () => {
     expect(awayHeadline(lost, 92_000)).toBe('Contract lost\u00a0— cash down 8%');
     const short = {
       ...quiet,
-      alerts: [{ t: 'shortage' as const, sectionId: 3, need: 'air' as const, daysLeft: 1 }],
+      alerts: [
+        { t: 'shortage' as const, companyId: 0, sectionId: 3, need: 'air' as const, daysLeft: 1 },
+      ],
     };
     expect(awayHeadline(short, 100_000)).toBe('Air runs short\u00a0— cash holds');
   });

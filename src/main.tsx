@@ -32,6 +32,7 @@ import { OtherTab } from './ui/screens/OtherTab';
 import { formatMoney } from './ui/format';
 import { flyIncome } from './ui/motion/incomeTokens';
 import { applyTokens } from './ui/tokens';
+import { PLAYER } from './sim/companies';
 
 const html = document.documentElement;
 applyTokens(html);
@@ -62,7 +63,7 @@ function start(root: HTMLElement): void {
   });
   client.on('catchUp', (msg) => (catchUpProgress.value = msg.progress < 1 ? msg.progress : null));
   client.on('events', (msg) => {
-    const fills = msg.events.filter((e) => e.t === 'trade');
+    const fills = msg.events.filter((e) => e.t === 'trade').filter((e) => e.companyId === PLAYER);
     if (fills.length) recentFills.value = [...fills.reverse(), ...recentFills.value].slice(0, 10);
     flyIncomeTokens(msg.events);
   });
@@ -81,7 +82,7 @@ function flyIncomeTokens(events: SimEvent[]): void {
   if (html.dataset.motion === 'reduced') return;
   const byPlot = new Map<number, number>();
   for (const e of events) {
-    if (e.t === 'income' && e.plotId !== null) {
+    if (e.t === 'income' && e.plotId !== null && e.companyId === PLAYER) {
       byPlot.set(e.plotId, (byPlot.get(e.plotId) ?? 0) + e.cents);
     }
   }

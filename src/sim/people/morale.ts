@@ -3,7 +3,7 @@ import { MORALE, WAGE_LEVEL, type WageLevel } from '../../data/balance';
 import type { System } from '../engine';
 import { ALL_MET, type NeedsMet } from './needs';
 import { SKILL_OF } from './store';
-import { playerCompany } from '../companies';
+import { buildingOwner, PLAYER } from '../companies';
 
 /** The part of a target that depends only on the home: base, housing quality and needs met. */
 function homePart(quality: number, m: NeedsMet): number {
@@ -41,13 +41,26 @@ export const moraleSystem: System = {
     // the sums keep targetMorale's order, so results match it to the bit.
     const homeless = homePart(0, ALL_MET);
     const atHome = new Float64Array(state.nextId).fill(homeless);
+    // Wage morale and the unpaid malus come from the company that houses each worker.
+    const standard = { wage: SKILL_OF.map(() => WAGE_LEVEL.standard.morale), unpaid: 0 };
+    const terms = new Map(
+      state.companies.map((c) => [
+        c.id,
+        {
+          wage: SKILL_OF.map((s) => WAGE_LEVEL[c.wageLevel[s]].morale),
+          unpaid: c.payrollShortfall ? MORALE.unpaid : 0,
+        },
+      ]),
+    );
+    const homeTerms: (typeof standard)[] = [];
     for (const b of state.buildings) {
-      const met = state.sections.find((s) => s.id === b.sectionId)?.needsMet ?? ALL_MET;
-      atHome[b.id] = homePart(BUILDINGS[b.type].housing?.quality ?? 0, met);
+      const section = state.sections.find((s) => s.id === b.sectionId);
+      atHome[b.id] = homePart(
+        BUILDINGS[b.type].housing?.quality ?? 0,
+        section?.needsMet ?? ALL_MET,
+      );
+      homeTerms[b.id] = (section && terms.get(section.owner)) ?? standard;
     }
-    const company = playerCompany(state);
-    const wage = SKILL_OF.map((s) => WAGE_LEVEL[company?.wageLevel[s] ?? 'standard'].morale);
-    const unpaid = company?.payrollShortfall ? MORALE.unpaid : 0;
     const step = (MORALE.driftPerHour * ctx.dtMinutes) / 60;
     const p = state.people;
     // Morale of each workplace's crew, summed after this step's drift.
@@ -55,10 +68,11 @@ export const moraleSystem: System = {
     const crewN = new Uint32Array(state.nextId);
     for (let i = 0; i < p.count; i++) {
       const home = p.home[i]!;
+      const own = (home >= 0 ? homeTerms[home] : undefined) ?? standard;
       const t =
         (home >= 0 ? atHome[home]! : homeless) +
-        wage[p.skill[i]!]! +
-        unpaid +
+        own.wage[p.skill[i]!]! +
+        own.unpaid +
         longCommute(p.commuteMin[i]!);
       const target = Math.min(100, Math.max(0, t));
       const m = p.morale[i]!;
@@ -76,10 +90,18 @@ export const moraleSystem: System = {
       b.lowMoraleMinutes = avg < MORALE.strikeBelow ? b.lowMoraleMinutes + ctx.dtMinutes : 0;
       if (!b.strike && b.lowMoraleMinutes >= MORALE.strikeHours * 60) {
         b.strike = true;
-        ctx.events.push({ t: 'strike', buildingId: b.id });
+        ctx.events.push({
+          t: 'strike',
+          buildingId: b.id,
+          companyId: buildingOwner(state, b) ?? PLAYER,
+        });
       } else if (b.strike && avg >= MORALE.strikeResume) {
         b.strike = false;
-        ctx.events.push({ t: 'strikeEnded', buildingId: b.id });
+        ctx.events.push({
+          t: 'strikeEnded',
+          buildingId: b.id,
+          companyId: buildingOwner(state, b) ?? PLAYER,
+        });
       }
     }
   },

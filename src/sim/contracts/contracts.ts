@@ -7,10 +7,10 @@ import { take } from '../inventory';
 import { transfer } from '../ledger';
 import {
   activeCompany,
+  bestReputation,
   cashAccount,
   changeReputation,
   PLAYER,
-  playerCompany,
   type CompanyId,
 } from '../companies';
 import { presentCrew, releaseWorkers } from '../people/jobs';
@@ -186,20 +186,26 @@ function complete(state: GameState, ctx: StepContext, c: Contract): void {
   c.status = 'completed';
   const holder = c.holder ?? PLAYER;
   transfer(state.ledger, 'world', cashAccount(holder), c.rewardCents);
-  state.stats.incomeCents += c.rewardCents;
+  if (holder === PLAYER) state.stats.incomeCents += c.rewardCents;
   changeReputation(state, holder, c.repGain);
   if (c.plotId !== null && c.asset) state.clientAssets.push({ plotId: c.plotId, asset: c.asset });
   closeSite(state, c);
   state.colonyPop += ctx.rng.int(40, 120);
-  ctx.events.push({ t: 'income', plotId: c.plotId, cents: c.rewardCents, source: 'contract' });
-  ctx.events.push({ t: 'contractCompleted', contractId: c.id });
+  ctx.events.push({
+    t: 'income',
+    plotId: c.plotId,
+    cents: c.rewardCents,
+    source: 'contract',
+    companyId: holder,
+  });
+  ctx.events.push({ t: 'contractCompleted', contractId: c.id, companyId: holder });
 }
 
 function failContract(state: GameState, ctx: StepContext, c: Contract): void {
   c.status = 'failed';
   changeReputation(state, c.holder ?? PLAYER, -c.repLoss);
   closeSite(state, c);
-  ctx.events.push({ t: 'contractFailed', contractId: c.id });
+  ctx.events.push({ t: 'contractFailed', contractId: c.id, companyId: c.holder ?? PLAYER });
 }
 
 export const contractsSystem: System = {
@@ -215,11 +221,10 @@ export const contractsSystem: System = {
     state.contracts = state.contracts.filter((c) => c.status !== 'offered' || now < c.deadlineTick);
     if (now % 60 === 0) {
       const onBoard = state.contracts.filter((c) => c.status === 'offered').length;
-      const rep = playerCompany(state)?.reputation.luna ?? 0;
-      if (onBoard < boardSize(rep) && ctx.rng.next() < 0.25) {
+      if (onBoard < boardSize(bestReputation(state)) && ctx.rng.next() < 0.25) {
         const c = generateOffer(state, ctx.rng);
         state.contracts.push(c);
-        ctx.events.push({ t: 'contractOffered', contractId: c.id });
+        ctx.events.push({ t: 'contractOffered', contractId: c.id, tenderTo: c.tenderTo });
       }
     }
     const finished = state.contracts.filter((c) => c.status !== 'offered' && c.status !== 'active');

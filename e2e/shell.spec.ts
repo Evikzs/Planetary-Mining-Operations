@@ -74,7 +74,7 @@ test('a second tab of the game waits for the first, so their saves never collide
   await gotoGame(page, { freeze: '1' });
   await expect.poll(() => page.evaluate(() => window.__pmo.ui() !== null)).toBe(true);
   const second = await context.newPage();
-  await gotoGame(second, { freeze: '1' });
+  await gotoGame(second, { freeze: '1' }, { api: false });
   await expect(second.getByText('The game is open in another tab.')).toBeVisible();
   // The second tab never starts the game, so it cannot save over the first.
   expect(await second.evaluate(() => typeof window.__pmo)).toBe('undefined');

@@ -125,7 +125,7 @@ describe('story', () => {
 
   it('event beats fire at most once per 6 game hours', () => {
     const s = founded();
-    const strike = () => s.pendingEvents.push({ t: 'strike', buildingId: 1 });
+    const strike = () => s.pendingEvents.push({ t: 'strike', companyId: 0, buildingId: 1 });
     strike();
     run(s, 1);
     expect(s.story.queue).toContain('ev.strike');

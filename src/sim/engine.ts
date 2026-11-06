@@ -102,7 +102,7 @@ export function applyCommand(
       state.companies.push(company);
       grantCharter(state, PLAYER, charter);
       startStory(state);
-      state.pendingEvents.push({ t: 'founded' });
+      state.pendingEvents.push({ t: 'founded', companyId: PLAYER });
       return OK;
     }
     case 'build':

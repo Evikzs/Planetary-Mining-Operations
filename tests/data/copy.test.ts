@@ -34,27 +34,33 @@ describe('copy', () => {
   it('alerts read as short plain sentences', () => {
     const names = { building: () => 'Mine', belt: () => 'Smelter' };
     expect(
-      alertText({ t: 'shortage', sectionId: 3, need: 'air', daysLeft: 2.4, tick: 0 }, names),
+      alertText(
+        { t: 'shortage', companyId: 0, sectionId: 3, need: 'air', daysLeft: 2.4, tick: 0 },
+        names,
+      ),
     ).toBe('Oxygen runs out in about 2 days in section 3.');
     expect(
-      alertText({ t: 'shortage', sectionId: 3, need: 'food', daysLeft: 0.4, tick: 0 }, names),
+      alertText(
+        { t: 'shortage', companyId: 0, sectionId: 3, need: 'food', daysLeft: 0.4, tick: 0 },
+        names,
+      ),
     ).toBe('Food runs out in less than a day in section 3.');
-    expect(alertText({ t: 'brownout', sectionId: 3, factor: 0.62, tick: 0 }, names)).toBe(
-      'Section 3 is short of power. Machines run at 62%.',
-    );
-    expect(alertText({ t: 'beltJammed', beltId: 9, tick: 0 }, names)).toBe(
+    expect(
+      alertText({ t: 'brownout', companyId: 0, sectionId: 3, factor: 0.62, tick: 0 }, names),
+    ).toBe('Section 3 is short of power. Machines run at 62%.');
+    expect(alertText({ t: 'beltJammed', companyId: 0, beltId: 9, tick: 0 }, names)).toBe(
       'The Smelter belt is jammed. Its depot is full.',
     );
-    expect(alertText({ t: 'strike', buildingId: 4, tick: 0 }, names)).toBe(
+    expect(alertText({ t: 'strike', companyId: 0, buildingId: 4, tick: 0 }, names)).toBe(
       'Workers at the Mine are on strike.',
     );
-    expect(alertText({ t: 'emigration', count: 1, tick: 0 }, names)).toBe(
+    expect(alertText({ t: 'emigration', companyId: 0, count: 1, tick: 0 }, names)).toBe(
       '1 worker left the colony.',
     );
-    expect(alertText({ t: 'emigration', count: 3, tick: 0 }, names)).toBe(
+    expect(alertText({ t: 'emigration', companyId: 0, count: 3, tick: 0 }, names)).toBe(
       '3 workers left the colony.',
     );
-    expect(alertText({ t: 'contractFailed', contractId: 2, tick: 0 }, names)).toBe(
+    expect(alertText({ t: 'contractFailed', companyId: 0, contractId: 2, tick: 0 }, names)).toBe(
       'A contract failed. You lost reputation.',
     );
     expect(alertText({ t: 'priceMove', goodId: 'ilmenite', pct24h: -0.34, tick: 0 }, names)).toBe(

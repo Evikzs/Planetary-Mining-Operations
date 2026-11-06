@@ -129,9 +129,10 @@ describe('contracts', () => {
     expect(s.companies[0]!.reputation.luna).toBe(23);
     expect(s.colonyPop - pop).toBeGreaterThanOrEqual(40);
     expect(s.colonyPop - pop).toBeLessThanOrEqual(120);
-    expect(events).toContainEqual({ t: 'contractCompleted', contractId: c.id });
+    expect(events).toContainEqual({ t: 'contractCompleted', companyId: 0, contractId: c.id });
     expect(events).toContainEqual({
       t: 'income',
+      companyId: 0,
       plotId: null,
       cents: 100_000,
       source: 'contract',
@@ -146,7 +147,7 @@ describe('contracts', () => {
     const events = run(s, 121);
     expect(c.status).toBe('failed');
     expect(s.companies[0]!.reputation.luna).toBe(15);
-    expect(events).toContainEqual({ t: 'contractFailed', contractId: c.id });
+    expect(events).toContainEqual({ t: 'contractFailed', companyId: 0, contractId: c.id });
   });
 
   it('abandoning costs 4 reputation and keeps what was delivered', () => {

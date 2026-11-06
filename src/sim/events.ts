@@ -1,20 +1,38 @@
 import type { GoodId } from '../data/goods';
+import { PLAYER, type CompanyId } from './companies';
+
+/** Events about one company's sections, buildings, workers, orders or contracts name it. */
+type Of<E> = E & { companyId: CompanyId };
 
 // Later tasks add members to this union.
 export type SimEvent =
   | { t: 'shiftChange'; shift: 0 | 1 | 2 }
-  | { t: 'founded' }
-  | { t: 'constructionStarted'; buildingId: number }
-  | { t: 'buildingCompleted'; buildingId: number }
-  | { t: 'sectionBought'; sectionId: number }
-  | { t: 'brownout'; sectionId: number; factor: number }
-  | { t: 'beltJammed'; beltId: number }
-  | { t: 'shortage'; sectionId: number; need: 'air' | 'water' | 'food'; daysLeft: number }
-  | { t: 'arrivals'; sectionId: number; count: number }
-  | { t: 'emigration'; count: number }
-  | { t: 'strike'; buildingId: number }
-  | { t: 'strikeEnded'; buildingId: number }
-  | { t: 'trade'; orderId: number; goodId: GoodId; side: 'buy' | 'sell'; kg: number; cents: number }
-  | { t: 'income'; plotId: number | null; cents: number; source: 'trade' | 'contract' }
+  | Of<{ t: 'founded' }>
+  | Of<{ t: 'constructionStarted'; buildingId: number }>
+  | Of<{ t: 'buildingCompleted'; buildingId: number }>
+  | Of<{ t: 'sectionBought'; sectionId: number }>
+  | Of<{ t: 'brownout'; sectionId: number; factor: number }>
+  | Of<{ t: 'beltJammed'; beltId: number }>
+  | Of<{ t: 'shortage'; sectionId: number; need: 'air' | 'water' | 'food'; daysLeft: number }>
+  | Of<{ t: 'arrivals'; sectionId: number; count: number }>
+  | Of<{ t: 'emigration'; count: number }>
+  | Of<{ t: 'strike'; buildingId: number }>
+  | Of<{ t: 'strikeEnded'; buildingId: number }>
+  | Of<{
+      t: 'trade';
+      orderId: number;
+      goodId: GoodId;
+      side: 'buy' | 'sell';
+      kg: number;
+      cents: number;
+    }>
+  | Of<{ t: 'income'; plotId: number | null; cents: number; source: 'trade' | 'contract' }>
   | { t: 'priceMove'; goodId: GoodId; pct24h: number }
-  | { t: 'contractOffered' | 'contractCompleted' | 'contractFailed'; contractId: number };
+  | { t: 'contractOffered'; contractId: number; tenderTo: CompanyId | null }
+  | Of<{ t: 'contractCompleted' | 'contractFailed'; contractId: number }>;
+
+/** Whether the player should hear of an event: its own, a public offer, or market-wide news. */
+export function forPlayer(e: SimEvent): boolean {
+  if (e.t === 'contractOffered') return e.tenderTo === null || e.tenderTo === PLAYER;
+  return !('companyId' in e) || e.companyId === PLAYER;
+}
