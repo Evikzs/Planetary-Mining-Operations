@@ -1,3 +1,4 @@
+import { AUCTION } from '../../data/auctions';
 import { levelOutput, WAGE_LEVEL, type WageLevel } from '../../data/balance';
 import {
   BUILDINGS,
@@ -7,11 +8,16 @@ import {
   type RecipeId,
 } from '../../data/buildings';
 import { ARCHETYPES, OFFER_WAIT_HOURS, type ArchetypeWeights } from '../../data/companies';
+import { MIN_LOAN_CENTS } from '../../data/finance';
 import { GOODS, type GoodId } from '../../data/goods';
+import { leadingBid, minBidCents, type Auction } from '../auctions';
 import type { Command, CommandResult } from '../commands';
-import { cashAccount, type CompanyId, type CompanyState } from '../companies';
+import { cashAccount, type Archetype, type CompanyId, type CompanyState } from '../companies';
 import { maxActive } from '../contracts/rewards';
 import { applyCommand, type System } from '../engine';
+import { assets, liabilities } from '../finance/books';
+import { borrowingRoomCents, loanRate, loansOf } from '../finance/credit';
+import { listingOf, type Listing } from '../finance/shares';
 import { balance } from '../ledger';
 import { housingCapacity, residentsBySection } from '../people/housing';
 import { slotsPerShift } from '../people/jobs';
@@ -20,7 +26,13 @@ import { payrollCentsPerHour } from '../people/payroll';
 import type { Building, GameState, SectionState } from '../state';
 import { worldOf } from '../world/luna';
 import type { Plot } from '../world/types';
-import { EXTRACTORS, goodValueCents, hourlyMarginCents } from './valuation';
+import {
+  EXTRACTORS,
+  goodValueCents,
+  headroomCents,
+  hourlyMarginCents,
+  sectionValueCents,
+} from './valuation';
 
 /** A command a rival could send, with what it is worth to it, in cents of value a game day. */
 export interface Option {
@@ -43,6 +55,8 @@ export interface RivalView {
   freePlots: Plot[];
   cash: number;
   wagesPerDay: number;
+  /** Cash and unused credit less a day of wages: the most it may bid or borrow. */
+  headroom: number;
   residents: Map<number, number>;
   idle: number;
   freeBeds: number;
@@ -76,6 +90,8 @@ const MATERIALS = new Set<GoodId>(
 const ORE_RESERVE_KG = 150_000;
 const LIFE_SUPPORT = 1e9;
 const URGENT = 1e8;
+/** A free policy change that happens once: it goes ahead of trade and builds. */
+const POLICY = 1e7;
 const HOUSING = 1e6;
 const tonnes = (kg: number) => Math.ceil(kg / 1000) * 1000;
 
@@ -113,6 +129,7 @@ function view(state: GameState, company: CompanyState): RivalView {
     freePlots,
     cash: balance(state.ledger, cashAccount(company.id)),
     wagesPerDay: payrollCentsPerHour(state, company.id) * 24,
+    headroom: headroomCents(state, company.id),
     residents: residentsBySection(state),
     idle: workers - employed,
     freeBeds: beds - workers,
@@ -446,7 +463,200 @@ const recipeInputs: OptionSource = (v) =>
     });
   });
 
-/** Option sources, in no particular order: the utilities rank them. C10 appends more. */
+/** A lot's worth to a rival: ten days of its deposits' best margins times its appetite for land; on
+ * a company's assets, half the buildings' book value as well. */
+function lotValueCents(v: RivalView, a: Auction): number {
+  let value = sectionValueCents(v.state, a.lot.sectionId, 10) * v.w.expand;
+  if (a.lot.kind === 'assets') {
+    for (const b of v.state.buildings) {
+      if (b.sectionId === a.lot.sectionId) value += 0.5 * b.bookCents;
+    }
+  }
+  return Math.floor(value);
+}
+
+/** The most valuable section nobody owns or auctions: next to the company's land when one is. */
+function bestFreeSection(v: RivalView, open: Auction[]): number | null {
+  const world = worldOf(v.state);
+  const taken = new Set([
+    ...v.state.sections.map((s) => s.id),
+    ...open.map((a) => a.lot.sectionId),
+  ]);
+  const near = [...new Set(v.sections.flatMap((s) => world.sections[s.id]!.neighbors))].filter(
+    (id) => !taken.has(id),
+  );
+  const pool = near.length ? near : world.sections.map((s) => s.id).filter((id) => !taken.has(id));
+  let best: number | null = null;
+  let bestValue = -1;
+  for (const id of pool.sort((a, b) => a - b)) {
+    const value = sectionValueCents(v.state, id, 10);
+    if (value > bestValue) {
+      best = id;
+      bestValue = value;
+    }
+  }
+  return best;
+}
+
+/**
+ * One proxy a decision, on the open lot worth most over its minimum bid, its ceiling within the
+ * headroom its other proxies leave; and a lot of its own once its deposits are all built on.
+ */
+const auctions: OptionSource = (v) => {
+  const { state, company } = v;
+  const co = company.id;
+  const open = state.auctions.filter((a) => a.status === 'open');
+  let room = v.headroom;
+  for (const a of open) room -= a.proxies.find((p) => p.companyId === co)?.ceilingCents ?? 0;
+  let best: Option | undefined;
+  for (const a of open) {
+    if (a.proxies.some((p) => p.companyId === co) || leadingBid(a)?.companyId === co) continue;
+    const value = lotValueCents(v, a);
+    const min = minBidCents(state, a, co);
+    const ceiling = Math.floor(Math.min(value * v.w.auctionAggression, room));
+    if (value <= min || ceiling < min) continue;
+    if (best && best.utility >= value - min) continue;
+    best = {
+      cmd: { t: 'setProxy', auctionId: a.id, ceilingCents: ceiling },
+      utility: value - min,
+      why: `proxy ${a.id}`,
+    };
+  }
+  const out = best ? [best] : [];
+  const mine = open.filter((a) => a.openedBy === co).length;
+  const builtOut = !v.freePlots.some((p) => p.kind === 'deposit');
+  if (builtOut && mine < AUCTION.maxOpenedPerCompany && v.cash >= 2 * AUCTION.reserveCents) {
+    const sid = bestFreeSection(v, open);
+    if (sid !== null) {
+      out.push({
+        cmd: { t: 'openAuction', sectionId: sid },
+        utility: sectionValueCents(state, sid, 10) * v.w.expand - AUCTION.reserveCents,
+        why: `open ${sid}`,
+        costCents: AUCTION.listingFeeCents,
+      });
+    }
+  }
+  return out;
+};
+
+/** The best build a decision cannot pay for and keep a day of wages: what a loan or an issue funds. */
+function buildWaitingOnCash(v: RivalView): Option | undefined {
+  let best: Option | undefined;
+  for (const o of builds(v))
+    if (o.cmd.t === 'build' && (!best || o.utility > best.utility)) best = o;
+  return best && v.cash - (best.costCents ?? 0) < v.wagesPerDay ? best : undefined;
+}
+
+const LOAN_STEP_CENTS = 1_000_000;
+/** Archetypes that repay early and buy back cheap shares. */
+const PRUDENT = new Set<Archetype>(['cautiousMiner', 'stateBacked']);
+
+/** A 6-month loan for the build that waits on cash, debt within the archetype's D/E; early repayment. */
+const debt: OptionSource = (v) => {
+  const { state, company } = v;
+  const co = company.id;
+  const out: Option[] = [];
+  const rate = loanRate(company.credit.rating);
+  const build = rate === null ? undefined : buildWaitingOnCash(v);
+  if (build && rate !== null) {
+    const short = (build.costCents ?? 0) + v.wagesPerDay - v.cash;
+    const amount = Math.max(MIN_LOAN_CENTS, Math.ceil(short / LOAN_STEP_CENTS) * LOAN_STEP_CENTS);
+    const equity = assets(state, co).total - liabilities(state, co);
+    const debtAfter = loansOf(state, co) + company.credit.creditDrawnCents + amount;
+    if (
+      debtAfter < v.w.maxDebtToEquity * equity &&
+      amount <= v.headroom &&
+      amount <= borrowingRoomCents(state, co)
+    ) {
+      out.push({
+        cmd: { t: 'takeLoan', amountCents: amount, months: 6 },
+        utility: build.utility - amount * rate * 6,
+        why: 'loan',
+      });
+    }
+  }
+  if (PRUDENT.has(company.archetype!)) {
+    for (const l of state.loans) {
+      if (l.companyId !== co || v.cash <= 3 * v.wagesPerDay + l.principalCents) continue;
+      out.push({
+        cmd: { t: 'repayLoan', loanId: l.id, amountCents: l.principalCents },
+        utility: (l.principalCents * l.ratePerMonth) / 30,
+        why: `repay ${l.id}`,
+        costCents: l.principalCents,
+      });
+    }
+  }
+  return out;
+};
+
+const shareBuy = (target: CompanyId, qty: number, l: Listing, why: string): Option => ({
+  cmd: { t: 'placeShareOrder', target, side: 'buy', kind: 'limit', qty, limitCents: l.priceCents },
+  utility: (l.fvCents - l.priceCents) * qty,
+  why,
+  costCents: qty * l.priceCents,
+});
+
+/** Dividends once a month has closed; buybacks, stock picks and issues by archetype. */
+const equity: OptionSource = (v) => {
+  const { state, company, w } = v;
+  const co = company.id;
+  const own = listingOf(state, co);
+  if (!own) return [];
+  const out: Option[] = [];
+  if (company.books.closed.length > 0 && own.dividendRatio !== w.dividendRatio) {
+    out.push({
+      cmd: { t: 'setDividendRatio', ratio: w.dividendRatio },
+      utility: POLICY,
+      why: 'dividends',
+    });
+  }
+  const ordered = (target: CompanyId) =>
+    state.shareOrders.some((o) => o.companyId === co && o.target === target);
+  if (PRUDENT.has(company.archetype!) && own.priceCents < 0.8 * own.fvCents && !ordered(co)) {
+    const qty = Math.floor(0.02 * own.outstanding);
+    if (v.cash - qty * own.priceCents > 5 * v.wagesPerDay)
+      out.push(shareBuy(co, qty, own, 'buyback'));
+  }
+  if (company.archetype === 'financier') {
+    for (const l of state.listings) {
+      if (l.companyId === co || ordered(l.companyId)) continue;
+      const held =
+        state.holdings.find((h) => h.holder === co && h.companyId === l.companyId)?.shares ?? 0;
+      const room = Math.floor(0.05 * l.outstanding) - held;
+      if (l.priceCents < 0.85 * l.fvCents && room > 0) {
+        out.push(shareBuy(l.companyId, room, l, `invest ${l.companyId}`));
+      } else if (held > 0 && l.priceCents > 1.15 * l.fvCents) {
+        out.push({
+          cmd: {
+            t: 'placeShareOrder',
+            target: l.companyId,
+            side: 'sell',
+            kind: 'limit',
+            qty: held,
+            limitCents: l.priceCents,
+          },
+          utility: (l.priceCents - l.fvCents) * held,
+          why: `cash in ${l.companyId}`,
+        });
+      }
+    }
+  }
+  if (
+    company.archetype === 'expander' &&
+    own.priceCents > 1.2 * own.fvCents &&
+    buildWaitingOnCash(v)
+  ) {
+    const qty = Math.floor(0.1 * own.outstanding);
+    out.push({
+      cmd: { t: 'issueShares', qty },
+      utility: (own.priceCents - own.fvCents) * qty,
+      why: 'issue',
+    });
+  }
+  return out;
+};
+
+/** Option sources, in no particular order: the utilities rank them. */
 export const OPTION_SOURCES: OptionSource[] = [
   lifeSupport,
   wages,
@@ -456,6 +666,9 @@ export const OPTION_SOURCES: OptionSource[] = [
   builds,
   recipeInputs,
   sellSurplus,
+  auctions,
+  debt,
+  equity,
 ];
 
 export type Dispatch = (state: GameState, cmd: Command, actor: CompanyId) => CommandResult;

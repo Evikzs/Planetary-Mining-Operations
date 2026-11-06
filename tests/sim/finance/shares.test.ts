@@ -141,6 +141,14 @@ describe('shares', () => {
     expect(books(s).retainedCents).toBe(month.income.netIncome - perShare * 100_000);
   });
 
+  it('a dividend ratio is stored as given, so 0.3 reads back as 0.3', () => {
+    const s = withRival();
+    for (const ratio of [0.05, 0.3, 0.35, 0.7, 1]) {
+      expect(applyCommand(s, { t: 'setDividendRatio', ratio })).toEqual({ ok: true });
+      expect(listingOf(s, PLAYER)!.dividendRatio).toBe(ratio);
+    }
+  });
+
   it('crossing 20% emits one stakeDisclosed', () => {
     const s = withRival();
     s.holdings.push({ holder: PLAYER, companyId: 1, shares: 19_900, costCents: 19_900 * 700 });

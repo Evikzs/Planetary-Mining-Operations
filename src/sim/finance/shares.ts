@@ -245,7 +245,7 @@ export function setDividendRatio(state: GameState, ratio: number, actor: Company
   if (!l || !(ratio >= 0 && ratio <= 1) || Math.abs(steps - Math.round(steps)) > 1e-9) {
     return fail('INVALID_ORDER');
   }
-  l.dividendRatio = Math.round(steps) * 0.05;
+  l.dividendRatio = Math.round(steps) / 20;
   return OK;
 }
 

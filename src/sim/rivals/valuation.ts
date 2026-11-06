@@ -7,6 +7,10 @@ import {
   type Skill,
 } from '../../data/buildings';
 import type { GoodId } from '../../data/goods';
+import { cashAccount, companyOf, type CompanyId } from '../companies';
+import { creditLimitCents } from '../finance/credit';
+import { balance } from '../ledger';
+import { payrollCentsPerHour } from '../people/payroll';
 import type { GameState } from '../state';
 import { worldOf } from '../world/luna';
 
@@ -69,4 +73,14 @@ export function sectionValueCents(
     perHour += best;
   }
   return Math.round(perHour * 24 * horizonDays);
+}
+
+/** What a company can commit to bids and loans: its cash and unused credit, less a day of wages. */
+export function headroomCents(state: GameState, co: CompanyId): number {
+  const unused = creditLimitCents(state, co) - companyOf(state, co)!.credit.creditDrawnCents;
+  return (
+    balance(state.ledger, cashAccount(co)) +
+    Math.max(0, unused) -
+    payrollCentsPerHour(state, co) * 24
+  );
 }
