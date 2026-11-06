@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { COLONY } from '../../../src/data/balance';
 import { GOODS, type GoodId } from '../../../src/data/goods';
 import { sectionState } from '../../../src/sim/build/sections';
 import type { Contract } from '../../../src/sim/contracts/contracts';
@@ -128,8 +129,8 @@ describe('contracts', () => {
     expect(c.status).toBe('completed');
     expect(balance(s.ledger, 'co:0') - cash).toBe(100_000);
     expect(s.companies[0]!.reputation.luna).toBe(23);
-    expect(s.colonyPop - pop).toBeGreaterThanOrEqual(40);
-    expect(s.colonyPop - pop).toBeLessThanOrEqual(120);
+    expect(s.colonyPop - pop).toBeGreaterThanOrEqual(COLONY.growthPerContract[0]);
+    expect(s.colonyPop - pop).toBeLessThanOrEqual(COLONY.growthPerContract[1]);
     expect(events).toContainEqual({ t: 'contractCompleted', companyId: 0, contractId: c.id });
     expect(events).toContainEqual({
       t: 'income',

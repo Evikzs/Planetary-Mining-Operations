@@ -1,3 +1,4 @@
+import { COLONY } from '../../data/balance';
 import type { GoodId } from '../../data/goods';
 import { plotOccupied } from '../build/construction';
 import { addBuilding, gridFor, sectionState } from '../build/sections';
@@ -191,7 +192,7 @@ function complete(state: GameState, ctx: StepContext, c: Contract): void {
   changeReputation(state, holder, c.repGain);
   if (c.plotId !== null && c.asset) state.clientAssets.push({ plotId: c.plotId, asset: c.asset });
   closeSite(state, c);
-  state.colonyPop += ctx.rng.int(40, 120);
+  state.colonyPop += ctx.rng.int(...COLONY.growthPerContract);
   ctx.events.push({
     t: 'income',
     plotId: c.plotId,

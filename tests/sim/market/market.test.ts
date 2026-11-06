@@ -103,7 +103,9 @@ describe('market', () => {
   it('selling 100x hourly volume clears at the lower bound and returns the rest', () => {
     const s = founded();
     const depot = sectionState(s, home)!.depot;
-    depot.helium3 = 5000;
+    const { volumeTph, demandElasticity, supplyElasticity } = GOODS.helium3.npc;
+    const hourKg = volumeTph * 1000;
+    depot.helium3 = 100 * hourKg;
     // Goods set by hand: open the books from what the company now holds.
     openBooks(s, 0);
     expect(
@@ -112,16 +114,17 @@ describe('market', () => {
         goodId: 'helium3',
         side: 'sell',
         kind: 'market',
-        qtyKg: 5000,
+        qtyKg: 100 * hourKg,
         sectionId: home,
       }),
     ).toEqual({ ok: true });
     expect(depot.helium3 ?? 0).toBe(0);
     const [trade] = trades(run(s, 60));
     expect(s.market.helium3.lastCents).toBe(base('helium3') / 20);
-    near(trade!.kg / 4461, 1, 0.005);
+    // NPC demand at a twentieth of the price, less NPC supply there.
+    near(trade!.kg / (hourKg * (20 ** demandElasticity - 20 ** -supplyElasticity)), 1, 0.005);
     expect(trade!.cents).toBe(Math.round((trade!.kg * s.market.helium3.lastCents) / 1000));
-    expect(depot.helium3).toBe(5000 - trade!.kg);
+    expect(depot.helium3).toBe(100 * hourKg - trade!.kg);
     expect(s.orders).toHaveLength(0);
     expect(Number.isFinite(s.market.helium3.pRefCents)).toBe(true);
     expect(checkInvariants(s)).toEqual([]);

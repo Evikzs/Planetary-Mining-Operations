@@ -11,6 +11,7 @@ import { balanceSheet, closeMonth } from '../../../src/sim/finance/statements';
 import { balance } from '../../../src/sim/ledger';
 import { createRivalsSystem } from '../../../src/sim/rivals/ai';
 import { headroomCents, sectionValueCents } from '../../../src/sim/rivals/valuation';
+import { payrollCentsPerHour } from '../../../src/sim/people/payroll';
 import type { GameState } from '../../../src/sim/state';
 import { worldOf } from '../../../src/sim/world/luna';
 
@@ -162,6 +163,33 @@ describe('rival AI: finance and auctions', () => {
     for (const e of loans) {
       expect(e.cmd.t === 'takeLoan' && e.cmd.amountCents).toBeLessThanOrEqual(e.headroom);
     }
+  });
+
+  it('a rival bids for land from cash, keeping 3 days of wages, not from its credit line', () => {
+    const s = founded();
+    drain(s, 1, 6_000_000);
+    const lot = openLot(
+      s,
+      { kind: 'section', sectionId: neighbourOf(s, 1) },
+      null,
+      AUCTION.reserveCents,
+      [],
+    );
+    const sent = recording(s, 1);
+    const proxy = sent.find((e) => e.actor === 1 && e.cmd.t === 'setProxy');
+    const wagesPerDay = 24 * payrollCentsPerHour(s, 1);
+    expect(lot.proxies.find((p) => p.companyId === 1)?.ceilingCents ?? 0).toBeLessThanOrEqual(
+      6_000_000 - 3 * wagesPerDay,
+    );
+    expect(proxy === undefined || proxy.headroom > 6_000_000).toBe(true);
+  });
+
+  it('a rival repays its drawn credit line once its cash allows', () => {
+    const s = founded();
+    // Grey Ledger draws LM 50,000; its starting cash covers that many times over.
+    expect(applyCommand(s, { t: 'drawCredit', amountCents: 5_000_000 }, 3)).toEqual({ ok: true });
+    hours(s, 2);
+    expect(s.companies.find((c) => c.id === 3)!.credit.creditDrawnCents).toBe(0);
   });
 
   it('rivals pay their archetype dividend ratio after the first close', () => {

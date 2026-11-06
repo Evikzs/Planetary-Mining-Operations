@@ -27,6 +27,12 @@ const order = (
   ...x,
 });
 
+/** A good with the NPC volume it had in the M1 tables, which the results below were recorded with. */
+const m1 = (g: GoodId, volumeTph: number) => ({
+  ...GOODS[g],
+  npc: { ...GOODS[g].npc, volumeTph },
+});
+
 // Results recorded from the M1 clearing before its core moved into clearBook (task C6).
 describe('goods clearing', () => {
   it('gives the same prices and fills after the clearBook extraction', () => {
@@ -35,12 +41,12 @@ describe('goods clearing', () => {
       fills: [],
     });
     expect(
-      clear(GOODS.helium3, market('helium3'), 1, [
+      clear(m1('helium3', 0.05), market('helium3'), 1, [
         order(1, { goodId: 'helium3', side: 'sell', qtyKg: 5000 }),
       ]),
     ).toEqual({ priceCents: 300000, fills: [{ orderId: 1, kg: 4460 }] });
     expect(
-      clear(GOODS.steel, market('steel'), 1.3, [
+      clear(m1('steel', 12), market('steel'), 1.3, [
         order(1, { goodId: 'steel', side: 'sell', qtyKg: 6000, kind: 'limit', limitCents: 41_000 }),
         order(2, { goodId: 'steel', side: 'buy', qtyKg: 9000 }),
         order(3, { goodId: 'steel', side: 'sell', qtyKg: 2500 }),
@@ -54,7 +60,7 @@ describe('goods clearing', () => {
       ],
     });
     expect(
-      clear(GOODS.glass, market('glass'), 1, [
+      clear(m1('glass', 8), market('glass'), 1, [
         order(1, {
           goodId: 'glass',
           side: 'sell',

@@ -1,10 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import type { Command } from '../../../src/sim/commands';
-import { PLAYER, type CompanyId } from '../../../src/sim/companies';
+import { cashAccount, PLAYER, type CompanyId } from '../../../src/sim/companies';
 import type { Contract } from '../../../src/sim/contracts/contracts';
 import { applyCommand, createGame, step, SYSTEMS, type System } from '../../../src/sim/engine';
 import type { SimEvent } from '../../../src/sim/events';
-import { openBooks } from '../../../src/sim/finance/books';
+import { cashOut, openBooks } from '../../../src/sim/finance/books';
+import { BUILDINGS } from '../../../src/data/buildings';
+import { balance } from '../../../src/sim/ledger';
+import { payrollCentsPerHour } from '../../../src/sim/people/payroll';
 import { hashState } from '../../../src/sim/hash';
 import { checkInvariants } from '../../../src/sim/invariants';
 import { createRivalsSystem, decisionMinute } from '../../../src/sim/rivals/ai';
@@ -87,6 +90,24 @@ describe('rival AI: operations', () => {
       return hashState(s);
     });
     expect(b).toBe(a);
+  });
+
+  it('a rival keeps 3 days of wages in cash when it builds', () => {
+    const s = founded();
+    // Enough for its best build and one day of wages, not three.
+    const wages = 24 * payrollCentsPerHour(s, 1);
+    const cash = balance(s.ledger, cashAccount(1));
+    const keep = BUILDINGS.mine.cost.cents + 2 * wages;
+    expect(cashOut(s, 1, cash - keep, { to: 'expense', line: 'other' }, 'operating')).toBe(true);
+    const sent: Command[] = [];
+    withRivals(
+      createRivalsSystem((state, cmd, actor) => {
+        if (actor === 1) sent.push(cmd);
+        return applyCommand(state, cmd, actor);
+      }),
+      () => step(s, { mode: 'coarse' }),
+    );
+    expect(sent.some((c) => c.t === 'build')).toBe(false);
   });
 
   it('decides once an hour at its own minute', () => {

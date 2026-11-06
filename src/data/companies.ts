@@ -57,7 +57,7 @@ export const ARCHETYPES: Record<Archetype, ArchetypeWeights> = {
     auctionAggression: 1.3,
     dividendRatio: 0,
     wage: 'standard',
-    paybackDays: 6,
+    paybackDays: 12,
     goods: ['ilmenite', 'anorthite', 'regolith'],
   },
   cautiousMiner: {
@@ -70,7 +70,7 @@ export const ARCHETYPES: Record<Archetype, ArchetypeWeights> = {
     auctionAggression: 0.8,
     dividendRatio: 0.3,
     wage: 'standard',
-    paybackDays: 3,
+    paybackDays: 6,
     goods: ['ilmenite', 'regolith', 'polarVolatiles'],
   },
   financier: {
@@ -83,7 +83,7 @@ export const ARCHETYPES: Record<Archetype, ArchetypeWeights> = {
     auctionAggression: 1.0,
     dividendRatio: 0.2,
     wage: 'standard',
-    paybackDays: 4,
+    paybackDays: 8,
     goods: ['anorthite', 'kreep'],
   },
   pirateLinked: {
@@ -96,7 +96,7 @@ export const ARCHETYPES: Record<Archetype, ArchetypeWeights> = {
     auctionAggression: 1.5,
     dividendRatio: 0,
     wage: 'low',
-    paybackDays: 4,
+    paybackDays: 8,
     goods: ['helium3', 'kreep', 'ilmenite'],
   },
   stateBacked: {
@@ -109,7 +109,7 @@ export const ARCHETYPES: Record<Archetype, ArchetypeWeights> = {
     auctionAggression: 1.0,
     dividendRatio: 0.4,
     wage: 'high',
-    paybackDays: 8,
+    paybackDays: 16,
     goods: ['polarVolatiles', 'anorthite', 'regolith'],
   },
 };

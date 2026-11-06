@@ -118,6 +118,62 @@ function place(s: GameState, plot: Plot, type: BuildingTypeId): void {
   if (BUILDINGS[type].belt) createBelt(s, b);
 }
 
+/** Every free plot of a section built on: `first`, then the workplace cycle; a rig on each deposit. */
+function buildOut(s: GameState, sid: number, first: BuildingTypeId[]): void {
+  freePlots(s, sid, 'build').forEach((p, i) =>
+    place(s, p, first[i] ?? BENCH_BUILD_CYCLE[(i - first.length) % BENCH_BUILD_CYCLE.length]!),
+  );
+  for (const p of freePlots(s, sid, 'deposit')) place(s, p, RIG[p.deposit!.goodId]);
+}
+
+/** Every building at the bench level and at work. */
+function levelUp(s: GameState): void {
+  for (const b of s.buildings) {
+    b.level = BENCH_LEVEL;
+    b.status = 'active';
+    b.progress = 1;
+  }
+}
+
+/** Up to `max` newcomers in a section's free beds, with the skills its jobs ask for. */
+function fillHomes(s: GameState, rng: Rng, sid: number, max: number): number {
+  const here = s.buildings.filter((b) => b.sectionId === sid);
+  const skills = here.flatMap((b) =>
+    (Object.entries(slotsPerShift(b)) as [Skill, number][]).flatMap(([skill, n]) =>
+      Array<number>(3 * n).fill(SKILL_CODE[skill]),
+    ),
+  );
+  const byHome = residentsByHome(s);
+  let added = 0;
+  for (const h of here) {
+    for (let free = housingCapacity(h) - (byHome.get(h.id) ?? 0); free > 0 && added < max; free--) {
+      newcomer(s, rng, skills[added % skills.length] ?? 0, h.id);
+      added++;
+    }
+  }
+  return added;
+}
+
+/** Everyone at work: hands beyond the job slots report to a workplace in their own section. */
+function employAll(s: GameState): void {
+  autoAssign(s);
+  const p = s.people;
+  const byId = new Map(s.buildings.map((b) => [b.id, b]));
+  const sites = new Map<number, number[]>();
+  for (const b of s.buildings) {
+    if (Object.keys(slotsPerShift(b)).length)
+      sites.set(b.sectionId, [...(sites.get(b.sectionId) ?? []), b.id]);
+  }
+  for (let i = 0, n = 0; i < p.count; i++) {
+    if (p.job[i] !== -1) continue;
+    const list = sites.get(byId.get(p.home[i]!)!.sectionId)!;
+    p.job[i] = list[n % list.length]!;
+    p.shift[i] = n++ % 3;
+  }
+  autoAssign(s); // refreshes commute times
+  seatCurrentShift(s);
+}
+
 /**
  * The late-game load: 16 sections at level 10, 26 habitat domes, a garage and a full set of
  * workplaces in each, and exactly 10,000 workers, all housed and at work in their own section.
@@ -139,54 +195,55 @@ export function makeBenchState(seed: number): GameState {
     if (!s.buildings.some((b) => b.sectionId === sid && b.type === 'roverGarage'))
       first.push('roverGarage');
     for (let d = Math.min(domes, k < 10 ? 2 : 1); d > 0; d--, domes--) first.push('habitatDome');
-    freePlots(s, sid, 'build').forEach((p, i) =>
-      place(s, p, first[i] ?? BENCH_BUILD_CYCLE[(i - first.length) % BENCH_BUILD_CYCLE.length]!),
-    );
-    for (const p of freePlots(s, sid, 'deposit')) place(s, p, RIG[p.deposit!.goodId]);
+    buildOut(s, sid, first);
   });
-  for (const b of s.buildings) {
-    b.level = BENCH_LEVEL;
-    b.status = 'active';
-    b.progress = 1;
-  }
+  levelUp(s);
 
   // Homes fill section by section, with skills in the mix that section's jobs ask for.
   const rng = createRng(deriveSeed(seed, 'bench'));
   let left = BENCH_WORKERS - s.people.count;
-  for (const sid of order) {
-    const here = s.buildings.filter((b) => b.sectionId === sid);
-    const skills = here.flatMap((b) =>
-      (Object.entries(slotsPerShift(b)) as [Skill, number][]).flatMap(([skill, n]) =>
-        Array<number>(3 * n).fill(SKILL_CODE[skill]),
-      ),
-    );
-    const byHome = residentsByHome(s);
-    let k = 0;
-    for (const h of here) {
-      for (let free = housingCapacity(h) - (byHome.get(h.id) ?? 0); free > 0 && left > 0; free--) {
-        newcomer(s, rng, skills[k++ % skills.length] ?? 0, h.id);
-        left--;
-      }
+  for (const sid of order) left -= fillHomes(s, rng, sid, left);
+  if (left > 0) throw new Error(`bench housing is ${left} short`);
+  employAll(s);
+  openAllBooks(s);
+  return s;
+}
+
+const RIVAL_BENCH_SECTIONS = 5;
+
+/**
+ * The late-game load beside rivals: the player and five rivals with five sections each, every
+ * plot built on at level 10, and exactly 10,000 workers spread evenly, all housed and at work.
+ */
+export function makeRivalBenchState(seed: number): GameState {
+  const s = createGame(seed);
+  applyCommand(s, { t: 'foundCompany', name: 'Selene Rock Co', companionId: 'veteran' });
+  const world = worldOf(s);
+  // In turn, each company takes the lowest free neighbour of its land.
+  for (let round = 1; round < RIVAL_BENCH_SECTIONS; round++) {
+    for (const c of s.companies) {
+      const owned = new Set(s.sections.map((x) => x.id));
+      const near = s.sections
+        .filter((x) => x.owner === c.id)
+        .flatMap((x) => world.sections[x.id]!.neighbors)
+        .filter((n) => !owned.has(n))
+        .sort((a, b) => a - b);
+      ownSection(s, near[0] ?? world.sections.find((x) => !owned.has(x.id))!.id, c.id);
     }
   }
-  if (left > 0) throw new Error(`bench housing is ${left} short`);
-  autoAssign(s);
-  // Hands beyond the job slots still report to a workplace in their own section.
-  const p = s.people;
-  const byId = new Map(s.buildings.map((b) => [b.id, b]));
-  const sites = new Map<number, number[]>();
-  for (const b of s.buildings) {
-    if (Object.keys(slotsPerShift(b)).length)
-      sites.set(b.sectionId, [...(sites.get(b.sectionId) ?? []), b.id]);
+  const order = s.sections.map((x) => x.id);
+  for (const sid of order) {
+    const garage = s.buildings.some((b) => b.sectionId === sid && b.type === 'roverGarage');
+    buildOut(s, sid, [...(garage ? [] : ['roverGarage' as const]), 'habitatDome']);
   }
-  for (let i = 0, n = 0; i < p.count; i++) {
-    if (p.job[i] !== -1) continue;
-    const list = sites.get(byId.get(p.home[i]!)!.sectionId)!;
-    p.job[i] = list[n % list.length]!;
-    p.shift[i] = n++ % 3;
-  }
-  autoAssign(s); // refreshes commute times
-  seatCurrentShift(s);
+  levelUp(s);
+  const rng = createRng(deriveSeed(seed, 'rivalBench'));
+  let left = BENCH_WORKERS - s.people.count;
+  order.forEach((sid, k) => {
+    left -= fillHomes(s, rng, sid, Math.ceil(left / (order.length - k)));
+  });
+  if (left > 0) throw new Error(`rival bench housing is ${left} short`);
+  employAll(s);
   openAllBooks(s);
   return s;
 }

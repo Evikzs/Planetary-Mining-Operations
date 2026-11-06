@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { makeBenchState, makeDemoState } from '../../bot/scenes';
+import { makeBenchState, makeDemoState, makeRivalBenchState } from '../../bot/scenes';
 import { BUILDINGS } from '../../src/data/buildings';
 import { tripDuration } from '../../src/shared/trips';
 import { formatGameDate } from '../../src/sim/clock';
@@ -40,4 +40,26 @@ describe('scenes', () => {
     expect(demo.sections[0]!.power.factor).toBe(1);
     expect(checkInvariants(demo)).toEqual([]);
   });
+
+  it('the rival bench holds 6 active companies and exactly 10,000 workers', () => {
+    const s = makeRivalBenchState(1);
+    expect(s.companies.filter((c) => c.status === 'active')).toHaveLength(6);
+    expect(s.sections).toHaveLength(30);
+    const p = s.people;
+    expect(p.count).toBe(10_000);
+    const owner = new Map(s.sections.map((x) => [x.id, x.owner]));
+    const homeOwner = new Map(s.buildings.map((b) => [b.id, owner.get(b.sectionId)]));
+    const workers = new Map<number, number>();
+    for (let i = 0; i < p.count; i++) {
+      expect(p.home[i]).toBeGreaterThanOrEqual(0);
+      expect(p.job[i]).toBeGreaterThanOrEqual(0);
+      const co = homeOwner.get(p.home[i]!)!;
+      workers.set(co, (workers.get(co) ?? 0) + 1);
+    }
+    for (const c of s.companies) {
+      expect(s.sections.filter((x) => x.owner === c.id)).toHaveLength(5);
+      expect(workers.get(c.id)).toBeGreaterThan(1000);
+    }
+    expect(checkInvariants(s)).toEqual([]);
+  }, 30_000);
 });

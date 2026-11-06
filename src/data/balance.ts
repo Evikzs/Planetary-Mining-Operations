@@ -81,13 +81,18 @@ export const BUFFER_HOURS = 2;
 
 export const LAND_PRICE = { baseCents: 6_000_000, growth: 1.6 } as const;
 export const MARKET = {
-  meanReversion: 0.03,
-  momentum: 0.6,
+  meanReversion: 0.3,
+  momentum: 0.1,
   noiseSigma: 0.01,
   boundsFactor: 20,
   historyHours: 168,
 } as const;
-export const COLONY = { startPop: 1200, demandExponent: 0.8 } as const;
+export const COLONY = {
+  startPop: 1200,
+  demandExponent: 0.8,
+  /** New colonists a completed contract brings, at least and at most. */
+  growthPerContract: [4, 12],
+} as const;
 export const OFFLINE = {
   capMs: 28_800_000,
   efficiency: 0.5,

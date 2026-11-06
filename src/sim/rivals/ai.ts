@@ -39,7 +39,7 @@ export interface Option {
   cmd: Command;
   utility: number;
   why: string;
-  /** Cash it spends at once; the decision keeps a day of wages in hand. */
+  /** Cash it spends at once; the decision keeps 3 days of wages in hand. */
   costCents?: number;
   /** Workers the new building needs over three shifts. */
   crew?: number;
@@ -88,6 +88,8 @@ const MATERIALS = new Set<GoodId>(
 
 /** Raw ore a depot keeps for delivery contracts, as the M1 bot does. */
 const ORE_RESERVE_KG = 150_000;
+/** Days of wages a rival keeps in cash through every spend: the credit line can shrink at a close. */
+const RESERVE_DAYS = 3;
 const LIFE_SUPPORT = 1e9;
 const URGENT = 1e8;
 /** A free policy change that happens once: it goes ahead of trade and builds. */
@@ -466,7 +468,7 @@ const recipeInputs: OptionSource = (v) =>
 /** A lot's worth to a rival: ten days of its deposits' best margins times its appetite for land; on
  * a company's assets, half the buildings' book value as well. */
 function lotValueCents(v: RivalView, a: Auction): number {
-  let value = sectionValueCents(v.state, a.lot.sectionId, 10) * v.w.expand;
+  let value = sectionValueCents(v.state, a.lot.sectionId, AUCTION.valueHorizonDays) * v.w.expand;
   if (a.lot.kind === 'assets') {
     for (const b of v.state.buildings) {
       if (b.sectionId === a.lot.sectionId) value += 0.5 * b.bookCents;
@@ -489,7 +491,7 @@ function bestFreeSection(v: RivalView, open: Auction[]): number | null {
   let best: number | null = null;
   let bestValue = -1;
   for (const id of pool.sort((a, b) => a - b)) {
-    const value = sectionValueCents(v.state, id, 10);
+    const value = sectionValueCents(v.state, id, AUCTION.valueHorizonDays);
     if (value > bestValue) {
       best = id;
       bestValue = value;
@@ -500,13 +502,14 @@ function bestFreeSection(v: RivalView, open: Auction[]): number | null {
 
 /**
  * One proxy a decision, on the open lot worth most over its minimum bid, its ceiling within the
- * headroom its other proxies leave; and a lot of its own once its deposits are all built on.
+ * cash its other proxies leave; and a lot of its own once its deposits are all built on.
  */
 const auctions: OptionSource = (v) => {
   const { state, company } = v;
   const co = company.id;
   const open = state.auctions.filter((a) => a.status === 'open');
-  let room = v.headroom;
+  // Land is paid from cash, keeping 3 days of wages: the credit line is for shortfalls.
+  let room = Math.min(v.headroom, v.cash - RESERVE_DAYS * v.wagesPerDay);
   for (const a of open) room -= a.proxies.find((p) => p.companyId === co)?.ceilingCents ?? 0;
   let best: Option | undefined;
   for (const a of open) {
@@ -530,7 +533,9 @@ const auctions: OptionSource = (v) => {
     if (sid !== null) {
       out.push({
         cmd: { t: 'openAuction', sectionId: sid },
-        utility: sectionValueCents(state, sid, 10) * v.w.expand - AUCTION.reserveCents,
+        utility:
+          sectionValueCents(state, sid, AUCTION.valueHorizonDays) * v.w.expand -
+          AUCTION.reserveCents,
         why: `open ${sid}`,
         costCents: AUCTION.listingFeeCents,
       });
@@ -539,12 +544,12 @@ const auctions: OptionSource = (v) => {
   return out;
 };
 
-/** The best build a decision cannot pay for and keep a day of wages: what a loan or an issue funds. */
+/** The best build a decision cannot pay for and keep 3 days of wages: what a loan or an issue funds. */
 function buildWaitingOnCash(v: RivalView): Option | undefined {
   let best: Option | undefined;
   for (const o of builds(v))
     if (o.cmd.t === 'build' && (!best || o.utility > best.utility)) best = o;
-  return best && v.cash - (best.costCents ?? 0) < v.wagesPerDay ? best : undefined;
+  return best && v.cash - (best.costCents ?? 0) < RESERVE_DAYS * v.wagesPerDay ? best : undefined;
 }
 
 const LOAN_STEP_CENTS = 1_000_000;
@@ -559,7 +564,7 @@ const debt: OptionSource = (v) => {
   const rate = loanRate(company.credit.rating);
   const build = rate === null ? undefined : buildWaitingOnCash(v);
   if (build && rate !== null) {
-    const short = (build.costCents ?? 0) + v.wagesPerDay - v.cash;
+    const short = (build.costCents ?? 0) + RESERVE_DAYS * v.wagesPerDay - v.cash;
     const amount = Math.max(MIN_LOAN_CENTS, Math.ceil(short / LOAN_STEP_CENTS) * LOAN_STEP_CENTS);
     const equity = assets(state, co).total - liabilities(state, co);
     const debtAfter = loansOf(state, co) + company.credit.creditDrawnCents + amount;
@@ -575,9 +580,19 @@ const debt: OptionSource = (v) => {
       });
     }
   }
+  // The credit line is for a day's shortfall: what cash beyond 3 days of wages allows goes back.
+  const repay = Math.min(company.credit.creditDrawnCents, v.cash - RESERVE_DAYS * v.wagesPerDay);
+  if (repay > 0) {
+    out.push({
+      cmd: { t: 'repayCredit', amountCents: repay },
+      utility: POLICY,
+      why: 'repay credit',
+      costCents: repay,
+    });
+  }
   if (PRUDENT.has(company.archetype!)) {
     for (const l of state.loans) {
-      if (l.companyId !== co || v.cash <= 3 * v.wagesPerDay + l.principalCents) continue;
+      if (l.companyId !== co || v.cash <= RESERVE_DAYS * v.wagesPerDay + l.principalCents) continue;
       out.push({
         cmd: { t: 'repayLoan', loanId: l.id, amountCents: l.principalCents },
         utility: (l.principalCents * l.ratePerMonth) / 30,
@@ -673,7 +688,7 @@ export const OPTION_SOURCES: OptionSource[] = [
 
 export type Dispatch = (state: GameState, cmd: Command, actor: CompanyId) => CommandResult;
 
-/** One decision: every option, best first, up to three that work, a day of wages kept in hand. */
+/** One decision: every option, best first, up to three that work, 3 days of wages kept in hand. */
 export function decide(state: GameState, company: CompanyState, dispatch: Dispatch): void {
   const v = view(state, company);
   const options = OPTION_SOURCES.flatMap((source) => source(v))
@@ -686,7 +701,13 @@ export function decide(state: GameState, company: CompanyState, dispatch: Dispat
   for (const o of options) {
     if (done >= ACTIONS_PER_DECISION) break;
     const cost = o.costCents ?? 0;
-    if (o.utility < LIFE_SUPPORT && cost > 0 && v.cash - spent - cost < v.wagesPerDay) continue;
+    if (
+      o.utility < LIFE_SUPPORT &&
+      cost > 0 &&
+      v.cash - spent - cost < RESERVE_DAYS * v.wagesPerDay
+    ) {
+      continue;
+    }
     if ((o.crew ?? 0) > crew) continue;
     // Two builds short of the same material ask for it once.
     const order =

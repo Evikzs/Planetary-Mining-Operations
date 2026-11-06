@@ -10,6 +10,8 @@ export const AUCTION = {
   minIncrementPct: 0.05,
   listingFeeCents: 200_000,
   reserveCents: 3_000_000,
+  /** Days of a section's best deposit margins that bidders count as its value. */
+  valueHorizonDays: 10,
   scheduledEveryHours: 12,
   maxOpenLots: 6,
   maxOpenedPerCompany: 2,
