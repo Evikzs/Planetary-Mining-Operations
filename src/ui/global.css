@@ -1842,6 +1842,8 @@ h3 {
   inset: 0;
   z-index: 8;
   display: grid;
+  /* A bounded row, so the card's max-height holds and a long page scrolls inside it. */
+  grid-template-rows: minmax(0, 1fr);
   place-items: center;
   padding: var(--space-4);
   background: color-mix(in srgb, var(--c-navy) 80%, transparent);
@@ -1855,6 +1857,7 @@ h3 {
 }
 
 .away .body {
+  min-height: 0;
   overflow: auto;
   padding: var(--space-5) var(--space-6);
 }

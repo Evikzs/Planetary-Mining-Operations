@@ -4,7 +4,10 @@ import { step } from './engine';
 import { forPlayer, type SimEvent } from './events';
 import { balance } from './ledger';
 import type { GameState } from './state';
-import { cashAccount, PLAYER } from './companies';
+import { cashAccount, PLAYER, playerCompany } from './companies';
+import type { Rating } from './finance/credit';
+import { incomeStatement } from './finance/statements';
+import type { NewsItem } from './news';
 
 export interface AwaySummary {
   realMsAway: number;
@@ -19,6 +22,15 @@ export interface AwaySummary {
   arrivals: number;
   departures: number;
   alerts: SimEvent[];
+  netIncomeCents: number;
+  auctionsWon: number;
+  /** Lots the player bid on that a rival won. */
+  auctionsLost: number;
+  ratingFrom: Rating;
+  ratingTo: Rating;
+  interestPaidCents: number;
+  /** Up to 5 public events from the window, newest first. */
+  news: NewsItem[];
 }
 
 const ALERT_TYPES = new Set<SimEvent['t']>([
@@ -78,10 +90,33 @@ export function runCatchUp(
   const cash = balance(state.ledger, cashAccount(PLAYER));
   const produced = { ...state.stats.producedKg };
   const sold = { ...state.stats.soldKg };
+  const company = playerCompany(state);
+  const ratingFrom = company?.credit.rating ?? 'BBB';
+  // The month so far, plus each month that closes in the window (dividends skip net income).
+  const period = () => {
+    const income = company ? incomeStatement(company.books.period) : null;
+    return { net: income?.netIncome ?? 0, interest: income?.expense.interest ?? 0 };
+  };
+  const start = period();
+  const closed = { net: 0, interest: 0 };
+  const seenNews = new Set(state.news);
   const events: SimEvent[] = [];
+  let auctionsLost = 0;
   // The summary reports the player's company; rivals' events reach the player as news.
-  const run = (mode: 'fine' | 'coarse') =>
-    events.push(...step(state, { mode, offlineEfficiency: OFFLINE.efficiency }).filter(forPlayer));
+  const run = (mode: 'fine' | 'coarse') => {
+    for (const e of step(state, { mode, offlineEfficiency: OFFLINE.efficiency })) {
+      if (e.t === 'auctionWon' && e.companyId !== PLAYER) {
+        const lot = state.auctions.find((a) => a.id === e.auctionId);
+        if (lot?.bids.some((b) => b.companyId === PLAYER)) auctionsLost++;
+      }
+      const month = e.t === 'monthClosed' && e.companyId === PLAYER && company?.books.closed[0];
+      if (month) {
+        closed.net += month.income.netIncome;
+        closed.interest += month.income.expense.interest;
+      }
+      if (forPlayer(e)) events.push(e);
+    }
+  };
 
   let left = total;
   while (left > 0 && state.tick % 60 !== 0) {
@@ -111,5 +146,12 @@ export function runCatchUp(
     arrivals: people('arrivals'),
     departures: people('emigration'),
     alerts: awayAlerts(events),
+    netIncomeCents: period().net + closed.net - start.net,
+    auctionsWon: count('auctionWon'),
+    auctionsLost,
+    ratingFrom,
+    ratingTo: company?.credit.rating ?? ratingFrom,
+    interestPaidCents: period().interest + closed.interest - start.interest,
+    news: state.news.filter((n) => !seenNews.has(n)).slice(0, 5),
   };
 }

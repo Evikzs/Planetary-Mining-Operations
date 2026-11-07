@@ -8,11 +8,15 @@ const OUTPUT: Record<GoodGroup, string> = {
   component: 'Assembly lines roll',
 };
 
-/** The biggest story while the player was away: bad news first, then what the company made. */
+/** The biggest story while the player was away: bad news first, then land won, then what the
+ * company made. */
 function lead(s: AwaySummary): string {
   if (s.contractsFailed > 0) return s.contractsFailed > 1 ? 'Contracts lost' : 'Contract lost';
   for (const a of s.alerts) if (a.t === 'shortage') return `${NEED[a.need]} runs short`;
   if (s.alerts.some((a) => a.t === 'strike')) return 'Crews walk out';
+  if (s.auctionsWon > 0) {
+    return s.auctionsWon > 1 ? 'Sections won at auction' : 'Section won at auction';
+  }
   if (s.contractsCompleted > 0) {
     return s.contractsCompleted > 1 ? 'Contracts delivered' : 'Contract delivered';
   }

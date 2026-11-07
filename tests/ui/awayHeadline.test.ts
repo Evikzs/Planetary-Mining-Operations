@@ -14,9 +14,27 @@ const quiet: AwaySummary = {
   arrivals: 0,
   departures: 0,
   alerts: [],
+  netIncomeCents: 0,
+  auctionsWon: 0,
+  auctionsLost: 0,
+  ratingFrom: 'BBB',
+  ratingTo: 'BBB',
+  interestPaidCents: 0,
+  news: [],
 };
 
 describe('away headline', () => {
+  it('names an auction win after bad news and before output', () => {
+    const won = { ...quiet, auctionsWon: 1, producedKg: { steel: 9_000 } };
+    expect(awayHeadline(won, 100_000)).toBe('Section won at auction\u00a0— cash holds');
+    expect(awayHeadline({ ...won, auctionsWon: 2 }, 100_000)).toBe(
+      'Sections won at auction\u00a0— cash holds',
+    );
+    expect(awayHeadline({ ...won, contractsFailed: 1 }, 100_000)).toBe(
+      'Contract lost\u00a0— cash holds',
+    );
+  });
+
   it('leads with what changed and ends with the cash', () => {
     const ore = { ...quiet, cashDeltaCents: 42_000, producedKg: { ilmenite: 30_000 } };
     expect(awayHeadline(ore, 142_000)).toBe('Ore flows\u00a0— cash up 42%');

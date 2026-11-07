@@ -1,9 +1,10 @@
 import { useEffect, useRef } from 'preact/hooks';
 import { away, ui, world } from '../../client/store';
-import { alertText } from '../../data/copy';
+import { alertText, newsText } from '../../data/copy';
 import { GOODS, type GoodId } from '../../data/goods';
 import { formatGameDuration, formatMass, formatMoney } from '../format';
 import { namesIn } from '../shell/Alerts';
+import { nameOf } from '../tabs/FinanceTab';
 import { awayHeadline } from './awayHeadline';
 
 /** The three goods with the most mass, as '30.0 t Ilmenite, 5.00 t Steel'. */
@@ -26,6 +27,7 @@ export function AwayScreen() {
   if (!s || !snap) return null;
   const names = namesIn(world.value);
   const cash = s.cashDeltaCents;
+  const signed = (cents: number) => (cents > 0 ? '+' : '') + formatMoney(cents);
   return (
     <div class="away-backdrop">
       <article class="away card" role="dialog" aria-modal="true" aria-labelledby="away-title">
@@ -48,7 +50,25 @@ export function AwayScreen() {
             </div>
             <div>
               <dt>Cash</dt>
-              <dd class="num">{(cash > 0 ? '+' : '') + formatMoney(cash)}</dd>
+              <dd class="num">{signed(cash)}</dd>
+            </div>
+            <div>
+              <dt>Net income</dt>
+              <dd class="num">{signed(s.netIncomeCents)}</dd>
+            </div>
+            <div>
+              <dt>Auctions won</dt>
+              <dd class="num">{s.auctionsWon}</dd>
+            </div>
+            <div>
+              <dt>Auctions lost</dt>
+              <dd class="num">{s.auctionsLost}</dd>
+            </div>
+            <div>
+              <dt>Credit rating</dt>
+              <dd>
+                {s.ratingFrom === s.ratingTo ? s.ratingTo : `${s.ratingFrom} to ${s.ratingTo}`}
+              </dd>
             </div>
             <div>
               <dt>Contracts</dt>
@@ -75,6 +95,16 @@ export function AwayScreen() {
             Crews worked skeleton shifts, so output ran at half rate.
             {s.capped && ' After 8 hours the Moon waited for you.'}
           </p>
+          {s.news.length > 0 && (
+            <section aria-labelledby="away-news">
+              <h3 id="away-news">On the wire</h3>
+              <ul>
+                {s.news.map((n, i) => (
+                  <li key={i}>{newsText(n, nameOf(snap))}</li>
+                ))}
+              </ul>
+            </section>
+          )}
           {s.alerts.length > 0 && (
             <section aria-labelledby="away-alerts">
               <h3 id="away-alerts">Needs your attention</h3>

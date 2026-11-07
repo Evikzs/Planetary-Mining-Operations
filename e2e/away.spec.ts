@@ -10,6 +10,9 @@ test('two hours away brings up the away page until Back to work', async ({ page 
   await expect(away).toBeVisible({ timeout: 15_000 });
   await expect(away.getByRole('heading', { level: 2 })).toHaveText(/\s— cash (up|down|holds)/);
   await expect(away).toContainText('2 h');
+  for (const label of ['Net income', 'Auctions won', 'Auctions lost', 'Credit rating']) {
+    await expect(away).toContainText(label);
+  }
   await away.getByRole('button', { name: 'Back to work' }).click();
   await expect(away).toBeHidden();
 });

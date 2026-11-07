@@ -3,6 +3,8 @@ import { makeBenchState } from '../../bot/scenes';
 import { OFFLINE } from '../../src/data/balance';
 import type { Skill } from '../../src/data/buildings';
 import { applyCommand, createGame, step } from '../../src/sim/engine';
+import { PLAYER } from '../../src/sim/companies';
+import { incomeStatement } from '../../src/sim/finance/statements';
 import { hashState } from '../../src/sim/hash';
 import { awayAlerts, runCatchUp } from '../../src/sim/offline';
 import { seatCurrentShift } from '../../src/sim/people/commute';
@@ -40,6 +42,43 @@ function withMine(): GameState {
   seatCurrentShift(s);
   return s;
 }
+
+/**
+ * Seed 42 with rivals, 3 game hours before the 2091-04-01 close. The player holds a proxy on one
+ * lot and the lowest bid on another, which rival 1's proxy tops; both lots end 2 hours into the
+ * window. Then a LM 100,000 loan at BBB, and 8 real hours away at 1x: 480 game hours.
+ */
+function acrossTheClose() {
+  const s = createGame(42);
+  applyCommand(s, { t: 'foundCompany', name: 'Selene Rock Co', companionId: 'veteran' });
+  while (s.tick < 44_100) step(s, { mode: 'coarse' }); // 2091-03-31 20:00
+  const taken = new Set([
+    ...s.sections.map((x) => x.id),
+    ...s.auctions.filter((a) => a.status === 'open').map((a) => a.lot.sectionId),
+  ]);
+  const [mine, theirs] = world.sections[home]!.neighbors.filter((id) => !taken.has(id));
+  for (const sectionId of [mine!, theirs!]) applyCommand(s, { t: 'openAuction', sectionId });
+  const lotOn = (id: number) =>
+    s.auctions.find((a) => a.status === 'open' && a.lot.sectionId === id)!;
+  const won = lotOn(mine!);
+  const lost = lotOn(theirs!);
+  applyCommand(s, { t: 'setProxy', auctionId: won.id, ceilingCents: 30_000_000 });
+  applyCommand(s, { t: 'placeBid', auctionId: lost.id, amountCents: 3_000_000 });
+  applyCommand(s, { t: 'setProxy', auctionId: lost.id, ceilingCents: 5_000_000 }, 1);
+  while (s.tick < 44_160) step(s, { mode: 'fine' });
+  expect(applyCommand(s, { t: 'takeLoan', amountCents: 10_000_000, months: 3 })).toEqual({
+    ok: true,
+  });
+  const books = s.companies[PLAYER]!.books;
+  const before = {
+    news: new Set(s.news),
+    net: books.retainedCents + incomeStatement(books.period).netIncome,
+  };
+  const summary = runCatchUp(s, 8 * 3_600_000, 1);
+  return { s, won, lost, before, summary };
+}
+let across: ReturnType<typeof acrossTheClose> | undefined;
+const scenario = () => (across ??= acrossTheClose());
 
 describe('offline catch-up', () => {
   it('negative time does nothing', () => {
@@ -98,6 +137,32 @@ describe('offline catch-up', () => {
     expect(summary.arrivals).toBeGreaterThanOrEqual(0);
     expect(summary.departures).toBeGreaterThanOrEqual(0);
   });
+
+  it('an 8-hour catch-up across an auction end, a month close and loan interest counts each once', () => {
+    const { s, won, summary } = scenario();
+    expect(summary.gameHours).toBe(480);
+    expect(won).toMatchObject({ status: 'won', winner: PLAYER });
+    expect(summary.auctionsWon).toBe(1);
+    expect(s.companies[PLAYER]!.books.closed.map((m) => m.label)).toEqual(['2091-03']);
+    // LM 100,000 at 3.2% a month (BBB), 480 of a month's 720 hours.
+    expect(Math.abs(summary.interestPaidCents - (10_000_000 * 0.032 * 480) / 720)).toBeLessThan(1);
+  }, 60_000);
+
+  it('the away summary reports net income, auctions won and lost, and the rating change', () => {
+    const { s, lost, before, summary } = scenario();
+    const books = s.companies[PLAYER]!.books;
+    expect(lost).toMatchObject({ status: 'won', winner: 1 });
+    expect(summary).toMatchObject({ auctionsWon: 1, auctionsLost: 1, ratingFrom: 'BBB' });
+    expect(summary.ratingTo).toBe(s.companies[PLAYER]!.credit.rating);
+    expect(summary.ratingTo).not.toBe('BBB');
+    expect(summary.netIncomeCents).toBe(
+      books.retainedCents + incomeStatement(books.period).netIncome - before.net,
+    );
+    expect(summary.news.length).toBeGreaterThan(0);
+    expect(summary.news.length).toBeLessThanOrEqual(5);
+    expect(summary.news.every((n) => !before.news.has(n))).toBe(true);
+    expect(summary.news).toEqual(s.news.filter((n) => !before.news.has(n)).slice(0, 5));
+  }, 60_000);
 
   it('keeps one alert per type and section', () => {
     const alerts = awayAlerts([
