@@ -138,3 +138,11 @@ Task 17: Ruling: codexFacts.ts is unchanged — the rules name no fact tables fo
 Task 17: Ruling: in reduced motion the ticker pins the item on show and steps to the next older one every 8 s, instead of indexing the newest-first list — new news shifted the list and held the same item on screen (e2e caught it) — cost if wrong: none.
 Task 17: Ruling: gotoGame now also waits for the renderer — __pmo.setCamera is a silent no-op before it exists, and four full runs each lost one visual or motion spec to the default view once live-rival specs ran alongside — cost if wrong: about a second more per spec.
 Task 17: note: check 424 tests; bot unchanged (3.81x); full e2e 83 passed, 3 skipped after the gotoGame renderer wait.
+Task 18: complete (commits a4d2e85..d97ba9b, tests: npx vitest run →    Duration  40.85s (transform 3.34s, setup 0ms, import 11.50s, tests 57.63s, environment 6ms))
+Task 18: Ruling: the catch-up test plays seed 42 with rivals to 2091-03-31 20:00 and gives rival 1 a proxy on the second lot, so a lot is lost — by day 30 the rival AI no longer bids near the player — cost if wrong: "proxy bids bid during catch-up" rests on the C7 tests, since nobody outbids the player's proxy inside this window.
+Task 18: Ruling: net income and interest come from the period accounts plus each player month that closes in the window, not from retained earnings — dividends post straight to retained earnings — cost if wrong: none.
+Task 18: Ruling: auctions lost counts rival wins on lots the player had bid on, read at the step the lot settles — a lot can drop from state.auctions after 20 closures — cost if wrong: a player bid that defaulted counts as a loss.
+Task 18: Ruling: the away page also lists summary.news under "On the wire" — the brief puts news in the summary, and the page is its only reader — cost if wrong: one section to remove.
+Task 18: Ruling: the away backdrop gets grid-template-rows: minmax(0, 1fr) and the card body min-height: 0 — the longer page overflowed off a phone screen, and "Back to work" could not be reached — cost if wrong: none.
+Task 18: note: the away e2e lines were added and the UI written in one pass; the unit tests and the headline test were watched failing first, the e2e assertion was not.
+Task 18: note: check 427 tests; bot unchanged (3.81x); full e2e 83 passed, 3 skipped.
