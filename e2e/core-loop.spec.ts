@@ -101,13 +101,20 @@ test('the core loop: found, build, sell, deliver, expand, and reload', async ({ 
 
   // 7. Accept the ilmenite delivery and fill it from the depot.
   await openTab(page, 'Contracts');
-  await panel
+  const offers = panel
     .getByRole('region', { name: 'Offers' })
     .getByRole('article')
-    .filter({ hasText: /Deliver [\d.,]+ t Ilmenite/ })
-    .first() // hours 113 to 165 hold two of them
-    .getByRole('button', { name: 'Accept' })
-    .click({ timeout: 40_000 });
+    .filter({ hasText: /Deliver [\d.,]+ t Ilmenite/ });
+  // Rivals take a public offer after 12 game hours, 6 real seconds here: hold the clock while
+  // clicking, or a slow runner loses the offer under the pointer.
+  for (;;) {
+    await expect(offers).not.toHaveCount(0, { timeout: 40_000 });
+    await page.evaluate(() => window.__pmo.freeze(true));
+    if ((await offers.count()) > 0) break;
+    await page.evaluate(() => window.__pmo.freeze(false));
+  }
+  await offers.first().getByRole('button', { name: 'Accept' }).click(); // hours 113 to 165 hold two
+  await page.evaluate(() => window.__pmo.freeze(false));
   const needKg = await page.evaluate(() => {
     const stage = window.__pmo.ui()!.contracts.find((c) => c.status === 'active')!.stages[0]!;
     return stage.kind === 'deliver' ? (stage.needKg.ilmenite ?? 0) : 0;
