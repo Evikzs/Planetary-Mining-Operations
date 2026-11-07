@@ -34,8 +34,13 @@ const host = new SimHost({
   checkInvariants: import.meta.env.DEV ? checkInvariants : undefined,
   loadScene: debugEnabled()
     ? async (scene, seed) => {
-        const { makeBenchState, makeDemoState } = await import('../../bot/scenes');
-        return scene === 'demo' ? makeDemoState(seed) : makeBenchState(seed);
+        const scenes = await import('../../bot/scenes');
+        const make = {
+          demo: scenes.makeDemoState,
+          bench: scenes.makeBenchState,
+          rivalBench: scenes.makeRivalBenchState,
+        };
+        return make[scene](seed);
       }
     : undefined,
 });

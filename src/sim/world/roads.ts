@@ -1,7 +1,6 @@
 import { MAX_ROAD_SLOPE } from '../../shared/scale';
 import type { Terrain } from '../../shared/terrain';
 import {
-  add,
   angleBetween,
   dot,
   len,
@@ -231,14 +230,17 @@ export function buildSectionGrid(world: WorldLike, sectionId: number, hub: Vec3)
   return grid;
 }
 
-function* neighbors(c: number): Generator<number> {
+/** The cells around one, in DIRS order. An array, not a generator: route searches call it often. */
+function neighbors(c: number): number[] {
   const i = c % GRID_SIZE;
   const j = Math.floor(c / GRID_SIZE);
+  const out: number[] = [];
   for (const [di, dj] of DIRS) {
     const ni = i + di;
     const nj = j + dj;
-    if (ni >= 0 && nj >= 0 && ni < GRID_SIZE && nj < GRID_SIZE) yield nj * GRID_SIZE + ni;
+    if (ni >= 0 && nj >= 0 && ni < GRID_SIZE && nj < GRID_SIZE) out.push(nj * GRID_SIZE + ni);
   }
+  return out;
 }
 
 const stepLen = (a: number, b: number) =>
@@ -278,7 +280,10 @@ class Heap {
     while (i > 0) {
       const parent = (i - 1) >> 1;
       if (a[parent]![0] <= a[i]![0]) break;
-      [a[parent], a[i]] = [a[i]!, a[parent]!];
+      // A temp, not [x, y] = [y, x]: route searches swap often, and that builds an array each time.
+      const t = a[parent]!;
+      a[parent] = a[i]!;
+      a[i] = t;
       i = parent;
     }
   }
@@ -296,7 +301,9 @@ class Heap {
         if (l < a.length && a[l]![0] < a[m]![0]) m = l;
         if (r < a.length && a[r]![0] < a[m]![0]) m = r;
         if (m === i) break;
-        [a[m], a[i]] = [a[i]!, a[m]!];
+        const t = a[m]!;
+        a[m] = a[i]!;
+        a[i] = t;
         i = m;
       }
     }
@@ -353,11 +360,34 @@ export function connectToNetwork(
   const cells = [goal];
   while (cells[cells.length - 1] !== start) cells.push(prev.get(cells[cells.length - 1]!)!);
   cells.reverse();
-  const points = smooth([from, ...cells.slice(1).map((c) => cellDir(g, c))], g.radius);
-  const line = { id: newId(), cells, points };
+  const line = { id: newId(), cells, points: polylinePoints(g, from, cells) };
   net.polylines.push(line);
   insertSorted(net.roadCells, cells);
   return line;
+}
+
+const search = {
+  gen: 0,
+  dist: new Float64Array(GRID_SIZE * GRID_SIZE),
+  prev: new Int32Array(GRID_SIZE * GRID_SIZE),
+  stamp: new Uint32Array(GRID_SIZE * GRID_SIZE),
+};
+
+const roadSets = new WeakMap<RoadNet, { size: number; cells: Set<number> }>();
+
+/** The network's road cells as a set, rebuilt only when cells are added (they never go). */
+function roadSet(net: RoadNet): Set<number> {
+  let r = roadSets.get(net);
+  if (r?.size !== net.roadCells.length) {
+    r = { size: net.roadCells.length, cells: new Set(net.roadCells) };
+    roadSets.set(net, r);
+  }
+  return r.cells;
+}
+
+/** A road's drawn line: from its plot through the cells after the first. Saves keep only `from`. */
+export function polylinePoints(g: SectionGrid, from: Vec3, cells: number[]): Vec3[] {
+  return smooth([from, ...cells.slice(1).map((c) => cellDir(g, c))], g.radius);
 }
 
 /** Shortest path along existing road cells (A*). */
@@ -367,7 +397,7 @@ export function roadPath(
   from: Vec3,
   to: Vec3,
 ): { cells: number[]; points: Vec3[]; length: number } | null {
-  const roads = new Set(net.roadCells);
+  const roads = roadSet(net);
   const start = cellOf(g, from);
   const goal = cellOf(g, to);
   if (start === null || goal === null || !roads.has(start) || !roads.has(goal)) return null;
@@ -378,27 +408,32 @@ export function roadPath(
     const dy = Math.abs(Math.floor(c / GRID_SIZE) - gj);
     return GRID_CELL * (Math.max(dx, dy) + (Math.SQRT2 - 1) * Math.min(dx, dy));
   };
-  const dist = new Map<number, number>([[start, 0]]);
-  const prev = new Map<number, number>();
+  // Typed arrays reused across searches; a cell counts only if stamped by this search.
+  const gen = ++search.gen;
+  const { dist, prev, stamp } = search;
+  const known = (c: number) => stamp[c] === gen;
+  dist[start] = 0;
+  stamp[start] = gen;
   const heap = new Heap();
   heap.push(h(start), start);
   while (heap.size) {
     const [, c] = heap.pop();
     if (c === goal) break;
-    const d = dist.get(c)!;
+    const d = dist[c]!;
     for (const nb of neighbors(c)) {
       if (!roads.has(nb)) continue;
       const nd = d + stepLen(c, nb);
-      if (nd < (dist.get(nb) ?? Infinity)) {
-        dist.set(nb, nd);
-        prev.set(nb, c);
+      if (nd < (known(nb) ? dist[nb]! : Infinity)) {
+        dist[nb] = nd;
+        prev[nb] = c;
+        stamp[nb] = gen;
         heap.push(nd + h(nb), nb);
       }
     }
   }
-  if (!dist.has(goal)) return null;
+  if (!known(goal)) return null;
   const cells = [goal];
-  while (cells[cells.length - 1] !== start) cells.push(prev.get(cells[cells.length - 1]!)!);
+  while (cells[cells.length - 1] !== start) cells.push(prev[cells[cells.length - 1]!]!);
   cells.reverse();
   const points = smooth([from, ...cells.slice(1, -1).map((c) => cellDir(g, c)), to], g.radius);
   let length = 0;
@@ -406,24 +441,39 @@ export function roadPath(
   return { cells, points, length };
 }
 
+/** Ramer-Douglas-Peucker on index ranges, with no sub-arrays: the same key points, cheaper. */
 function rdp(points: Vec3[], tol: number): Vec3[] {
   if (points.length <= 2) return points;
-  const a = points[0]!;
-  const b = points[points.length - 1]!;
-  const ab = sub(b, a);
-  const abLen = len(ab);
-  let worst = 0;
-  let index = 0;
-  for (let i = 1; i < points.length - 1; i++) {
-    const ap = sub(points[i]!, a);
-    const d = abLen === 0 ? len(ap) : len(sub(ap, scale(ab, dot(ap, ab) / (abLen * abLen))));
-    if (d > worst) {
-      worst = d;
-      index = i;
+  const keep: Vec3[] = [];
+  // Adds the key points from lo up to, not including, hi.
+  const walk = (lo: number, hi: number): void => {
+    const a = points[lo]!;
+    if (hi - lo < 2) {
+      keep.push(a);
+      return;
     }
-  }
-  if (worst <= tol) return [a, b];
-  return [...rdp(points.slice(0, index + 1), tol).slice(0, -1), ...rdp(points.slice(index), tol)];
+    const ab = sub(points[hi]!, a);
+    const abLen = len(ab);
+    let worst = 0;
+    let index = 0;
+    for (let i = lo + 1; i < hi; i++) {
+      const ap = sub(points[i]!, a);
+      const d = abLen === 0 ? len(ap) : len(sub(ap, scale(ab, dot(ap, ab) / (abLen * abLen))));
+      if (d > worst) {
+        worst = d;
+        index = i;
+      }
+    }
+    if (worst <= tol) {
+      keep.push(a);
+      return;
+    }
+    walk(lo, index);
+    walk(index, hi);
+  };
+  walk(0, points.length - 1);
+  keep.push(points[points.length - 1]!);
+  return keep;
 }
 
 /** Simplifies (RDP, 0.15 units) and resamples with a centripetal Catmull-Rom spline every 0.2 units. */
@@ -439,26 +489,34 @@ export function smooth(points: Vec3[], radius: number): Vec3[] {
     const p2 = key[k + 1]!;
     const p3 = key[Math.min(key.length - 1, k + 2)]!;
     const steps = Math.max(1, Math.ceil(len(sub(p2, p1)) / spacing));
-    for (let s = 0; s < steps; s++) out.push(normalize(catmullRom(p0, p1, p2, p3, s / steps)));
+    const curve = catmullRom(p0, p1, p2, p3);
+    for (let s = 0; s < steps; s++) out.push(normalize(curve(s / steps)));
   }
   out.push(points[points.length - 1]!);
   out[0] = points[0]!;
   return out;
 }
 
-function catmullRom(p0: Vec3, p1: Vec3, p2: Vec3, p3: Vec3, t: number): Vec3 {
+/** One centripetal Catmull-Rom segment from p1 to p2; the knots are worked out once per segment. */
+function catmullRom(p0: Vec3, p1: Vec3, p2: Vec3, p3: Vec3): (t: number) => Vec3 {
   const knot = (a: Vec3, b: Vec3) => Math.max(1e-12, Math.sqrt(len(sub(b, a))));
   const t0 = 0;
   const t1 = t0 + knot(p0, p1);
   const t2 = t1 + knot(p1, p2);
   const t3 = t2 + knot(p2, p3);
-  const u = t1 + (t2 - t1) * t;
-  const lerp = (a: Vec3, b: Vec3, ta: number, tb: number) =>
-    add(scale(a, (tb - u) / (tb - ta)), scale(b, (u - ta) / (tb - ta)));
-  const a1 = lerp(p0, p1, t0, t1);
-  const a2 = lerp(p1, p2, t1, t2);
-  const a3 = lerp(p2, p3, t2, t3);
-  const b1 = lerp(a1, a2, t0, t2);
-  const b2 = lerp(a2, a3, t1, t3);
-  return lerp(b1, b2, t1, t2);
+  return (t) => {
+    const u = t1 + (t2 - t1) * t;
+    // a × (tb − u)/(tb − ta) + b × (u − ta)/(tb − ta), without the tuples in between.
+    const lerp = (a: Vec3, b: Vec3, ta: number, tb: number): Vec3 => {
+      const ka = (tb - u) / (tb - ta);
+      const kb = (u - ta) / (tb - ta);
+      return [a[0] * ka + b[0] * kb, a[1] * ka + b[1] * kb, a[2] * ka + b[2] * kb];
+    };
+    const a1 = lerp(p0, p1, t0, t1);
+    const a2 = lerp(p1, p2, t1, t2);
+    const a3 = lerp(p2, p3, t2, t3);
+    const b1 = lerp(a1, a2, t0, t2);
+    const b2 = lerp(a2, a3, t1, t3);
+    return lerp(b1, b2, t1, t2);
+  };
 }

@@ -44,15 +44,24 @@ function slerp(a: Vec3, b: Vec3, t: number): Vec3 {
   return add(scale(a, Math.sin((1 - t) * theta) / s), scale(b, Math.sin(t * theta) / s));
 }
 
-export function createBelt(state: GameState, building: Building): Belt {
+/** A belt's line from its plot to the hub, a point every 0.2 units: the world fixes it, so saves leave it out. */
+export function beltPoints(
+  state: GameState,
+  b: Pick<Building, 'plotId' | 'sectionId'>,
+): { points: Vec3[]; length: number } {
   const world = worldOf(state);
-  const from = world.plots[building.plotId]!.dir;
-  const to = hubDir(state, building.sectionId);
+  const from = world.plots[b.plotId]!.dir;
+  const to = hubDir(state, b.sectionId);
   const length = angleBetween(from, to) * world.radius;
   const n = Math.max(1, Math.ceil(length / 0.2));
   const points = Array.from({ length: n + 1 }, (_, i) =>
     i === 0 ? from : i === n ? to : slerp(from, to, i / n),
   );
+  return { points, length };
+}
+
+export function createBelt(state: GameState, building: Building): Belt {
+  const { points, length } = beltPoints(state, building);
   const belt: Belt = {
     id: newId(state),
     buildingId: building.id,

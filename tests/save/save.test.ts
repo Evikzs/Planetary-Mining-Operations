@@ -1,6 +1,7 @@
 import 'fake-indexeddb/auto';
 import { openDB } from 'idb';
 import { describe, expect, it } from 'vitest';
+import { makeRivalBenchState } from '../../bot/scenes';
 import { applyCommand, createGame, step } from '../../src/sim/engine';
 import { hashState } from '../../src/sim/hash';
 import { decodeExportCode, encodeExportCode } from '../../src/save/exportCode';
@@ -29,6 +30,22 @@ describe('save files', () => {
     const back = deserializeState(JSON.parse(JSON.stringify(serializeState(s))));
     expect(hashState(back)).toBe(hashState(s));
   });
+
+  it('a save round trip without trip geometry keeps the state hash', () => {
+    const s = makeRivalBenchState(1);
+    for (let i = 0; i < 60; i++) step(s, { mode: 'fine' }); // buses on the road
+    const saved = JSON.parse(JSON.stringify(serializeState(s))) as {
+      trips: Record<string, unknown>[];
+      belts: Record<string, unknown>[];
+      sections: { roadNet: { polylines: Record<string, unknown>[] } }[];
+    };
+    expect(saved.trips.length).toBeGreaterThan(0);
+    expect(saved.trips.every((t) => !('points' in t) && !('cum' in t))).toBe(true);
+    expect(saved.belts.every((b) => !('points' in b))).toBe(true);
+    const lines = saved.sections.flatMap((x) => x.roadNet.polylines);
+    expect(lines.every((l) => !('points' in l))).toBe(true);
+    expect(hashState(deserializeState(saved))).toBe(hashState(s));
+  }, 60_000);
 
   it('round-trips through a save file', () => {
     const s = foundedState();

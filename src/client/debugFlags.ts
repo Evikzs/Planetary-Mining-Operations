@@ -1,4 +1,6 @@
-import type { DebugFlags } from '../worker/protocol';
+import type { DebugFlags, Scene } from '../worker/protocol';
+
+const SCENES: Scene[] = ['demo', 'bench', 'rivalBench'];
 
 export const DEFAULT_DEBUG_FLAGS: DebugFlags = {
   timescale: 1,
@@ -21,7 +23,7 @@ export function parseDebugFlags(search: string, enabled: boolean): DebugFlags {
     timescale: Math.min(600, Math.max(1, int('timescale') ?? 1)),
     freeze: q.get('freeze') === '1',
     seed: int('seed'),
-    scene: scene === 'demo' || scene === 'bench' ? scene : 'none',
+    scene: SCENES.find((s) => s === scene) ?? 'none',
     noWebgl: q.get('nowebgl') === '1',
   };
 }

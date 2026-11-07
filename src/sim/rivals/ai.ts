@@ -19,10 +19,11 @@ import { assets, liabilities } from '../finance/books';
 import { borrowingRoomCents, loanRate, loansOf } from '../finance/credit';
 import { listingOf, type Listing } from '../finance/shares';
 import { balance } from '../ledger';
-import { housingCapacity, residentsBySection } from '../people/housing';
+import { housingCapacity } from '../people/housing';
 import { slotsPerShift } from '../people/jobs';
 import { NEEDS } from '../people/needs';
-import { payrollCentsPerHour } from '../people/payroll';
+import { hourlyWageCents } from '../people/payroll';
+import { SKILL_OF } from '../people/store';
 import type { Building, GameState, SectionState } from '../state';
 import { worldOf } from '../world/luna';
 import type { Plot } from '../world/types';
@@ -106,14 +107,20 @@ function view(state: GameState, company: CompanyState): RivalView {
     (p) =>
       ids.has(p.sectionId) && (p.kind === 'build' || p.kind === 'deposit') && !occupied.has(p.id),
   );
-  const homes = new Set(buildings.map((b) => b.id));
+  // One pass over the people: head count, wages and residents of the company's own sections.
+  const homeSection = new Map(buildings.map((b) => [b.id, b.sectionId]));
+  const residents = new Map<number, number>();
   let workers = 0;
   let employed = 0;
+  let wagesPerHour = 0;
   const p = state.people;
   for (let i = 0; i < p.count; i++) {
-    if (!homes.has(p.home[i]!)) continue;
+    const sid = homeSection.get(p.home[i]!);
+    if (sid === undefined) continue;
     workers++;
     if (p.job[i]! >= 0) employed++;
+    residents.set(sid, (residents.get(sid) ?? 0) + 1);
+    wagesPerHour += hourlyWageCents(SKILL_OF[p.skill[i]!]!, company.wageLevel);
   }
   let beds = 0;
   let slots = 0;
@@ -130,9 +137,9 @@ function view(state: GameState, company: CompanyState): RivalView {
     buildings,
     freePlots,
     cash: balance(state.ledger, cashAccount(company.id)),
-    wagesPerDay: payrollCentsPerHour(state, company.id) * 24,
-    headroom: headroomCents(state, company.id),
-    residents: residentsBySection(state),
+    wagesPerDay: wagesPerHour * 24,
+    headroom: headroomCents(state, company.id, wagesPerHour),
+    residents,
     idle: workers - employed,
     freeBeds: beds - workers,
     open: slots - employed,

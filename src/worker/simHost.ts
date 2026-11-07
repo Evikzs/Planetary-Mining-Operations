@@ -15,7 +15,7 @@ import {
 } from '../sim/views';
 import { createMemorySaveStore } from '../save/memoryStore';
 import type { SaveFile, SaveStore } from '../save/types';
-import type { DebugFlags, FromWorker, ManualSlot, SaveSlot, ToWorker } from './protocol';
+import type { DebugFlags, FromWorker, ManualSlot, SaveSlot, Scene, ToWorker } from './protocol';
 import { playerCompany } from '../sim/companies';
 
 export interface SaveCodec {
@@ -34,7 +34,7 @@ export interface SimHostDeps {
   /** Dev builds pass checkInvariants; violations are posted as errors. */
   checkInvariants?: (state: GameState) => string[];
   /** Dev and e2e builds pass the demo and bench scene builders. */
-  loadScene?: (scene: 'demo' | 'bench', seed: number) => Promise<GameState>;
+  loadScene?: (scene: Scene, seed: number) => Promise<GameState>;
 }
 
 /** Gaps longer than this many ticks go through catch-up instead of fine ticks. */

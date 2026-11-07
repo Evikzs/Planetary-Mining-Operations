@@ -5,7 +5,13 @@ import { balance } from '../ledger';
 import { cashOut } from '../finance/books';
 import type { GameState } from '../state';
 import { SKILL_OF } from './store';
+import type { Skill } from '../../data/buildings';
+import type { CompanyState } from '../companies';
 import { payDue } from '../finance/credit';
+
+/** One worker's wage for a game hour at a company's wage level. */
+export const hourlyWageCents = (skill: Skill, levels: CompanyState['wageLevel']): number =>
+  Math.round((WAGE_CENTS_PER_DAY[skill] * WAGE_LEVEL[levels[skill]].factor) / 24);
 
 /** What one game hour of wages costs each company, at its head count and wage levels. */
 export function payrollByCompany(state: GameState): Map<CompanyId, number> {
@@ -17,9 +23,7 @@ export function payrollByCompany(state: GameState): Map<CompanyId, number> {
     const co = owners.get(p.home[i]!);
     const level = co === undefined ? undefined : levels.get(co);
     if (co === undefined || !level) continue;
-    const skill = SKILL_OF[p.skill[i]!]!;
-    const cents = Math.round((WAGE_CENTS_PER_DAY[skill] * WAGE_LEVEL[level[skill]].factor) / 24);
-    due.set(co, (due.get(co) ?? 0) + cents);
+    due.set(co, (due.get(co) ?? 0) + hourlyWageCents(SKILL_OF[p.skill[i]!]!, level));
   }
   return due;
 }

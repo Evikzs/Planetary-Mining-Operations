@@ -27,7 +27,8 @@ export function canonicalStringify(value: unknown): string {
   switch (typeof value) {
     case 'number':
       if (!Number.isFinite(value)) throw new Error(`cannot hash a non-finite number: ${value}`);
-      return JSON.stringify(Object.is(value, -0) ? 0 : value);
+      // String() writes finite numbers exactly as JSON.stringify does, and faster.
+      return Object.is(value, -0) ? '0' : String(value);
     case 'string':
       return JSON.stringify(value);
     case 'boolean':

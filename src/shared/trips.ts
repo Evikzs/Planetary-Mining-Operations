@@ -16,6 +16,9 @@ export interface Trip {
   id: number;
   sectionId: number;
   departTick: number;
+  /** Where the bus sets out. Saves keep it and rebuild `points` and `cum` from the roads; trips
+   * saved before it existed keep their geometry. */
+  originPlotId?: number;
   /** Unit directions along the road. */
   points: Vec3[];
   /** Distance from the start to each point, in world units. */

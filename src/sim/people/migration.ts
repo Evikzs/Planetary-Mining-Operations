@@ -9,11 +9,10 @@ import { ownersByBuilding, PLAYER, type CompanyId } from '../companies';
 
 const isHour = (state: GameState) => state.tick % 60 === 0;
 
-/**
- * The skill whose job slots at one company, contract sites' included, are least filled; ties go
- * miner, technician, engineer.
- */
-export function arrivalSkill(state: GameState, co: CompanyId = PLAYER): Skill {
+type SkillCounts = { slots: Record<Skill, number>; filled: Record<Skill, number> };
+
+/** Job slots over all three shifts at one company, contract sites' included, and its workers. */
+function skillCounts(state: GameState, co: CompanyId): SkillCounts {
   const owners = ownersByBuilding(state);
   const slots: Record<Skill, number> = { miner: 0, technician: 0, engineer: 0 };
   for (const b of state.buildings) {
@@ -27,6 +26,11 @@ export function arrivalSkill(state: GameState, co: CompanyId = PLAYER): Skill {
   for (let i = 0; i < p.count; i++) {
     if (owners.get(p.home[i]!) === co) filled[SKILLS[p.skill[i]!]!]++;
   }
+  return { slots, filled };
+}
+
+/** The least filled skill; ties go miner, technician, engineer. */
+function neediest({ slots, filled }: SkillCounts): Skill {
   let best: Skill = 'miner';
   let bestRatio = -Infinity;
   for (const skill of SKILLS) {
@@ -38,6 +42,13 @@ export function arrivalSkill(state: GameState, co: CompanyId = PLAYER): Skill {
   }
   return best;
 }
+
+/**
+ * The skill whose job slots at one company, contract sites' included, are least filled; ties go
+ * miner, technician, engineer.
+ */
+export const arrivalSkill = (state: GameState, co: CompanyId = PLAYER): Skill =>
+  neediest(skillCounts(state, co));
 
 function emigrate(state: GameState, ctx: StepContext): void {
   const p = state.people;
@@ -60,30 +71,42 @@ function emigrate(state: GameState, ctx: StepContext): void {
 function arrive(state: GameState, ctx: StepContext): void {
   const p = state.people;
   const byHome = residentsByHome(state);
+  // Residents' morale per section, summed in people order, in one pass.
+  const housingSection = new Map(
+    state.buildings.filter((b) => housingCapacity(b) > 0).map((b) => [b.id, b.sectionId]),
+  );
+  const morale = new Map<number, { sum: number; n: number }>();
+  for (let i = 0; i < p.count; i++) {
+    const sid = housingSection.get(p.home[i]!);
+    if (sid === undefined) continue;
+    const m = morale.get(sid) ?? { sum: 0, n: 0 };
+    m.sum += p.morale[i]!;
+    m.n++;
+    morale.set(sid, m);
+  }
+  // Each company's skill counts, kept up to date as arrivals take their skills.
+  const counts = new Map<CompanyId, SkillCounts>();
   for (const section of state.sections) {
     const homes = state.buildings.filter(
       (b) => b.sectionId === section.id && housingCapacity(b) > 0,
     );
     let free = homes.reduce((n, b) => n + housingCapacity(b) - (byHome.get(b.id) ?? 0), 0);
     if (free <= 0) continue;
-    let sum = 0;
-    let n = 0;
-    for (let i = 0; i < p.count; i++) {
-      if (homes.some((b) => b.id === p.home[i])) {
-        sum += p.morale[i]!;
-        n++;
-      }
-    }
+    const { sum, n } = morale.get(section.id) ?? { sum: 0, n: 0 };
     if ((n ? sum / n : 60) < MORALE.migrateMinMorale) continue;
     let arrivals = Math.min(free, Math.floor(migrationPerDay(n) / 24 + ctx.rng.next()));
     const count = arrivals;
     while (arrivals-- > 0 && free-- > 0) {
       const home = homes.find((b) => housingCapacity(b) > (byHome.get(b.id) ?? 0))!;
       byHome.set(home.id, (byHome.get(home.id) ?? 0) + 1);
+      let c = counts.get(section.owner);
+      if (!c) counts.set(section.owner, (c = skillCounts(state, section.owner)));
+      const skill = neediest(c);
+      c.filled[skill]++;
       addWorker(p, {
         first: ctx.rng.int(0, 159),
         last: ctx.rng.int(0, 159),
-        skill: SKILL_CODE[arrivalSkill(state, section.owner)],
+        skill: SKILL_CODE[skill],
         level: 1,
         home: home.id,
       });

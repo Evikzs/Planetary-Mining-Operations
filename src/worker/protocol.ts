@@ -6,11 +6,14 @@ import type { MotionView, PeopleFilter, PeopleRow, UiSnapshot, WorldView } from 
 
 export type { UiSnapshot } from '../sim/views';
 
+/** Test scenes for dev and e2e builds; the rival bench has six companies. */
+export type Scene = 'demo' | 'bench' | 'rivalBench';
+
 export interface DebugFlags {
   timescale: number;
   freeze: boolean;
   seed: number | null;
-  scene: 'none' | 'demo' | 'bench';
+  scene: 'none' | Scene;
   noWebgl: boolean;
 }
 

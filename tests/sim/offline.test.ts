@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { makeBenchState } from '../../bot/scenes';
+import { makeBenchState, makeRivalBenchState } from '../../bot/scenes';
 import { OFFLINE } from '../../src/data/balance';
 import type { Skill } from '../../src/data/buildings';
 import { applyCommand, createGame, step } from '../../src/sim/engine';
@@ -162,6 +162,14 @@ describe('offline catch-up', () => {
     expect(summary.news.length).toBeLessThanOrEqual(5);
     expect(summary.news.every((n) => !before.news.has(n))).toBe(true);
     expect(summary.news).toEqual(s.news.filter((n) => !before.news.has(n)).slice(0, 5));
+  }, 60_000);
+
+  it('an 8-hour catch-up on the rival bench (six companies, 10,000 workers) takes < 10 s', () => {
+    const s = makeRivalBenchState(1);
+    const t0 = performance.now();
+    const summary = runCatchUp(s, OFFLINE.capMs, 1);
+    expect(summary.gameHours).toBe(480);
+    expect(performance.now() - t0).toBeLessThan(10_000);
   }, 60_000);
 
   it('keeps one alert per type and section', () => {

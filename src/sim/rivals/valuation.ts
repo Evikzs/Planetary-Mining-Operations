@@ -76,11 +76,11 @@ export function sectionValueCents(
 }
 
 /** What a company can commit to bids and loans: its cash and unused credit, less a day of wages. */
-export function headroomCents(state: GameState, co: CompanyId): number {
+export function headroomCents(
+  state: GameState,
+  co: CompanyId,
+  payrollPerHourCents = payrollCentsPerHour(state, co),
+): number {
   const unused = creditLimitCents(state, co) - companyOf(state, co)!.credit.creditDrawnCents;
-  return (
-    balance(state.ledger, cashAccount(co)) +
-    Math.max(0, unused) -
-    payrollCentsPerHour(state, co) * 24
-  );
+  return balance(state.ledger, cashAccount(co)) + Math.max(0, unused) - payrollPerHourCents * 24;
 }

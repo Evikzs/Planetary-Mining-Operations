@@ -4,6 +4,11 @@ import { openBooks } from '../sim/finance/books';
 import { freshCredit } from '../sim/finance/credit';
 import { listCompany } from '../sim/finance/shares';
 import { ensureRivals } from '../sim/rivals/founding';
+import { beltPoints } from '../sim/build/belts';
+import { gridFor } from '../sim/build/sections';
+import { polylinePoints, type Polyline } from '../sim/world/roads';
+import type { Vec3 } from '../shared/vec3';
+import { tripGeometry } from '../sim/people/commute';
 
 /** Top-level state keys rebuilt on load instead of saved (task 9 adds 'world'). */
 export const DERIVED_KEYS: string[] = [];
@@ -50,6 +55,28 @@ function decode(v: unknown): unknown {
 export function serializeState(state: GameState): unknown {
   const copy: Record<string, unknown> = { ...state };
   for (const k of DERIVED_KEYS) delete copy[k];
+  // Lines the world and the roads rebuild on load: most of a rival-bench save otherwise.
+  copy.sections = state.sections.map((sec) => {
+    if (!sec.roadNet) return sec;
+    const polylines = sec.roadNet.polylines.map((l) => ({
+      id: l.id,
+      cells: l.cells,
+      from: l.points[0],
+    }));
+    return { ...sec, roadNet: { ...sec.roadNet, polylines } };
+  });
+  copy.trips = state.trips.map((t) => {
+    if (t.originPlotId === undefined) return t;
+    const lean: Partial<typeof t> = { ...t };
+    delete lean.points;
+    delete lean.cum;
+    return lean;
+  });
+  copy.belts = state.belts.map((b) => {
+    const lean: Partial<typeof b> = { ...b };
+    delete lean.points;
+    return lean;
+  });
   return encode(copy);
 }
 
@@ -120,5 +147,20 @@ export function deserializeState(data: unknown): GameState {
 }
 
 function rebuildDerived(state: GameState): void {
-  void state; // task 9 regenerates the world from the seed here
+  for (const sec of state.sections) {
+    for (const line of (sec.roadNet?.polylines ?? []) as (Polyline & { from?: Vec3 })[]) {
+      if (line.points || !line.from) continue;
+      line.points = polylinePoints(gridFor(state, sec.id), line.from, line.cells);
+      delete line.from;
+    }
+  }
+  for (const b of state.belts) {
+    const building = state.buildings.find((x) => x.id === b.buildingId);
+    if (!b.points && building) b.points = beltPoints(state, building).points;
+  }
+  for (const t of state.trips) {
+    if (!t.points && t.originPlotId !== undefined) {
+      Object.assign(t, tripGeometry(state, { ...t, originPlotId: t.originPlotId }));
+    }
+  }
 }

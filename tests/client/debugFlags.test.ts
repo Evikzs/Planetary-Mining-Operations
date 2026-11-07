@@ -22,6 +22,10 @@ describe('debug flags', () => {
     });
   });
 
+  it('takes the rival bench scene', () => {
+    expect(parseDebugFlags('?scene=rivalBench', true).scene).toBe('rivalBench');
+  });
+
   it('drops invalid values', () => {
     expect(parseDebugFlags('?timescale=abc&seed=x&scene=zz&nowebgl=1', true)).toEqual({
       timescale: 1,

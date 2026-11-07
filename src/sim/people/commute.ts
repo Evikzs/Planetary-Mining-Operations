@@ -9,7 +9,7 @@ import { ROVER_SPEED } from '../../shared/scale';
 import { stopTimes, tripDuration, type Trip } from '../../shared/trips';
 import { len, sub, type Vec3 } from '../../shared/vec3';
 import { plotRoute } from '../build/routes';
-import { shiftAt, shiftStartingAt } from '../clock';
+import { nextShiftStartTick, shiftAt, shiftStartingAt } from '../clock';
 import type { System } from '../engine';
 import type { Building, GameState } from '../state';
 import { worldOf } from '../world/luna';
@@ -108,29 +108,59 @@ function packLoads(state: GameState, origin: Building, groups: Map<Building, num
   return loads;
 }
 
-function makeTrip(state: GameState, sectionId: number, kind: Trip['kind'], load: Load): Trip {
+/** Joins legs into one line, with the distance from the start to each point and each leg's end. */
+function joinLegs(state: GameState, legs: { points: Vec3[] }[]) {
   const radius = worldOf(state).radius;
   const points: Vec3[] = [];
   const cum: number[] = [];
-  const stops: Trip['stops'] = [];
-  load.legs.forEach((leg, k) => {
+  const ends: number[] = [];
+  for (const leg of legs) {
     for (const pt of points.length ? leg.points.slice(1) : leg.points) {
       const prev = points[points.length - 1];
       cum.push(prev ? cum[cum.length - 1]! + len(sub(pt, prev)) * radius : 0);
       points.push(pt);
     }
-    stops.push({ s: cum[cum.length - 1]!, ...load.stops[k]!, dwell: STOP_DWELL_MINUTES });
-  });
+    ends.push(cum[cum.length - 1]!);
+  }
+  return { points, cum, ends };
+}
+
+function makeTrip(state: GameState, origin: Building, kind: Trip['kind'], load: Load): Trip {
+  const { points, cum, ends } = joinLegs(state, load.legs);
   return {
     id: state.nextTripId++,
-    sectionId,
+    sectionId: origin.sectionId,
     departTick: 0,
+    originPlotId: origin.plotId,
     points,
     cum,
-    stops,
+    stops: load.stops.map((stop, k) => ({ s: ends[k]!, ...stop, dwell: STOP_DWELL_MINUTES })),
     speed: ROVER_SPEED,
     kind,
   };
+}
+
+/**
+ * A loaded trip's line, rebuilt from the roads as the bus would drive it: origin to each stop. A
+ * leg no road joins any more runs straight; only the renderer reads the line.
+ */
+export function tripGeometry(
+  state: GameState,
+  trip: Pick<Trip, 'sectionId' | 'stops'> & { originPlotId: number },
+): { points: Vec3[]; cum: number[] } {
+  const plots = worldOf(state).plots;
+  const plotOf = new Map(state.buildings.map((b) => [b.id, b.plotId]));
+  let at = trip.originPlotId;
+  const legs = trip.stops.map((stop) => {
+    const to = plotOf.get(stop.buildingId) ?? at;
+    const leg = plotRoute(state, trip.sectionId, at, to) ?? {
+      points: [plots[at]!.dir, plots[to]!.dir],
+    };
+    at = to;
+    return leg;
+  });
+  const { points, cum } = joinLegs(state, legs);
+  return { points, cum };
 }
 
 function dispatch(
@@ -144,7 +174,7 @@ function dispatch(
   if (!pool.total) return;
   const p = state.people;
   for (const load of packLoads(state, origin, groups)) {
-    const trip = makeTrip(state, origin.sectionId, kind, load);
+    const trip = makeTrip(state, origin, kind, load);
     const driveBack = trip.stops[trip.stops.length - 1]!.s / trip.speed;
     trip.departTick = takeBus(pool, now, tripDuration(trip) + driveBack);
     state.trips.push(trip);
@@ -164,17 +194,19 @@ function addRider(plan: Plan, origin: Building, stop: Building, id: number): voi
   ids.push(id);
 }
 
-function dispatchAll(state: GameState, now: number, plan: Plan, kind: Trip['kind']): void {
+/** Origins and their stops, both in building id order. */
+function sortedPlan(plan: Plan): [Building, Map<Building, number[]>][] {
   const byId = (a: [Building, unknown], b: [Building, unknown]) => a[0].id - b[0].id;
-  for (const [origin, stops] of [...plan].sort(byId)) {
-    dispatch(state, now, origin, new Map([...stops].sort(byId)), kind);
-  }
+  return [...plan].sort(byId).map(([origin, stops]) => [origin, new Map([...stops].sort(byId))]);
 }
 
-/** Workers of the shift due within the lead time who are not at work or on a bus. */
-function planToWork(state: GameState, now: number): void {
+function dispatchAll(state: GameState, now: number, plan: Plan, kind: Trip['kind']): void {
+  for (const [origin, stops] of sortedPlan(plan)) dispatch(state, now, origin, stops, kind);
+}
+
+/** Workers of a shift at home, by home and workplace. */
+function workPlan(state: GameState, due: number): Plan {
   const p = state.people;
-  const due = shiftAt(now + BUS_LEAD_MINUTES);
   const byId = new Map(state.buildings.map((b) => [b.id, b]));
   const plan: Plan = new Map();
   for (let i = 0; i < p.count; i++) {
@@ -183,23 +215,57 @@ function planToWork(state: GameState, now: number): void {
     const job = byId.get(p.job[i]!);
     if (home && job && job.sectionId === home.sectionId) addRider(plan, home, job, p.id[i]!);
   }
-  dispatchAll(state, now, plan, 'toWork');
+  return plan;
 }
 
-/** The ending shift leaves work; those who were there ride home. */
-function sendHome(state: GameState, now: number, ending: number): void {
+/** Workers of a shift at work, by workplace and home. */
+function homePlan(state: GameState, ending: number): Plan {
   const p = state.people;
   const byId = new Map(state.buildings.map((b) => [b.id, b]));
   const plan: Plan = new Map();
   for (let i = 0; i < p.count; i++) {
-    if (p.shift[i] !== ending || p.present[i] === 0) continue;
-    const wasAtWork = p.present[i] === 1;
-    p.present[i] = 0;
+    if (p.shift[i] !== ending || p.present[i] !== 1) continue;
     const job = byId.get(p.job[i]!);
     const home = byId.get(p.home[i]!);
-    if (wasAtWork && job && home) addRider(plan, job, home, p.id[i]!);
+    if (job && home) addRider(plan, job, home, p.id[i]!);
   }
+  return plan;
+}
+
+/** Workers of the shift due within the lead time who are not at work or on a bus. */
+function planToWork(state: GameState, now: number): void {
+  dispatchAll(state, now, workPlan(state, shiftAt(now + BUS_LEAD_MINUTES)), 'toWork');
+}
+
+/** The ending shift leaves work; those who were there ride home. */
+function sendHome(state: GameState, now: number, ending: number): void {
+  const plan = homePlan(state, ending);
+  const p = state.people;
+  for (let i = 0; i < p.count; i++) if (p.shift[i] === ending) p.present[i] = 0;
   dispatchAll(state, now, plan, 'toHome');
+}
+
+const WARM_MINUTES = 20;
+
+/**
+ * A cold route cache made a dispatch the slowest tick of the day. In the 20 minutes before each
+ * dispatch, one twentieth of its origins work out their routes a minute; the cache only remembers
+ * routes, so no outcome changes.
+ */
+function warmRoutes(state: GameState, now: number): void {
+  const start = nextShiftStartTick(now);
+  const due = shiftStartingAt(start)!;
+  const runs: [number, () => Plan][] = [
+    [start - BUS_LEAD_MINUTES, () => workPlan(state, due)],
+    [start, () => homePlan(state, (due + 2) % 3)],
+  ];
+  for (const [departs, plan] of runs) {
+    const k = departs - now - 1;
+    if (k < 0 || k >= WARM_MINUTES) continue;
+    sortedPlan(plan()).forEach(([origin, stops], i) => {
+      if (i % WARM_MINUTES === k) packLoads(state, origin, stops);
+    });
+  }
 }
 
 /** Riders reach work when their bus reaches their stop. */
@@ -229,6 +295,7 @@ export const commuteSystem: System = {
     const starting = shiftStartingAt(now);
     if (starting !== null) sendHome(state, now, (starting + 2) % 3);
     planToWork(state, now);
+    warmRoutes(state, now);
     arrive(state, now);
     state.trips = state.trips.filter((t) => now <= t.departTick + tripDuration(t) + 1);
     forgetCrews(state);
