@@ -28,4 +28,15 @@ export const NARRATOR_LINES: Record<BeatId, string[]> = {
   'ev.emigration': ['Unhappy workers have left the company.'],
   'ev.contractFailed': ['A contract deadline passed. Reputation fell.'],
   'ev.priceCrash': ['A price fell more than 30% in 24 hours.'],
+  'ev.rivalsIntro': ['A rival company opened an auction. Any company can bid on its lot.'],
+  'ev.firstClose': ['The month has closed. Your statements are in the Finance tab.'],
+  'ev.ratingCut': [
+    'Your credit rating fell. New loans cost more, and your credit line is smaller.',
+  ],
+  'ev.rivalStake': ['A rival company now holds 20% or more of your shares.'],
+  'ev.auctionLost': ['A rival won a lot you bid on.'],
+  'ev.playerDefault': [
+    'Your company is in default. Lenders sell your stock until what is overdue is paid.',
+  ],
+  'ev.rivalBankrupt': ['A company went bankrupt. Its sections go to auction.'],
 };

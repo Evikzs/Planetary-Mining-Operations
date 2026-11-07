@@ -47,6 +47,36 @@ describe('codex', () => {
     }
   });
 
+  it('every new codex id exists, bodies ≤ 80 words, real-world paragraphs ≤ 60 words', () => {
+    const mechanics = ['auctions', 'rivals', 'loans', 'statements', 'monthlyClose'];
+    const concepts = [
+      'balanceSheet',
+      'incomeStatement',
+      'cashFlow',
+      'creditRating',
+      'interest',
+      'shares',
+      'dividends',
+      'dilution',
+      'buyback',
+      'priceEarnings',
+      'englishAuction',
+      'proxyBid',
+      'default',
+      'bankruptcy',
+    ];
+    for (const id of mechanics.map((m) => `mech.${m}`)) {
+      expect(CODEX[id]?.category, id).toBe('mechanics');
+      expect(words(CODEX[id]!.body), id).toBeLessThanOrEqual(80);
+    }
+    for (const id of concepts.map((c) => `concept.${c}`)) {
+      expect(CODEX[id]?.category, id).toBe('concepts');
+      expect(words(CODEX[id]!.body), id).toBeLessThanOrEqual(80);
+      expect(words(CODEX[id]!.realWorld ?? ''), id).toBeGreaterThan(0);
+      expect(words(CODEX[id]!.realWorld!), id).toBeLessThanOrEqual(60);
+    }
+  });
+
   it('covers every good, every buildable building and both contract types', () => {
     for (const g of GOOD_IDS) expect(CODEX[`good.${g}`], g).toBeDefined();
     for (const t of BUILDING_IDS) {

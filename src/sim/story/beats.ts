@@ -18,7 +18,14 @@ export type BeatId =
   | 'ev.strike'
   | 'ev.emigration'
   | 'ev.contractFailed'
-  | 'ev.priceCrash';
+  | 'ev.priceCrash'
+  | 'ev.rivalsIntro'
+  | 'ev.firstClose'
+  | 'ev.ratingCut'
+  | 'ev.rivalStake'
+  | 'ev.auctionLost'
+  | 'ev.playerDefault'
+  | 'ev.rivalBankrupt';
 
 export type HintCategory = 'tutorial' | 'economy' | 'alerts';
 
@@ -46,6 +53,8 @@ export const TUTORIAL: BeatId[] = [
 ];
 
 const alert: BeatDef = { category: 'alerts', ack: true, codex: [] };
+/** Money and rivals; their Codex entries open on first contact, muted or not (codex.ts). */
+const economy: BeatDef = { category: 'economy', ack: true, codex: [] };
 
 export const BEATS: Record<BeatId, BeatDef> = {
   'ch1.founding': { category: 'tutorial', ack: true, codex: ['mech.sections', 'mech.plots'] },
@@ -76,6 +85,13 @@ export const BEATS: Record<BeatId, BeatDef> = {
   'ev.emigration': alert,
   'ev.contractFailed': alert,
   'ev.priceCrash': { category: 'economy', ack: true, codex: ['concept.meanReversion'] },
+  'ev.rivalsIntro': economy,
+  'ev.firstClose': economy,
+  'ev.ratingCut': economy,
+  'ev.rivalStake': alert,
+  'ev.auctionLost': economy,
+  'ev.playerDefault': alert,
+  'ev.rivalBankrupt': economy,
 };
 
 export const BEAT_IDS = Object.keys(BEATS) as BeatId[];

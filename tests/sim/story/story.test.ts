@@ -7,6 +7,7 @@ import { deserializeState, serializeState } from '../../../src/save/serialize';
 import { PLAYER } from '../../../src/sim/companies';
 import { applyCommand, createGame, step } from '../../../src/sim/engine';
 import { TUTORIAL } from '../../../src/sim/story/beats';
+import type { SimEvent } from '../../../src/sim/events';
 import { currentLine } from '../../../src/sim/story/story';
 import type { GameState } from '../../../src/sim/state';
 import { worldOf } from '../../../src/sim/world/luna';
@@ -155,6 +156,132 @@ describe('story', () => {
     expect(back.story.codex).toContain('mech.auctions');
     expect(back.story.codex).not.toContain('mech.landOffice');
     expect('landPurchases' in back).toBe(false);
+  });
+
+  it('a rival stake of 20% in the player fires ev.rivalStake; a rival stake in another rival fires nothing', () => {
+    const s = founded();
+    s.pendingEvents.push({ t: 'stakeDisclosed', holder: 1, companyId: 2, pct: 0.2 });
+    run(s, 1);
+    expect(s.story.seen).not.toContain('ev.rivalStake');
+    s.pendingEvents.push({ t: 'stakeDisclosed', holder: 1, companyId: PLAYER, pct: 0.2 });
+    run(s, 1);
+    expect(s.story.queue).toContain('ev.rivalStake');
+  });
+
+  it('the first close unlocks the statement concepts', () => {
+    const s = founded();
+    s.pendingEvents.push({ t: 'monthClosed', companyId: 1, label: 'Mar 2091', netIncomeCents: 0 });
+    run(s, 1);
+    expect(s.story.codex).not.toContain('mech.statements');
+    s.pendingEvents.push({
+      t: 'monthClosed',
+      companyId: PLAYER,
+      label: 'Mar 2091',
+      netIncomeCents: 0,
+    });
+    run(s, 1);
+    expect(s.story.codex).toEqual(
+      expect.arrayContaining([
+        'mech.statements',
+        'mech.monthlyClose',
+        'concept.balanceSheet',
+        'concept.incomeStatement',
+        'concept.cashFlow',
+      ]),
+    );
+    expect(s.story.queue).toContain('ev.firstClose');
+  });
+
+  it('first contacts with money open their Codex entries', () => {
+    const s = founded();
+    expect(s.story.codex).toContain('mech.rivals');
+    const push = (...events: SimEvent[]) => s.pendingEvents.push(...events);
+    push(
+      { t: 'auctionOpened', auctionId: 90, sectionId: 3, companyId: null },
+      { t: 'ratingChanged', companyId: PLAYER, from: 'BBB', to: 'BB' },
+      { t: 'shareTrade', companyId: PLAYER, orderId: 1, target: 1, side: 'buy', qty: 5, cents: 9 },
+      {
+        t: 'shareTrade',
+        companyId: PLAYER,
+        orderId: 2,
+        target: PLAYER,
+        side: 'sell',
+        qty: 5,
+        cents: 9,
+      },
+      {
+        t: 'shareTrade',
+        companyId: PLAYER,
+        orderId: 3,
+        target: PLAYER,
+        side: 'buy',
+        qty: 5,
+        cents: 9,
+      },
+      { t: 'dividendPaid', companyId: PLAYER, perShareCents: 3 },
+      { t: 'defaulted', companyId: 1, owedCents: 100 },
+      { t: 'bankrupt', companyId: 1 },
+    );
+    run(s, 1);
+    expect(s.story.codex).toEqual(
+      expect.arrayContaining([
+        'mech.auctions',
+        'concept.englishAuction',
+        'concept.creditRating',
+        'concept.shares',
+        'concept.priceEarnings',
+        'concept.dilution',
+        'concept.buyback',
+        'concept.dividends',
+        'concept.default',
+        'concept.bankruptcy',
+      ]),
+    );
+    expect(s.story.queue).toEqual(expect.arrayContaining(['ev.ratingCut', 'ev.rivalBankrupt']));
+    expect(s.story.codex).not.toContain('concept.proxyBid');
+    expect(applyCommand(s, { t: 'takeLoan', amountCents: 1_000_000, months: 3 })).toEqual({
+      ok: true,
+    });
+    const next = world.sections[home]!.neighbors[0]!;
+    applyCommand(s, { t: 'openAuction', sectionId: next });
+    const lot = s.auctions.find((a) => a.lot.sectionId === next)!;
+    applyCommand(s, { t: 'setProxy', auctionId: lot.id, ceilingCents: 5_000_000 });
+    run(s, 60);
+    expect(s.story.codex).toEqual(
+      expect.arrayContaining(['concept.proxyBid', 'mech.loans', 'concept.interest']),
+    );
+  });
+
+  it('rivals: their first lot fires ev.rivalsIntro; a lot the player bid on and lost fires ev.auctionLost', () => {
+    const s = founded();
+    s.pendingEvents.push({ t: 'auctionOpened', auctionId: 90, sectionId: 3, companyId: null });
+    run(s, 1);
+    expect(s.story.seen).not.toContain('ev.rivalsIntro');
+    s.pendingEvents.push({ t: 'auctionOpened', auctionId: 91, sectionId: 4, companyId: 1 });
+    run(s, 1);
+    expect(s.story.queue).toContain('ev.rivalsIntro');
+    const next = world.sections[home]!.neighbors[0]!;
+    applyCommand(s, { t: 'openAuction', sectionId: next });
+    const lot = s.auctions.find((a) => a.lot.sectionId === next)!;
+    applyCommand(s, { t: 'placeBid', auctionId: lot.id, amountCents: AUCTION.reserveCents });
+    s.pendingEvents.push({
+      t: 'auctionWon',
+      auctionId: 90,
+      companyId: 1,
+      sectionId: 3,
+      amountCents: 1,
+    });
+    run(s, 1);
+    expect(s.story.seen).not.toContain('ev.auctionLost');
+    s.pendingEvents.push({
+      t: 'auctionWon',
+      auctionId: lot.id,
+      companyId: 1,
+      sectionId: next,
+      amountCents: 1,
+    });
+    run(s, 1);
+    expect(s.story.queue).toContain('ev.auctionLost');
   });
 
   it('event beats fire at most once per 6 game hours', () => {

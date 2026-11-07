@@ -4,9 +4,10 @@ import type { System } from '../engine';
 import type { SimEvent } from '../events';
 import type { GameState } from '../state';
 import { BEATS, TUTORIAL, type BeatId, type HintCategory } from './beats';
-import { unlockCodex, unlockFromState } from './codex';
+import { unlockCodex, unlockFromEvent, unlockFromState } from './codex';
 import { buildingOwner, PLAYER, playerCompany } from '../companies';
 import { forPlayer } from '../events';
+import { RATINGS } from '../finance/credit';
 
 export interface StoryState {
   /** Every beat that has started, in order. */
@@ -115,6 +116,41 @@ function onEvent(state: GameState, e: SimEvent): void {
     case 'priceMove':
       if (e.pct24h < -0.3) fireEventBeat(state, 'ev.priceCrash');
       break;
+    case 'monthClosed':
+      if (!seen.includes('ev.firstClose')) begin(state, 'ev.firstClose');
+      break;
+    case 'ratingChanged':
+      if (RATINGS.indexOf(e.to) > RATINGS.indexOf(e.from)) fireEventBeat(state, 'ev.ratingCut');
+      break;
+    case 'stakeDisclosed':
+      // Only stakes in the player's own company reach here.
+      if (e.holder !== PLAYER) fireEventBeat(state, 'ev.rivalStake');
+      break;
+    case 'defaulted':
+      fireEventBeat(state, 'ev.playerDefault');
+      break;
+  }
+}
+
+/** Rivals' news the companion speaks about: their first lot, a lot they took from the player,
+ * and any bankruptcy. Nothing else of theirs reaches the story. */
+function onPublicEvent(state: GameState, e: SimEvent): void {
+  switch (e.t) {
+    case 'auctionOpened':
+      if (e.companyId !== null && e.companyId !== PLAYER) {
+        if (!state.story.seen.includes('ev.rivalsIntro')) begin(state, 'ev.rivalsIntro');
+      }
+      break;
+    case 'auctionWon': {
+      const lot = state.auctions.find((a) => a.id === e.auctionId);
+      if (e.companyId !== PLAYER && lot?.bids.some((b) => b.companyId === PLAYER)) {
+        fireEventBeat(state, 'ev.auctionLost');
+      }
+      break;
+    }
+    case 'bankrupt':
+      fireEventBeat(state, 'ev.rivalBankrupt');
+      break;
   }
 }
 
@@ -192,6 +228,10 @@ export const storySystem: System = {
     if (!playerCompany(state)) return;
     const mine = ctx.events.filter(forPlayer);
     for (const e of mine) onEvent(state, e);
+    for (const e of ctx.events) {
+      onPublicEvent(state, e);
+      unlockFromEvent(state, e);
+    }
     progressTutorial(state, mine);
     if (state.tick % 60 === 0) unlockFromState(state);
   },

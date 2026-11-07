@@ -350,6 +350,35 @@ h3 {
   z-index: 3;
 }
 
+.ticker ul {
+  display: flex;
+  flex: none;
+  gap: var(--space-6);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* Starts one ticker width to the right; its duration is set from its width, for 60 px/s. */
+.ticker ul.crawl {
+  padding-left: 100%;
+  animation: ticker-crawl 60s linear infinite;
+}
+
+.ticker:hover ul.crawl,
+.ticker:focus-within ul.crawl {
+  animation-play-state: paused;
+}
+
+@keyframes ticker-crawl {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-100%);
+  }
+}
+
 .sheet {
   position: absolute;
   left: 8px;

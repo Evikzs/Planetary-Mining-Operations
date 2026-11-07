@@ -3,6 +3,7 @@ import { GOOD_IDS, type GoodId } from '../../data/goods';
 import { balance } from '../ledger';
 import type { GameState } from '../state';
 import { buildingOwner, cashAccount, PLAYER } from '../companies';
+import type { SimEvent } from '../events';
 
 export function unlockCodex(state: GameState, id: string): void {
   if (!state.story.codex.includes(id)) state.story.codex.push(id);
@@ -41,5 +42,47 @@ export function unlockFromState(state: GameState): void {
   for (const c of contracts) unlockCodex(state, `contract.${c.type}`);
   if (buildings.some((b) => b.type === 'warehouse')) {
     unlockCodex(state, 'concept.temporalArbitrage');
+  }
+  // Founding: rivals share the Moon from the first day.
+  unlockCodex(state, 'mech.rivals');
+  if (state.loans.some((l) => l.companyId === PLAYER)) {
+    unlockCodex(state, 'mech.loans');
+    unlockCodex(state, 'concept.interest');
+  }
+  if (state.auctions.some((a) => a.proxies.some((p) => p.companyId === PLAYER))) {
+    unlockCodex(state, 'concept.proxyBid');
+  }
+}
+
+/** Entries the player's first contact with auctions, statements, credit and shares opens. */
+export function unlockFromEvent(state: GameState, e: SimEvent): void {
+  const open = (...ids: string[]) => ids.forEach((id) => unlockCodex(state, id));
+  switch (e.t) {
+    case 'auctionOpened':
+      return open('mech.auctions', 'concept.englishAuction');
+    case 'defaulted':
+      return open('concept.default');
+    case 'bankrupt':
+      return open('concept.bankruptcy');
+  }
+  if (!('companyId' in e) || e.companyId !== PLAYER) return;
+  switch (e.t) {
+    case 'monthClosed':
+      return open(
+        'mech.statements',
+        'mech.monthlyClose',
+        'concept.balanceSheet',
+        'concept.incomeStatement',
+        'concept.cashFlow',
+      );
+    case 'ratingChanged':
+      return open('concept.creditRating');
+    case 'dividendPaid':
+      return open('concept.dividends');
+    case 'shareTrade':
+      open('concept.shares', 'concept.priceEarnings');
+      // Trading its own shares: selling new ones is an issue, buying them back a buyback.
+      if (e.target === PLAYER) open(e.side === 'sell' ? 'concept.dilution' : 'concept.buyback');
+      return;
   }
 }

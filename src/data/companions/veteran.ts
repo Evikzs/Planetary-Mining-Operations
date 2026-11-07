@@ -95,4 +95,37 @@ export const VETERAN_LINES: Record<BeatId, string[]> = {
     'A price just fell through the floor. Down more than thirty percent in a day.',
     'Prices drift back given time. If we can hold the stock, we wait. If we cannot, we sell slow.',
   ],
+  'ev.rivalsIntro': [
+    'Company on the wire, boss. One of the rival outfits just put a section up for auction. They want more ground, same as us.',
+    'Five of them share the Moon with us. Some dig careful, some borrow hard, some buy whatever moves. All of them bid.',
+    'Anyone can bid on their lot, us included. Look at the deposits before you look at the price.',
+  ],
+  'ev.firstClose': [
+    "Month's closed, boss. The bookkeepers tallied every Mark that came in and went out. It's all in Finance now.",
+    "Three sheets. What we earned, what we own against what we owe, and where the cash went. They don't always agree.",
+    "Profit on paper doesn't pay wages. Cash does. Read the cash sheet first, then the rest.",
+  ],
+  'ev.ratingCut': [
+    'The lenders cut our rating. Borrowing costs more from today, and the credit line got shorter.',
+    'They watch debt against equity, whether profit covers the interest, and whether cash comes in from the work. Fix those and the grade climbs back.',
+  ],
+  'ev.rivalStake': [
+    'Heads up, boss. A rival now holds a fifth of our shares or more. The rules made them say so in public.',
+    'An owner that size has plans for us. Maybe it wants a bigger slice. Maybe it sells all at once and sinks the price.',
+    'If the cash allows, we can buy shares back and make their slice smaller.',
+  ],
+  'ev.auctionLost': [
+    'Lost that lot. A rival outbid us at the close. It happens.',
+    'Bids count for cash times reputation. Raise one or the other, or set a higher ceiling next time, if the ground is worth it.',
+    "Don't chase it. The Authority puts up another section every twelve hours.",
+  ],
+  'ev.playerDefault': [
+    "We missed a payment, boss. That's a default. Our rating is D now, and nobody lends us a Mark.",
+    "The lenders are selling our stock until what's overdue is paid. Raise cash fast. Sell ore, sell steel, cut what isn't earning.",
+    'Stay in default a full day and they start seizing assets. Pay it off, and the D still sticks for three months. Lenders remember.',
+  ],
+  'ev.rivalBankrupt': [
+    "One of the rivals went under. Couldn't pay its debts. Its sections go to auction, and its shares are worth nothing now.",
+    "Cheap ground, boss, and a new outfit takes its place in a couple of days. Bid on what fits our rock, not on what's cheap.",
+  ],
 };

@@ -149,6 +149,26 @@ const OTHER: Record<string, CodexEntry> = {
     category: 'mechanics',
     body: 'Sections change hands at auction. Any company can open a lot on an unowned section for LM 2,000; the Lunar Authority opens one every 12 game hours. Bids start at the LM 30,000 reserve and count for their amount times a reputation bonus. A lot runs 3 real minutes; a late bid adds 30 seconds, up to 10 minutes. A proxy bids the minimum for you up to your ceiling, even while you are away.',
   },
+  'mech.rivals': {
+    title: 'Rivals',
+    category: 'mechanics',
+    body: 'Five rival companies share the Moon. Each mines, refines, trades, takes contracts, bids at auction, borrows and lists its shares, and each has its own temper: some dig carefully, some borrow hard. A rival that cannot pay its debts goes bankrupt. Its sections go to auction, and a new company takes its place two days later.',
+  },
+  'mech.loans': {
+    title: 'Loans',
+    category: 'mechanics',
+    body: 'Lenders offer loans of 3, 6 or 12 months at a monthly rate set by your credit rating. Interest is charged every hour, and the principal is due at the end. The credit line lets you draw and repay cash at any time, up to a limit set by your rating and equity. Loans and credit together stay within a share of your equity. At rating D, nobody lends.',
+  },
+  'mech.statements': {
+    title: 'Financial statements',
+    category: 'mechanics',
+    body: 'The Finance tab keeps three statements. The income statement shows what you earned and spent this month. The balance sheet shows what you own, what you owe, and the difference: equity. The cash flow statement shows where cash came from and where it went. Choose a closed month to see its final figures.',
+  },
+  'mech.monthlyClose': {
+    title: 'Monthly close',
+    category: 'mechanics',
+    body: "At the end of each game month the books close. The month's profit moves into retained earnings, buildings lose a 24th of their cost to depreciation, dividends are paid at the share you set, and lenders review your credit rating. Each closed month stays on record as a set of statements.",
+  },
   'mech.offline': {
     title: 'While you are away',
     category: 'mechanics',
@@ -212,4 +232,102 @@ export const CODEX: Record<string, CodexEntry> = {
     ]),
   ),
   ...OTHER,
+  'concept.balanceSheet': {
+    title: 'Balance sheet',
+    category: 'concepts',
+    body: "What a company owns and what it owes. Assets are cash, stock, buildings, land and shares in others. Liabilities are loans and credit. Assets minus liabilities is equity, the owners' stake. The two sides always balance, because every Mark the company holds came from a lender or an owner.",
+    realWorld:
+      'Every listed company publishes one each quarter. Analysts compare debt with equity to judge how much risk a company carries.',
+  },
+  'concept.incomeStatement': {
+    title: 'Income statement',
+    category: 'concepts',
+    body: 'Revenue minus expenses over a period. Sales and contract payments come in; the cost of goods sold, wages, materials, interest, depreciation and fees go out. What remains is net income: a profit or a loss.',
+    realWorld:
+      'Also called the profit and loss account. It counts a sale when it is made, not when the cash arrives, so a profitable company can still run out of money.',
+  },
+  'concept.cashFlow': {
+    title: 'Cash flow',
+    category: 'concepts',
+    body: 'Where cash came from and where it went, in three parts. Operating: selling goods and paying wages. Investing: buildings, land and shares. Financing: loans, share issues and dividends. Profit and cash differ: a new smelter is cash out today, but an expense spread over two years.',
+    realWorld:
+      'Lenders read the cash flow statement first. A company that reports profits but burns cash is a classic warning sign, and many bankruptcies start that way.',
+  },
+  'concept.creditRating': {
+    title: 'Credit rating',
+    category: 'concepts',
+    body: 'Lenders grade every company from AAA, the safest, down to D, in default. The grade weighs debt against equity, how easily profit covers interest, operating cash flow and the share price. Lenders review it at each monthly close. A better rating means cheaper loans and a bigger credit line.',
+    realWorld:
+      "Agencies such as S&P and Moody's rate governments and companies on the same letter scale. A cut below BBB, the edge of investment grade, forces many funds to sell.",
+  },
+  'concept.interest': {
+    title: 'Interest',
+    category: 'concepts',
+    body: "The price of borrowed money, charged as a share of what you owe. Here it is quoted per month and charged every hour. The rate is the Lunar Authority's base rate plus a spread for your credit rating: 2.7% a month at A, 5.5% at B.",
+    realWorld:
+      'Central banks set a base rate, and banks add a margin for risk. Small rates compound: 2% a month is about 27% a year.',
+  },
+  'concept.shares': {
+    title: 'Shares',
+    category: 'concepts',
+    body: 'A listed company is split into shares; each starts with 100,000. Their price moves every hour as investors and companies trade, pulled toward a fair value built from book value and recent earnings. Buy shares in a rival and you own part of it. A holder of 20% or more must say so in public.',
+    realWorld:
+      'Shares trade on exchanges such as the New York Stock Exchange. Over long periods prices follow earnings; in the short run, mood and news move them far more.',
+  },
+  'concept.dividends': {
+    title: 'Dividends',
+    category: 'concepts',
+    body: "Cash a company pays its owners out of profit. You choose the share of each month's net income to pay: none, 10%, 25% or 50%. Dividends please investors and lift the share price a little, but cash paid out cannot build a smelter.",
+    realWorld:
+      'Mature companies pay steady dividends; young ones keep their profit to grow. A cut dividend reads as bad news and often sinks the price.',
+  },
+  'concept.dilution': {
+    title: 'Dilution',
+    category: 'concepts',
+    body: 'Issuing new shares raises cash without debt, but every existing share now owns a smaller slice of the company. You can issue at most 20% more shares each month. New shares sell at market, so an issue at a low price gives away more of the company.',
+    realWorld:
+      'Start-ups dilute their founders in every funding round. Investors accept it when the cash raised grows the company faster than their slice shrinks.',
+  },
+  'concept.buyback': {
+    title: 'Buyback',
+    category: 'concepts',
+    body: 'A company buys its own shares on the market and holds them in treasury. Fewer shares stay in other hands, so each one owns more of the company and its profit. It returns cash to owners without a dividend.',
+    realWorld:
+      'Large firms such as Apple spend tens of billions a year on buybacks. Critics say the cash would do more as investment.',
+  },
+  'concept.priceEarnings': {
+    title: 'Price to earnings',
+    category: 'concepts',
+    body: "The share price divided by a year's earnings per share. A P/E of 10 means buyers pay ten Marks for each Mark of yearly profit. A high P/E means investors expect growth, or hope too much; a low one means doubt, or a bargain. With a loss, there is no P/E.",
+    realWorld:
+      'Stock markets have averaged a P/E of about 15 over the last century. Fast-growing technology firms often trade at 30 or more.',
+  },
+  'concept.englishAuction': {
+    title: 'English auction',
+    category: 'concepts',
+    body: 'An open auction where the price climbs. Each bid must beat the leader by a step, everyone sees the leading bid, and the best bid when time runs out wins. Here a bid counts for its amount times a reputation bonus, and a late bid adds time, so nobody wins by sniping.',
+    realWorld:
+      "Christie's and Sotheby's sell art this way. Governments use rising-price auctions to sell radio spectrum and oil leases.",
+  },
+  'concept.proxyBid': {
+    title: 'Proxy bid',
+    category: 'concepts',
+    body: 'A ceiling you set in advance. The auction bids for you, one step at a time, only when someone else leads, and never above your ceiling. You pay one step over the next best bid, not your ceiling. It keeps bidding while you are away.',
+    realWorld:
+      'eBay works this way: you enter the most you will pay, and the site bids for you. Economists call it a second-price auction in disguise.',
+  },
+  'concept.default': {
+    title: 'Default',
+    category: 'concepts',
+    body: 'Failing to pay a debt when it is due. Your rating falls to D, nobody lends to you, and lenders sell your stock until what is overdue is paid. Stay in default a full game day and they seize assets. After the debt is cleared, the D stays for three monthly closes.',
+    realWorld:
+      'Countries default too: Argentina has done it nine times. Lenders charge a defaulter higher rates for years afterwards.',
+  },
+  'concept.bankruptcy': {
+    title: 'Bankruptcy',
+    category: 'concepts',
+    body: 'When a company cannot pay and its assets are seized, it is finished. Its sections and buildings go to auction, its remaining debts are written off, and its shares become worthless. Lenders take the losses. On the Moon, a new rival is founded two days later.',
+    realWorld:
+      'Courts decide who gets what is left: lenders first, owners last. Shareholders usually get nothing, as at Lehman Brothers in 2008.',
+  },
 };
