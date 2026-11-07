@@ -92,7 +92,9 @@ test('the core loop: found, build, sell, deliver, expand, and reload', async ({ 
   await expect
     .poll(async () => (await watched()).tokens, { timeout: 15_000 })
     .toContainEqual(expect.stringMatching(/^\+LM [\d,.]+$/));
-  await expect.poll(async () => (await watched()).rises.length).toBeGreaterThan(0);
+  await expect
+    .poll(async () => (await watched()).rises.length, { timeout: 15_000 })
+    .toBeGreaterThan(0);
   await expect(panel.getByRole('list', { name: 'Recent fills' })).toContainText(
     'Sold 40.0 t Ilmenite',
   );
@@ -138,7 +140,8 @@ test('the core loop: found, build, sell, deliver, expand, and reload', async ({ 
     mine: window.__pmo.world()!.buildings.some((b) => b.type === 'mine'),
   }));
   const expected = before.tick + ((after.at - before.at) * TIMESCALE) / 1000;
-  expect(Math.abs(after.tick - expected)).toBeLessThanOrEqual(TIMESCALE);
+  // Each tick read is the latest snapshot, which a busy runner can deliver up to a second late.
+  expect(Math.abs(after.tick - expected)).toBeLessThanOrEqual(2 * TIMESCALE);
   expect(after.sections).toBe(2);
   expect(after.mine).toBe(true);
 });

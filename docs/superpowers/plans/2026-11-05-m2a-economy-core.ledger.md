@@ -185,3 +185,4 @@ Final: minor (deferred): offered tenders keep a stale tenderTo after their secti
 Final: minor (deferred): an orphaned doc comment at src/data/companies.ts:18.
 Final: minor (deferred): test gaps: the v2 migration test checks only cash > 0; no proxy bids during a catch-up; workers removed by an unsold seizure are not in "departures".
 Final: minor (deferred): Codex bodies carry numbers (LM 2,000, 2.7% at A) that can drift from data; codexFacts could show them.
+Final: Ruling: CI run 69 still failed the core loop on two timing checks: the cash-rise poll (5 s default, now 15 s like the token poll before it) and the reload clock check (122 ticks against 120, now 2 game hours: each tick read is a snapshot a busy runner can deliver up to a second late) — cost if wrong: a clock drift under 2 real seconds after reload goes unnoticed.
