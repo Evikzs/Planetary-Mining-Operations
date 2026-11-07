@@ -4,7 +4,7 @@ A browser game about a mining conglomerate. You start with one section of the Mo
 
 - Mobile first, with a full desktop version.
 - Runs in the browser. No server.
-- Status: the Moon slice (milestone M1) is playable. The economy core (M2a) is in progress: five AI rivals share the Moon, and you can take loans, trade shares and read your statements in the Finance tab. Auctions run, but the land office still sells land until the auctions screen arrives. Next: the auctions screen, the news ticker and the away summary.
+- Status: the Moon slice (milestone M1) is playable. The economy core (M2a) is in progress: five AI rivals share the Moon. You win new sections at auction against them in the Build tab, and you can take loans, trade shares and read your statements in the Finance tab. Next: the news ticker, the companion's finance lessons and the away summary.
 
 ## Play
 

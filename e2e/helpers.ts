@@ -40,3 +40,14 @@ export async function openTab(page: Page, label: string): Promise<void> {
   await tabs.getByRole('button', { name: 'More' }).click();
   await page.getByTestId('tab-panel').getByRole('button', { name: label }).click();
 }
+
+/** The unowned section nearest the player's charter, with no lot open on it. */
+export function nearestFreeSection(page: Page): Promise<number> {
+  return page.evaluate(() => {
+    const w = window.__pmo.world()!;
+    const home = w.sections.find((s) => s.owner === 0)!.center;
+    const dist = (c: readonly number[]) => Math.hypot(...c.map((v, i) => v - home[i]!));
+    const free = w.sections.filter((s) => s.owner === null && !s.onAuction);
+    return free.sort((a, b) => dist(a.center) - dist(b.center))[0]!.id;
+  });
+}

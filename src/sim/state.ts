@@ -98,7 +98,6 @@ export interface GameState {
   sections: SectionState[];
   buildings: Building[];
   belts: Belt[];
-  landPurchases: number;
   stats: Stats;
   people: People;
   /** Bus runs on the road or waiting for a bus. */
@@ -154,7 +153,6 @@ export function createInitialState(seed: number): GameState {
     sections: [],
     buildings: [],
     belts: [],
-    landPurchases: 0,
     stats: { producedKg: {}, soldKg: {}, boughtKg: {}, incomeCents: 0 },
     people: createPeople(),
     trips: [],

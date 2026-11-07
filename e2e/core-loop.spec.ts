@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { gotoGame, openTab } from './helpers';
+import { gotoGame, nearestFreeSection, openTab } from './helpers';
 
 const TIMESCALE = 120; // one game hour every half second
 const snapshot = (page: Page) => page.evaluate(() => window.__pmo.ui()!);
@@ -119,16 +119,27 @@ test('the core loop: found, build, sell, deliver, expand, and reload', async ({ 
   );
   await panel.getByRole('button', { name: 'Close panel' }).click();
 
-  // 8. Buy a neighbouring section: the starting cash covers the land office's LM 60,000.
-  const neighbour = await page.evaluate(
-    () => window.__pmo.world()!.sections.find((s) => s.buyable)!.id,
-  );
+  // 8. Win a neighbouring section at auction: open a lot and let a proxy bid up to LM 200,000.
+  const neighbour = await nearestFreeSection(page);
   await page.evaluate((id) => window.__pmo.select({ kind: 'section', id }), neighbour);
-  await page
-    .getByTestId('context-panel')
-    .getByRole('button', { name: 'Buy section — LM 60,000.00' })
-    .click();
-  await expect.poll(async () => (await snapshot(page)).sections.length).toBe(2);
+  const context = page.getByTestId('context-panel');
+  await context.getByRole('button', { name: 'Open an auction — LM 2,000.00' }).click();
+  // At 120x a lot runs 1.5 real seconds, too short to type a ceiling, so the proxy goes in
+  // directly; e2e/auctions.spec.ts sets one by hand.
+  const proxy = await page.evaluate(async (id) => {
+    for (;;) {
+      const lot = window.__pmo
+        .ui()!
+        .auctions.find((a) => a.status === 'open' && a.lot.sectionId === id);
+      if (lot)
+        return window.__pmo.send({ t: 'setProxy', auctionId: lot.id, ceilingCents: 20_000_000 });
+      await new Promise((done) => setTimeout(done, 20));
+    }
+  }, neighbour);
+  expect(proxy).toEqual({ ok: true });
+  await expect
+    .poll(async () => (await snapshot(page)).sections.length, { timeout: 30_000 })
+    .toBe(2);
 
   // 9. Reload: the autosave brings back the company, and the clock has kept time.
   const before = await page.evaluate(() => ({ tick: window.__pmo.ui()!.tick, at: Date.now() }));

@@ -16,7 +16,7 @@ export const NARRATOR_LINES: Record<BeatId, string[]> = {
   'ch1.firstContract': ['Accept a contract from the board and complete it before its deadline.'],
   'ch1.power': ['Power demand exceeds supply. Every building slows down by the same share.'],
   'ch1.firstRefinery': ['A smelter refines ilmenite into steel, which is worth more.'],
-  'ch1.expansion': ['Buy a neighbouring section from the land office.'],
+  'ch1.expansion': ['Win a neighbouring section at auction. Rival companies bid against you.'],
   'ch1.end': [
     'Chapter 1 is complete. While you are away, the company works at half pace for up to 8 hours.',
   ],

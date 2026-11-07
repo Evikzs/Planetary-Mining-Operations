@@ -59,7 +59,6 @@ export class SectionOverlay {
   private readonly root = new Group();
   private readonly orbit = new Group();
   private borders: LineSegments | null = null;
-  private buyable: LineSegments | null = null;
   private lots: LineSegments | null = null;
   /** One fill per owner, in its colour. */
   private fills: Mesh[] = [];
@@ -93,11 +92,6 @@ export class SectionOverlay {
         w.sections.map((s) => [s.id, Math.max(...s.polygon.map((p) => angleBetween(s.center, p)))]),
       );
     }
-    const buyable = w.sections.filter((s) => s.buyable);
-    this.buyable = this.replace(
-      this.buyable,
-      lines(this.arcs(buyable, ORBIT_LIFT + 0.01), palette.mustard),
-    );
     this.lots = this.replace(
       this.lots,
       lines(
@@ -137,7 +131,7 @@ export class SectionOverlay {
   }
 
   dispose(): void {
-    for (const o of [this.borders, this.buyable, this.lots, this.markers, this.pins, this.draped]) {
+    for (const o of [this.borders, this.lots, this.markers, this.pins, this.draped]) {
       if (o) this.release(o);
     }
     for (const f of this.fills) this.release(f);
@@ -147,7 +141,6 @@ export class SectionOverlay {
   private applyFilter(): void {
     const p = this.filter.planetary;
     for (const f of this.fills) f.visible = p === 'ownership';
-    if (this.buyable) this.buyable.visible = p === 'ownership';
     if (this.lots) this.lots.visible = p === 'ownership';
     if (this.pins) this.pins.visible = p === 'contracts';
     if (this.markers) this.markers.visible = typeof p === 'object';

@@ -19,7 +19,7 @@ import { Trend } from '../components/Trend';
 import { formatChange, formatMoney, formatNumber } from '../format';
 import { isDesktop } from '../shell/useBreakpoint';
 
-const nameOf = (snap: UiSnapshot) => (id: CompanyId) =>
+export const nameOf = (snap: UiSnapshot) => (id: CompanyId) =>
   id === PLAYER ? 'You' : (snap.companies.find((c) => c.id === id)?.name ?? 'A rival');
 
 const incomeRows = (s: IncomeStatement): StatementRow[] => [

@@ -1,13 +1,11 @@
 import { BUILDINGS, type BuildingTypeId } from '../../data/buildings';
-import { landPrice } from '../build/landOffice';
 import { fail, OK, type CommandResult } from '../commands';
 import type { System } from '../engine';
 import type { SimEvent } from '../events';
-import { balance } from '../ledger';
 import type { GameState } from '../state';
 import { BEATS, TUTORIAL, type BeatId, type HintCategory } from './beats';
 import { unlockCodex, unlockFromState } from './codex';
-import { buildingOwner, cashAccount, PLAYER, playerCompany } from '../companies';
+import { buildingOwner, PLAYER, playerCompany } from '../companies';
 import { forPlayer } from '../events';
 
 export interface StoryState {
@@ -52,7 +50,6 @@ const TRIGGER: Partial<Record<BeatId, (s: GameState, events: SimEvent[]) => bool
   'ch1.belts': (s) =>
     playerBuildings(s).some((b) => BUILDINGS[b.type].belt && b.status !== 'constructing'),
   'ch1.shiftChange': (_s, events) => events.some((e) => e.t === 'shiftChange'),
-  'ch1.expansion': (s) => balance(s.ledger, cashAccount(PLAYER)) >= landPrice(s.landPurchases),
 };
 
 /** Beats that end when something happens rather than when the player closes them. */
@@ -63,7 +60,8 @@ const COMPLETE: Partial<Record<BeatId, (s: GameState) => boolean>> = {
   'ch1.firstContract': (s) =>
     s.contracts.some((c) => c.status === 'completed' && c.holder === PLAYER),
   'ch1.firstRefinery': (s) => (s.stats.producedKg.steel ?? 0) > 0,
-  'ch1.expansion': (s) => s.landPurchases > 0,
+  // Land the player paid for: the charter section came free.
+  'ch1.expansion': (s) => s.sections.some((x) => x.owner === PLAYER && x.landCents > 0),
 };
 
 function finish(state: GameState, beat: BeatId): void {

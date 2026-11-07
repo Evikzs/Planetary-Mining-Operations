@@ -223,7 +223,7 @@ export function setProxy(
 
 /** The leader pays, else the next company in line, each at its own best bid. */
 function settle(state: GameState, a: Auction, events: SimEvent[]): void {
-  // Changed hands meanwhile (the land office, until C16 closes it): nothing left to sell.
+  // Changed hands meanwhile: nothing left to sell.
   const seller = a.lot.kind === 'assets' ? a.lot.fromCompanyId : null;
   if (sectionOwner(state, a.lot.sectionId) !== seller) {
     a.status = 'unsold';

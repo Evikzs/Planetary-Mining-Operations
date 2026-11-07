@@ -190,7 +190,7 @@ describe('auctions', () => {
     const s = twoCompanies();
     const a = open(s);
     applyCommand(s, { t: 'placeBid', auctionId: a.id, amountCents: 4_000_000 }, 1);
-    // The land office (until it closes) sells the same section to the player.
+    // Something else hands the same section to the player.
     ownSection(s, a.lot.sectionId, PLAYER);
     const events = run(s, AUCTION.durationTicks + 5);
     expect(a.status).toBe('unsold');

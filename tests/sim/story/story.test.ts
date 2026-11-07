@@ -1,7 +1,10 @@
 import { describe, expect, it } from 'vitest';
+import { AUCTION } from '../../../src/data/auctions';
 import { NARRATOR_LINES } from '../../../src/data/companions/narrator';
 import { VETERAN_LINES } from '../../../src/data/companions/veteran';
 import { sectionState } from '../../../src/sim/build/sections';
+import { deserializeState, serializeState } from '../../../src/save/serialize';
+import { PLAYER } from '../../../src/sim/companies';
 import { applyCommand, createGame, step } from '../../../src/sim/engine';
 import { TUTORIAL } from '../../../src/sim/story/beats';
 import { currentLine } from '../../../src/sim/story/story';
@@ -121,6 +124,37 @@ describe('story', () => {
     expect(s.story.codex).toEqual(
       expect.arrayContaining(['concept.orderBook', 'concept.priceImpact']),
     );
+  });
+
+  it('ch1.expansion completes when the player wins an auction', () => {
+    const s = founded();
+    const before = TUTORIAL.slice(0, TUTORIAL.indexOf('ch1.expansion'));
+    s.story.seen = [...before];
+    s.story.done = [...before];
+    s.story.queue = [];
+    run(s, 1);
+    expect(s.story.queue).toEqual(['ch1.expansion']);
+    const next = world.sections[home]!.neighbors[0]!;
+    expect(applyCommand(s, { t: 'openAuction', sectionId: next })).toEqual({ ok: true });
+    const lot = s.auctions.find((a) => a.lot.sectionId === next)!;
+    applyCommand(s, { t: 'setProxy', auctionId: lot.id, ceilingCents: 20_000_000 });
+    run(s, AUCTION.durationTicks - 10);
+    expect(s.story.done).not.toContain('ch1.expansion');
+    run(s, 15);
+    expect(lot).toMatchObject({ status: 'won', winner: PLAYER });
+    expect(s.story.done).toContain('ch1.expansion');
+    expect(s.story.codex).toContain('mech.auctions');
+  });
+
+  it('a saved mech.landOffice entry loads as mech.auctions', () => {
+    const s = founded();
+    s.story.codex.push('mech.landOffice');
+    const saved = JSON.parse(JSON.stringify(serializeState(s))) as Record<string, unknown>;
+    saved.landPurchases = 1;
+    const back = deserializeState(saved);
+    expect(back.story.codex).toContain('mech.auctions');
+    expect(back.story.codex).not.toContain('mech.landOffice');
+    expect('landPurchases' in back).toBe(false);
   });
 
   it('event beats fire at most once per 6 game hours', () => {

@@ -20,12 +20,16 @@ const working = (b: Building) => b.status !== 'constructing' && b.status !== 'up
 export function sectionPower(state: GameState, sectionId: number): Omit<SectionPower, 'brownout'> {
   let supplyKw = 0;
   let demandKw = 0;
+  let depotOnly = true;
   for (const b of state.buildings) {
     if (b.sectionId !== sectionId || !working(b)) continue;
+    if (b.type !== 'depot') depotOnly = false;
     const kw = BUILDINGS[b.type].powerKw;
     if (kw > 0) supplyKw += kw * levelOutput(b.level) * staffing(state, b);
     else demandKw += -kw * levelPower(b.level);
   }
+  // A depot alone draws nothing, so a section just won does not open with a brownout.
+  if (depotOnly) demandKw = 0;
   const factor = demandKw === 0 ? 1 : Math.min(1, supplyKw / demandKw);
   return { supplyKw, demandKw, factor };
 }

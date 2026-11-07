@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { applyCommand, createGame, step } from '../../../src/sim/engine';
 import type { SimEvent } from '../../../src/sim/events';
-import { sectionState } from '../../../src/sim/build/sections';
+import { ownSection, sectionState } from '../../../src/sim/build/sections';
+import { PLAYER } from '../../../src/sim/companies';
 import type { GameState } from '../../../src/sim/state';
 import { worldOf } from '../../../src/sim/world/luna';
 
@@ -64,5 +65,14 @@ describe('power grid', () => {
     applyCommand(s, { t: 'build', plotId: freeBuild(s).id, type: 'electrolysisPlant' });
     events = run(s, 300);
     expect(events.filter((e) => e.t === 'brownout')).toHaveLength(1);
+  });
+
+  it('a section with only its depot raises no brownout', () => {
+    const s = founded();
+    const next = world.sections[home]!.neighbors[0]!;
+    ownSection(s, next, PLAYER);
+    const events = run(s, 2);
+    expect(events.filter((e) => e.t === 'brownout')).toEqual([]);
+    expect(sectionState(s, next)!.power.factor).toBe(1);
   });
 });

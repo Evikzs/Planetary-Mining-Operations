@@ -5,6 +5,7 @@ import { ownersByBuilding, PLAYER } from '../../src/sim/companies';
 import { applyCommand, createGame, step } from '../../src/sim/engine';
 import type { Contract } from '../../src/sim/contracts/contracts';
 import { addWorker, indexOfId, SKILL_CODE } from '../../src/sim/people/store';
+import { ownSection } from '../../src/sim/build/sections';
 import {
   buildMotionView,
   buildUiSnapshot,
@@ -85,7 +86,7 @@ describe('views', () => {
     applyCommand(s, { t: 'demolish', buildingId: fresh.id });
     expect(changed()).toBe(true);
     const next = world.sections[home]!.neighbors[0]!;
-    applyCommand(s, { t: 'buySection', sectionId: next });
+    ownSection(s, next, PLAYER);
     expect(changed()).toBe(true);
   });
 

@@ -53,8 +53,10 @@ export const VETERAN_LINES: Record<BeatId, string[]> = {
     'Feed it by belt from the depot, then sell the steel or build with it. Same rock, more than twice the money.',
   ],
   'ch1.expansion': [
-    'We have outgrown one section. The Lunar Authority land office sells the sections next door at a listed price.',
-    'Each one costs more than the last. Buy the one with the deposits we lack, and put a garage on it early.',
+    "We've outgrown one section, boss. Land here goes at auction, and five rival outfits want the same rock we do.",
+    'Open a lot on the section next door, or wait for the Authority to put one up. The fee is two thousand Marks. Bids start at thirty thousand.',
+    'Set a ceiling and our broker bids for us, a step at a time, up to that number. Pick the number before the fever picks it for you.',
+    'Rivals bid with the cash they have. Early on that is plenty. Lose one, and there is always another lot. Win the one with the deposits we lack.',
   ],
   'ch1.end': [
     "That's the job, boss. Dig, haul, refine, sell, and keep the crew breathing. The rest is doing it bigger.",

@@ -66,7 +66,7 @@ export const BEATS: Record<BeatId, BeatDef> = {
   'ch1.firstContract': { category: 'tutorial', ack: false, codex: ['mech.reputation'] },
   'ch1.power': { category: 'tutorial', ack: true, codex: ['mech.power'] },
   'ch1.firstRefinery': { category: 'tutorial', ack: false, codex: ['concept.valueAdded'] },
-  'ch1.expansion': { category: 'tutorial', ack: false, codex: ['mech.landOffice'] },
+  'ch1.expansion': { category: 'tutorial', ack: false, codex: ['mech.auctions'] },
   'ch1.end': { category: 'tutorial', ack: true, codex: ['mech.offline'] },
   'ev.brownout': alert,
   'ev.shortageAir': alert,

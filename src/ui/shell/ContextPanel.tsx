@@ -14,7 +14,7 @@ import { busLoad, type Trip } from '../../shared/trips';
 import { PLAYER } from '../../sim/companies';
 import type { Inventory } from '../../sim/inventory';
 import type { UiSnapshot, WorldView } from '../../sim/views';
-import { BuySection } from '../components/BuySection';
+import { AuctionPanel, OpenAuction } from '../components/AuctionPanel';
 import { formatGameDuration, formatMass } from '../format';
 import { Icon } from '../icons';
 import { activeTab } from './tabs';
@@ -159,11 +159,14 @@ function sectionView(id: number, w: WorldView, snap: UiSnapshot | null): View | 
       },
     );
   }
+  const lot = snap?.auctions.find((a) => a.status === 'open' && a.lot.sectionId === id);
   return {
     title: `Section ${s.id}`,
     facts,
-    extra: s.buyable && snap && (
-      <BuySection key={s.id} id={s.id} priceCents={snap.landPriceCents} />
+    extra: lot ? (
+      <AuctionPanel key={lot.id} auctionId={lot.id} />
+    ) : (
+      snap?.company && s.owner === null && <OpenAuction key={s.id} sectionId={s.id} />
     ),
   };
 }

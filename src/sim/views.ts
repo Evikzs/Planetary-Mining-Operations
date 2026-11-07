@@ -11,7 +11,6 @@ import { GOOD_IDS, type GoodId } from '../data/goods';
 import type { Trip } from '../shared/trips';
 import type { Vec3 } from '../shared/vec3';
 import type { Alert } from './alerts';
-import { buyableSections, landPrice } from './build/landOffice';
 import { productionRateTph } from './build/production';
 import { storageCapKg } from './build/sections';
 import { formatGameDate, shiftAt } from './clock';
@@ -66,7 +65,6 @@ export interface WorldView {
     polygon: Vec3[];
     /** Null: the Lunar Authority's. */
     owner: CompanyId | null;
-    buyable: boolean;
     onAuction: boolean;
   }[];
   plots: {
@@ -171,7 +169,6 @@ export interface UiSnapshot {
   company: Company | null;
   cashCents: number;
   reputation: { group: number; luna: number };
-  landPriceCents: number;
   sections: {
     id: number;
     owned: boolean;
@@ -296,7 +293,6 @@ export function buildWorldView(state: GameState, version: number): WorldView {
   const onAuction = new Set(
     state.auctions.filter((a) => a.status === 'open').map((a) => a.lot.sectionId),
   );
-  const buyable = new Set(buyableSections(state));
   return {
     version,
     seed: state.seed,
@@ -306,7 +302,6 @@ export function buildWorldView(state: GameState, version: number): WorldView {
       center: s.center,
       polygon: s.polygon,
       owner: ownerOf.get(s.id) ?? null,
-      buyable: buyable.has(s.id),
       onAuction: onAuction.has(s.id),
     })),
     plots: world.plots.map((p) => ({
@@ -496,7 +491,6 @@ export function buildUiSnapshot(state: GameState): UiSnapshot {
     company: player ? { name: player.name, companionId: player.companionId ?? 'veteran' } : null,
     cashCents: balance(state.ledger, cashAccount(PLAYER)),
     reputation: { ...(player?.reputation ?? { group: 0, luna: 0 }) },
-    landPriceCents: landPrice(state.landPurchases),
     sections: state.sections
       .filter((s) => s.owner === PLAYER)
       .map((s) => ({

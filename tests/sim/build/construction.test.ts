@@ -3,7 +3,6 @@ import { BUILDINGS } from '../../../src/data/buildings';
 import { START_STOCK_T } from '../../../src/data/balance';
 import { applyCommand, createGame, step } from '../../../src/sim/engine';
 import { balance, transfer } from '../../../src/sim/ledger';
-import { buyableSections, landPrice } from '../../../src/sim/build/landOffice';
 import { sectionState, storageCapKg } from '../../../src/sim/build/sections';
 import type { GameState } from '../../../src/sim/state';
 import { worldOf } from '../../../src/sim/world/luna';
@@ -177,36 +176,5 @@ describe('construction', () => {
       { ok: true },
     );
     expect(smelter.priority).toBe('high');
-  });
-});
-
-describe('land office', () => {
-  it('sells adjacent sections at LM 60,000 then LM 96,000', () => {
-    const s = founded();
-    expect(landPrice(0)).toBe(6_000_000);
-    expect(landPrice(1)).toBe(9_600_000);
-    const [a, b] = buyableSections(s);
-    const cash = balance(s.ledger, 'co:0');
-    expect(applyCommand(s, { t: 'buySection', sectionId: a! })).toEqual({ ok: true });
-    expect(cash - balance(s.ledger, 'co:0')).toBe(6_000_000);
-    expect(applyCommand(s, { t: 'buySection', sectionId: b! })).toEqual({ ok: true });
-    expect(cash - balance(s.ledger, 'co:0')).toBe(15_600_000);
-    expect(s.buildings.filter((x) => x.type === 'depot')).toHaveLength(3);
-    expect(applyCommand(s, { t: 'buySection', sectionId: a! })).toEqual({
-      ok: false,
-      error: 'ALREADY_OWNED',
-    });
-  });
-
-  it('refuses sections that are not adjacent', () => {
-    const s = founded();
-    const owned = new Set(s.sections.map((x) => x.id));
-    const far = world.sections.find(
-      (x) => !owned.has(x.id) && !x.neighbors.some((n) => owned.has(n)),
-    )!;
-    expect(applyCommand(s, { t: 'buySection', sectionId: far.id })).toEqual({
-      ok: false,
-      error: 'NOT_ADJACENT',
-    });
   });
 });

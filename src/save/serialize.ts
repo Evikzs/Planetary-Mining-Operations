@@ -104,6 +104,12 @@ export const UPGRADES: ((s: GameState) => void)[] = [
       bought.forEach((x, i) => (x.landCents += each + (i === 0 ? rest - each * bought.length : 0)));
     }
   },
+  // M2a C16: auctions replace the land office.
+  (s) => {
+    const codex = s.story.codex.map((id) => (id === 'mech.landOffice' ? 'mech.auctions' : id));
+    s.story.codex = [...new Set(codex)];
+    delete (s as Partial<GameState> & { landPurchases?: number }).landPurchases;
+  },
 ];
 
 export function deserializeState(data: unknown): GameState {

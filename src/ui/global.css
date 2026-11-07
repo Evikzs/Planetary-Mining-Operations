@@ -1963,11 +1963,13 @@ h3 {
   font-size: 15px;
 }
 
-.finance-tab .facts {
+.finance-tab .facts,
+.auction .facts {
   margin: var(--space-2) 0;
 }
 
-.finance-tab .facts div {
+.finance-tab .facts div,
+.auction .facts div {
   display: flex;
   justify-content: space-between;
   align-items: baseline;
@@ -1976,12 +1978,14 @@ h3 {
   border-bottom: 1px solid color-mix(in srgb, var(--c-offBlack) 18%, transparent);
 }
 
-.finance-tab .facts dt {
+.finance-tab .facts dt,
+.auction .facts dt {
   font-family: var(--font-display);
   font-weight: 500;
 }
 
-.finance-tab .facts dd {
+.finance-tab .facts dd,
+.auction .facts dd {
   margin: 0;
 }
 
@@ -1992,7 +1996,8 @@ h3 {
   font-weight: 600;
 }
 
-.finance-tab .buttons {
+.finance-tab .buttons,
+.auction .buttons {
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-2);

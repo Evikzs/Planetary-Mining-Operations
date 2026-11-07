@@ -8,7 +8,6 @@ import {
   upgrade,
 } from './build/construction';
 import { grantCharter } from './build/founding';
-import { buySection } from './build/landOffice';
 import { powerSystem } from './build/power';
 import { productionSystem } from './build/production';
 import { shiftStartingAt } from './clock';
@@ -140,8 +139,6 @@ export function applyCommand(
       return setRecipe(state, cmd.buildingId, cmd.recipeId, actor);
     case 'setPriority':
       return setPriority(state, cmd.buildingId, cmd.priority, actor);
-    case 'buySection':
-      return buySection(state, cmd.sectionId, actor);
     case 'storyAck':
       return actor === PLAYER ? storyAck(state, cmd.beatId) : fail('NOT_OWNED');
     case 'setHintMute':

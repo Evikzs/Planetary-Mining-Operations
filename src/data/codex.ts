@@ -144,10 +144,10 @@ const OTHER: Record<string, CodexEntry> = {
     category: 'mechanics',
     body: "Solar arrays feed each section's grid, and every finished building draws from it. When demand is higher than supply, every building slows by the same share. That is a brownout.",
   },
-  'mech.landOffice': {
-    title: 'Land office',
+  'mech.auctions': {
+    title: 'Auctions',
     category: 'mechanics',
-    body: 'The Lunar Authority sells sections next to the ones you own. The first costs LM 60,000, and each purchase costs 60% more than the one before.',
+    body: 'Sections change hands at auction. Any company can open a lot on an unowned section for LM 2,000; the Lunar Authority opens one every 12 game hours. Bids start at the LM 30,000 reserve and count for their amount times a reputation bonus. A lot runs 3 real minutes; a late bid adds 30 seconds, up to 10 minutes. A proxy bids the minimum for you up to your ceiling, even while you are away.',
   },
   'mech.offline': {
     title: 'While you are away',

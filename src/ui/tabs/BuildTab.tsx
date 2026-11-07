@@ -15,10 +15,17 @@ import type { Command } from '../../sim/commands';
 import type { Inventory } from '../../sim/inventory';
 import type { Priority } from '../../sim/state';
 import type { UiSnapshot, WorldView } from '../../sim/views';
-import { BuySection } from '../components/BuySection';
+import {
+  AuctionPanel,
+  leaderOf,
+  LOT_KIND,
+  OpenAuction,
+  timeLeft,
+} from '../components/AuctionPanel';
 import { ErrorText, useCommand } from '../components/command';
 import { formatGameDuration, formatMass, formatMoney, formatRealFromGame } from '../format';
 import { sectionOfPick } from '../shell/sectionOf';
+import { nameOf } from './FinanceTab';
 
 type Plot = WorldView['plots'][number];
 type Built = WorldView['buildings'][number];
@@ -311,7 +318,46 @@ function focusOf(
   return { plot: null, building: null };
 }
 
-/** Build on the plots of the selected section (or the founding one); buy sections next door. */
+/** The selected section's lot, or a way to open one; then every open lot. */
+function LandAndAuctions(props: { snap: UiSnapshot; sectionId: number; owned: boolean }) {
+  const { snap, sectionId, owned } = props;
+  const open = snap.auctions.filter((a) => a.status === 'open');
+  const here = open.find((a) => a.lot.sectionId === sectionId);
+  return (
+    <section aria-labelledby="build-land">
+      <h3 id="build-land">Land and auctions</h3>
+      {here ? (
+        <AuctionPanel key={here.id} auctionId={here.id} />
+      ) : (
+        !owned && <OpenAuction key={sectionId} sectionId={sectionId} />
+      )}
+      <ul class="orders" aria-label="Open lots">
+        {open.length === 0 && <li class="empty">No open lots.</li>}
+        {open.map((a) => (
+          <li key={a.id}>
+            <span>
+              <button
+                type="button"
+                class="action small quiet"
+                onClick={() => (selection.value = { kind: 'section', id: a.lot.sectionId })}
+              >
+                Section {a.lot.sectionId}
+              </button>{' '}
+              {LOT_KIND[a.lot.kind]}
+              <span class="meta">
+                {leaderOf(snap, a)}
+                {a.myProxyCents !== null && `, your proxy ${formatMoney(a.myProxyCents)}`}
+              </span>
+            </span>
+            <span class="num">{timeLeft(snap, a)}</span>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
+/** Build on the plots of the selected section (or the founding one); bid for land. */
 export function BuildTab() {
   const { error, clear, run } = useCommand();
   const pick = selection.value;
@@ -361,7 +407,7 @@ export function BuildTab() {
     <div class="build-tab">
       <p class="where">
         Section {sectionId}
-        {mine ? '' : ', Lunar Authority'}
+        {section?.owner == null ? ', Lunar Authority' : ''}
       </p>
       {mine ? (
         <>
@@ -370,15 +416,11 @@ export function BuildTab() {
             {focus}
           </div>
         </>
-      ) : section?.buyable ? (
-        <>
-          <p>The Lunar Authority land office sells this section.</p>
-          <BuySection key={section.id} id={section.id} priceCents={snap.landPriceCents} />
-        </>
       ) : (
-        <p>{ERROR_COPY.NOT_ADJACENT}</p>
+        section?.owner != null && <p>{nameOf(snap)(section.owner)} owns this section.</p>
       )}
       <ErrorText error={error} />
+      <LandAndAuctions snap={snap} sectionId={sectionId} owned={section?.owner != null} />
     </div>
   );
 }

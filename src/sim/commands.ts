@@ -13,7 +13,6 @@ export type Command =
   | { t: 'demolish'; buildingId: number }
   | { t: 'setRecipe'; buildingId: number; recipeId: RecipeId }
   | { t: 'setPriority'; buildingId: number; priority: Priority }
-  | { t: 'buySection'; sectionId: number }
   | { t: 'setWageLevel'; skill: Skill; level: WageLevel }
   | {
       t: 'assignWorker';
@@ -71,8 +70,6 @@ export type CommandError =
   | 'INSUFFICIENT_MATERIALS'
   | 'NO_ROAD_ACCESS'
   | 'MAX_LEVEL'
-  | 'NOT_ADJACENT'
-  | 'ALREADY_OWNED'
   | 'INVALID_RECIPE'
   | 'BUSY'
   | 'CANNOT_DEMOLISH'

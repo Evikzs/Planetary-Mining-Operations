@@ -79,7 +79,6 @@ export const MAX_STOPS = 4;
 export const BELT_CAPACITY_TPH = 30;
 export const BUFFER_HOURS = 2;
 
-export const LAND_PRICE = { baseCents: 6_000_000, growth: 1.6 } as const;
 export const MARKET = {
   meanReversion: 0.3,
   momentum: 0.1,
