@@ -155,3 +155,8 @@ Task 19: Ruling: the save-size and encode budgets live in tests/perf/sim.perf.te
 Task 19: Ruling: "before" for the 50% budget is the same busy state (590 buses out, an hour before the 06:00 shift) serialized with its trip and belt lines put back — the old code's size at that moment — cost if wrong: none.
 Task 19: Ruling: tried a native JSON deep copy for saves; it ran slower (the replacer forces JSON's slow path), so the walk stays — cost if wrong: none.
 Task 19: note: rival bench now: median fine tick ~3.8 ms (unchanged), slowest tick of a day under 30 ms (was ~300), 8-hour catch-up ~5 s (was 12), busy save 1.16 MB (was 5.9) and encode ~40 ms (was 143). check 433 tests; bot unchanged; full e2e 85 passed, 3 skipped.
+Task 20: complete (commits a0fa16e..bfbd991, tests: npx vitest run →    Duration  51.20s (transform 3.01s, setup 0ms, import 10.55s, tests 67.03s, environment 7ms))
+Task 20: Ruling: the economy loop's proxy ceiling is LM 250,000, not LM 200,000, and goes in through the test API right after the lot opens in the context panel — at 120x a lot runs 1.5 real seconds, and in the first game day rivals bid up to LM 232,848 — cost if wrong: the proxy form is covered only by auctions.spec.
+Task 20: Ruling: the spec's owner log is unchanged — it already held the three 2026-11-05 decisions (M2 scope, money, rivals) — cost if wrong: none.
+Task 20: note: the economy-loop e2e passed on its first run; every feature it covers was already in, so it never failed.
+Task 20: note: check 433 tests; build passes; size 228.9 KiB of 1536; bot passes; full e2e 89 passed, 3 skipped.
