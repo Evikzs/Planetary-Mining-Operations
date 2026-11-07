@@ -4,7 +4,7 @@ A browser game about a mining conglomerate. You start with one section of the Mo
 
 - Mobile first, with a full desktop version.
 - Runs in the browser. No server.
-- Status: the Moon slice (milestone M1) is playable. Build mines and refineries, sell on the Lunar market, take contracts and buy land.
+- Status: the Moon slice (milestone M1) is playable. The economy core (M2a) is in progress: five AI rivals share the Moon, and you can take loans, trade shares and read your statements in the Finance tab. Auctions run, but the land office still sells land until the auctions screen arrives. Next: the auctions screen, the news ticker and the away summary.
 
 ## Play
 
@@ -43,3 +43,4 @@ Development builds read these URL flags: `?seed=42`, `?timescale=60` (1 to 600),
 
 - [Game design specification](docs/superpowers/specs/2026-10-27-planetary-mining-operations-design.md)
 - [M0–M1 implementation plan](docs/superpowers/plans/2026-10-27-m0-m1-foundations-moon-slice.md)
+- [M2a implementation plan](docs/superpowers/plans/2026-11-05-m2a-economy-core.md), with its [handover](docs/superpowers/plans/2026-11-05-m2a-handover.md) and [ledger](docs/superpowers/plans/2026-11-05-m2a-economy-core.ledger.md)

@@ -59,6 +59,9 @@ This is a personal project. The owner plays it with friends. There is no monetiz
 | Voyage mode | FTL-style ship cut-away. Operating parameters. 10% event chance per leg. Real-time combat with pause. Autopilot gives no opportunities. |
 | People | A full residential and workforce system. About 10,000 individual employees at end-game. |
 | Look | Retro-futurist 1970s space-agency poster. |
+| M2 scope (2026-11-05) | Two plans. M2a: the economy core and a money rebalance. M2b: research and patents, clinic and recreation needs, the training centre, scientist, pilot and crew skills, haulers, road editing. |
+| Money (2026-11-05) | Tight. In the balance bot's first real day, company value (book equity) ends at 3–5 times its founding value. |
+| Rivals (2026-11-05) | Fully simulated, workers and buses included, under the same rules as the player. |
 
 ---
 
