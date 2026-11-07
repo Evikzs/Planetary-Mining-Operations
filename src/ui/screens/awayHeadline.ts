@@ -11,6 +11,8 @@ const OUTPUT: Record<GoodGroup, string> = {
 /** The biggest story while the player was away: bad news first, then land won, then what the
  * company made. */
 function lead(s: AwaySummary): string {
+  if (s.sectionsLost > 0) return 'Lenders seize land';
+  if (s.alerts.some((a) => a.t === 'defaulted')) return 'In default';
   if (s.contractsFailed > 0) return s.contractsFailed > 1 ? 'Contracts lost' : 'Contract lost';
   for (const a of s.alerts) if (a.t === 'shortage') return `${NEED[a.need]} runs short`;
   if (s.alerts.some((a) => a.t === 'strike')) return 'Crews walk out';

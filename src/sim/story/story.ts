@@ -134,7 +134,7 @@ function onEvent(state: GameState, e: SimEvent): void {
 
 /** Rivals' news the companion speaks about: their first lot, a lot they took from the player,
  * and any bankruptcy. Nothing else of theirs reaches the story. */
-function onPublicEvent(state: GameState, e: SimEvent): void {
+function onPublicEvent(state: GameState, e: SimEvent, unpaid: Set<number>): void {
   switch (e.t) {
     case 'auctionOpened':
       if (e.companyId !== null && e.companyId !== PLAYER) {
@@ -143,7 +143,9 @@ function onPublicEvent(state: GameState, e: SimEvent): void {
       break;
     case 'auctionWon': {
       const lot = state.auctions.find((a) => a.id === e.auctionId);
-      if (e.companyId !== PLAYER && lot?.bids.some((b) => b.companyId === PLAYER)) {
+      // A lot the player won but could not pay for was not lost to a rival.
+      const bid = lot?.bids.some((b) => b.companyId === PLAYER) && !unpaid.has(e.auctionId);
+      if (e.companyId !== PLAYER && bid) {
         fireEventBeat(state, 'ev.auctionLost');
       }
       break;
@@ -228,8 +230,13 @@ export const storySystem: System = {
     if (!playerCompany(state)) return;
     const mine = ctx.events.filter(forPlayer);
     for (const e of mine) onEvent(state, e);
+    const unpaid = new Set(
+      ctx.events.flatMap((e) =>
+        e.t === 'bidDefaulted' && e.companyId === PLAYER ? [e.auctionId] : [],
+      ),
+    );
     for (const e of ctx.events) {
-      onPublicEvent(state, e);
+      onPublicEvent(state, e, unpaid);
       unlockFromEvent(state, e);
     }
     progressTutorial(state, mine);

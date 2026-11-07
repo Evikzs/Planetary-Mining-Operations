@@ -64,6 +64,12 @@ export function AwayScreen() {
               <dt>Auctions lost</dt>
               <dd class="num">{s.auctionsLost}</dd>
             </div>
+            {s.sectionsLost > 0 && (
+              <div>
+                <dt>Sections seized</dt>
+                <dd class="num">{s.sectionsLost}</dd>
+              </div>
+            )}
             <div>
               <dt>Credit rating</dt>
               <dd>

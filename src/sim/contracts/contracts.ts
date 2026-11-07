@@ -222,7 +222,10 @@ export const contractsSystem: System = {
     }
     state.contracts = state.contracts.filter((c) => c.status !== 'offered' || now < c.deadlineTick);
     if (now % 60 === 0) {
-      const onBoard = state.contracts.filter((c) => c.status === 'offered').length;
+      // Tenders to rivals sit apart: they would crowd the player out of the board.
+      const onBoard = state.contracts.filter(
+        (c) => c.status === 'offered' && (c.tenderTo ?? PLAYER) === PLAYER,
+      ).length;
       if (onBoard < boardSize(bestReputation(state)) && ctx.rng.next() < 0.25) {
         const c = generateOffer(state, ctx.rng);
         state.contracts.push(c);

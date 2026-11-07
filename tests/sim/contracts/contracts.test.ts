@@ -62,6 +62,27 @@ const deliver = (s: GameState, c: Contract) =>
   applyCommand(s, { t: 'deliverContract', contractId: c.id, sectionId: home });
 
 describe('rewards and limits', () => {
+  it('tenders to rivals do not take board places from the player', () => {
+    const s = createGame(42);
+    applyCommand(s, { t: 'foundCompany', name: 'Selene Rock Co', companionId: 'veteran' });
+    const tender = (k: number): Contract => ({
+      ...generateOffer(s, createRng(k)),
+      tenderTo: 1,
+      offeredTick: s.tick,
+      deadlineTick: s.tick + 1000 * 60,
+    });
+    s.contracts = Array.from({ length: boardSize(100) }, (_, k) => ({
+      ...tender(k),
+      id: s.nextId++,
+    }));
+    const offered: SimEvent[] = [];
+    for (let h = 0; h < 48; h++) {
+      offered.push(...step(s, { mode: 'coarse' }).filter((e) => e.t === 'contractOffered'));
+    }
+    // Rivals take public ore offers after 12 hours, so count what was offered to the player.
+    expect(offered.some((e) => e.t === 'contractOffered' && (e.tenderTo ?? 0) === 0)).toBe(true);
+  });
+
   it('board size 4 at rep 20, 8 at rep 100; active limit 2 at rep 20', () => {
     expect(boardSize(20)).toBe(4);
     expect(boardSize(100)).toBe(8);

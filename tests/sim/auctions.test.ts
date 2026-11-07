@@ -186,6 +186,36 @@ describe('auctions', () => {
     expect(playerCompany(t)!.credit.creditDrawnCents).toBeGreaterThan(0);
   });
 
+  it('a bid the player cannot pay raises an alert; Ox does not call it a lot lost to a rival', () => {
+    const s = twoCompanies();
+    const a = open(s);
+    applyCommand(s, { t: 'placeBid', auctionId: a.id, amountCents: 4_000_000 }, 1);
+    applyCommand(s, { t: 'placeBid', auctionId: a.id, amountCents: 5_000_000 });
+    cashOut(s, PLAYER, cash(s, PLAYER) - 1_000_000, { to: 'expense', line: 'other' }, 'operating');
+    playerCompany(s)!.credit.rating = 'D';
+    run(s, AUCTION.durationTicks + 5);
+    expect(a).toMatchObject({ status: 'won', winner: 1 });
+    expect(s.alerts).toContainEqual(
+      expect.objectContaining({ t: 'bidDefaulted', companyId: PLAYER, auctionId: a.id }),
+    );
+    expect(s.story.seen).not.toContain('ev.auctionLost');
+  });
+
+  it('below reputation 5 a proxy can still be removed, and it no longer bids', () => {
+    const s = twoCompanies();
+    const a = open(s);
+    applyCommand(s, { t: 'setProxy', auctionId: a.id, ceilingCents: 8_000_000 });
+    playerCompany(s)!.reputation.luna = 3;
+    applyCommand(s, { t: 'placeBid', auctionId: a.id, amountCents: 4_000_000 }, 1);
+    expect(leaderOf(a)!.companyId).toBe(1);
+    expect(applyCommand(s, { t: 'setProxy', auctionId: a.id, ceilingCents: null })).toEqual({
+      ok: true,
+    });
+    expect(a.proxies).toEqual([]);
+    applyCommand(s, { t: 'setProxy', auctionId: a.id, ceilingCents: 8_000_000 }, PLAYER);
+    expect(a.proxies).toEqual([]);
+  });
+
   it('a lot on a section that changed hands meanwhile closes unsold', () => {
     const s = twoCompanies();
     const a = open(s);

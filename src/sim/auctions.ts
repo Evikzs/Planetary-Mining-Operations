@@ -131,6 +131,8 @@ function resolveProxies(state: GameState, a: Auction, events: SimEvent[]): void 
     let changed = false;
     for (const p of proxies) {
       if (leadingBid(a)?.companyId === p.companyId) continue;
+      // A company that fell below the bidding reputation stops bidding through its proxy too.
+      if (reputationOf(state, p.companyId) < AUCTION.minReputation) continue;
       const need = minBidCents(state, a, p.companyId);
       if (need > p.ceilingCents) continue;
       bid(state, a, p.companyId, need, events);
@@ -175,12 +177,20 @@ export function openAuction(state: GameState, sectionId: number, actor: CompanyI
   return OK;
 }
 
-function biddable(state: GameState, auctionId: number, actor: CompanyId): Auction | CommandResult {
+/** An open lot `actor` may bid on; `removing` a proxy needs no reputation. */
+function biddable(
+  state: GameState,
+  auctionId: number,
+  actor: CompanyId,
+  removing = false,
+): Auction | CommandResult {
   if (!activeCompany(state, actor)) return fail('NOT_FOUNDED');
   const a = state.auctions.find((x) => x.id === auctionId);
   if (!a) return fail('UNKNOWN_ID');
   if (a.status !== 'open') return fail('AUCTION_CLOSED');
-  if (reputationOf(state, actor) < AUCTION.minReputation) return fail('LOW_REPUTATION');
+  if (!removing && reputationOf(state, actor) < AUCTION.minReputation) {
+    return fail('LOW_REPUTATION');
+  }
   // A seized company cannot buy back its own assets.
   if (a.lot.kind === 'assets' && a.lot.fromCompanyId === actor) return fail('NOT_FOR_SALE');
   return a;
@@ -210,7 +220,7 @@ export function setProxy(
   ceilingCents: number | null,
   actor: CompanyId,
 ): CommandResult {
-  const a = biddable(state, auctionId, actor);
+  const a = biddable(state, auctionId, actor, ceilingCents === null);
   if (!('lot' in a)) return a;
   a.proxies = a.proxies.filter((p) => p.companyId !== actor);
   if (ceilingCents !== null) {
@@ -228,6 +238,12 @@ function settle(state: GameState, a: Auction, events: SimEvent[]): void {
   if (sectionOwner(state, a.lot.sectionId) !== seller) {
     a.status = 'unsold';
     events.push({ t: 'auctionUnsold', auctionId: a.id, sectionId: a.lot.sectionId });
+    return;
+  }
+  // A seizure whose debt was paid before the close is withdrawn: the land stays with its owner.
+  const owner = seller === null ? undefined : companyOf(state, seller);
+  if (owner?.status === 'active' && !owner.credit.default) {
+    a.status = 'unsold';
     return;
   }
   const best = new Map<CompanyId, Bid>();

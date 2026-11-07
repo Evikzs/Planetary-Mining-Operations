@@ -10,7 +10,9 @@ const ilmenite = async (page: Page) => (await snapshot(page)).sections[0]?.stock
 // Seed 42 offers ilmenite deliveries from game hour 21 to 69 and 113 to 253, whenever the mine
 // is built; the mine fills the depot with about 6 t an hour.
 test('the core loop: found, build, sell, deliver, expand, and reload', async ({ page }, info) => {
-  test.slow();
+  // About 80 s here and twice that on CI's runner, with five rivals simulated alongside: past the
+  // 180 s that test.slow() gives.
+  test.setTimeout(300_000);
   await gotoGame(page, { timescale: String(TIMESCALE) });
   const panel = page.getByTestId('tab-panel');
 

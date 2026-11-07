@@ -21,9 +21,19 @@ const quiet: AwaySummary = {
   ratingTo: 'BBB',
   interestPaidCents: 0,
   news: [],
+  sectionsLost: 0,
 };
 
 describe('away headline', () => {
+  it('leads with land seized, then a default, before everything else', () => {
+    const defaulted = { t: 'defaulted' as const, companyId: 0, owedCents: 100 };
+    const bad = { ...quiet, contractsFailed: 1, alerts: [defaulted] };
+    expect(awayHeadline(bad, 100_000)).toBe('In default\u00a0— cash holds');
+    expect(awayHeadline({ ...bad, sectionsLost: 2 }, 100_000)).toBe(
+      'Lenders seize land\u00a0— cash holds',
+    );
+  });
+
   it('names an auction win after bad news and before output', () => {
     const won = { ...quiet, auctionsWon: 1, producedKg: { steel: 9_000 } };
     expect(awayHeadline(won, 100_000)).toBe('Section won at auction\u00a0— cash holds');

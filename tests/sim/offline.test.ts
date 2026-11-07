@@ -1,10 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import { makeBenchState, makeRivalBenchState } from '../../bot/scenes';
+import { AUCTION } from '../../src/data/auctions';
 import { OFFLINE } from '../../src/data/balance';
 import type { Skill } from '../../src/data/buildings';
 import { applyCommand, createGame, step } from '../../src/sim/engine';
 import { PLAYER } from '../../src/sim/companies';
 import { incomeStatement } from '../../src/sim/finance/statements';
+import { cashOut, openBooks, recognize } from '../../src/sim/finance/books';
+import { ownSection } from '../../src/sim/build/sections';
+import { balance as ledgerBalance } from '../../src/sim/ledger';
 import { hashState } from '../../src/sim/hash';
 import { awayAlerts, runCatchUp } from '../../src/sim/offline';
 import { seatCurrentShift } from '../../src/sim/people/commute';
@@ -64,7 +68,14 @@ function acrossTheClose() {
   const lost = lotOn(theirs!);
   applyCommand(s, { t: 'setProxy', auctionId: won.id, ceilingCents: 30_000_000 });
   applyCommand(s, { t: 'placeBid', auctionId: lost.id, amountCents: 3_000_000 });
-  applyCommand(s, { t: 'setProxy', auctionId: lost.id, ceilingCents: 5_000_000 }, 1);
+  // The first rival whose reputation lets it bid tops the player's bid by proxy.
+  const rival = s.companies.find(
+    (c) =>
+      c.kind === 'rival' && c.status === 'active' && c.reputation.luna >= AUCTION.minReputation,
+  )!.id;
+  expect(
+    applyCommand(s, { t: 'setProxy', auctionId: lost.id, ceilingCents: 5_000_000 }, rival),
+  ).toEqual({ ok: true });
   while (s.tick < 44_160) step(s, { mode: 'fine' });
   expect(applyCommand(s, { t: 'takeLoan', amountCents: 10_000_000, months: 3 })).toEqual({
     ok: true,
@@ -75,7 +86,7 @@ function acrossTheClose() {
     net: books.retainedCents + incomeStatement(books.period).netIncome,
   };
   const summary = runCatchUp(s, 8 * 3_600_000, 1);
-  return { s, won, lost, before, summary };
+  return { s, won, lost, rival, before, summary };
 }
 let across: ReturnType<typeof acrossTheClose> | undefined;
 const scenario = () => (across ??= acrossTheClose());
@@ -149,9 +160,9 @@ describe('offline catch-up', () => {
   }, 60_000);
 
   it('the away summary reports net income, auctions won and lost, and the rating change', () => {
-    const { s, lost, before, summary } = scenario();
+    const { s, lost, rival, before, summary } = scenario();
     const books = s.companies[PLAYER]!.books;
-    expect(lost).toMatchObject({ status: 'won', winner: 1 });
+    expect(lost).toMatchObject({ status: 'won', winner: rival });
     expect(summary).toMatchObject({ auctionsWon: 1, auctionsLost: 1, ratingFrom: 'BBB' });
     expect(summary.ratingTo).toBe(s.companies[PLAYER]!.credit.rating);
     expect(summary.ratingTo).not.toBe('BBB');
@@ -171,6 +182,30 @@ describe('offline catch-up', () => {
     expect(summary.gameHours).toBe(480);
     expect(performance.now() - t0).toBeLessThan(10_000);
   }, 60_000);
+
+  it('the away summary names land lost to a seizure and the debt written off', () => {
+    const s = createGame(42, { rivals: false });
+    applyCommand(s, { t: 'foundCompany', name: 'Selene Rock Co', companionId: 'veteran' });
+    const next = world.sections[home]!.neighbors[0]!;
+    ownSection(s, next, PLAYER);
+    openBooks(s, PLAYER);
+    // LM 2,000,000 overdue for 23 game hours, and no cash: forced sales cannot cure it.
+    const c = s.companies[PLAYER]!;
+    cashOut(
+      s,
+      PLAYER,
+      ledgerBalance(s.ledger, 'co:0'),
+      { to: 'expense', line: 'other' },
+      'operating',
+    );
+    c.credit.overdueCents += 200_000_000;
+    recognize(s, PLAYER, -200_000_000);
+    c.credit.default = { sinceTick: s.tick - 23 * 60 };
+    c.credit.rating = 'D';
+    const summary = runCatchUp(s, 8 * HOUR_MS, 1);
+    expect(summary.sectionsLost).toBe(1);
+    expect(summary.alerts.map((a) => a.t)).toContain('debtWrittenOff');
+  });
 
   it('keeps one alert per type and section', () => {
     const alerts = awayAlerts([

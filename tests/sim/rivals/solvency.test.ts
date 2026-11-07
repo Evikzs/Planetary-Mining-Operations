@@ -5,7 +5,7 @@ import { cashAccount, PLAYER, type CompanyId } from '../../../src/sim/companies'
 import type { Contract } from '../../../src/sim/contracts/contracts';
 import { applyCommand, createGame, step, SYSTEMS } from '../../../src/sim/engine';
 import type { SimEvent } from '../../../src/sim/events';
-import { cashOut, holdings, openBooks, recognize } from '../../../src/sim/finance/books';
+import { cashIn, cashOut, holdings, openBooks, recognize } from '../../../src/sim/finance/books';
 import { payDue } from '../../../src/sim/finance/credit';
 import { listingOf } from '../../../src/sim/finance/shares';
 import { ownSection } from '../../../src/sim/build/sections';
@@ -275,6 +275,29 @@ describe('solvency', () => {
     expect(fresh.id).toBe(6);
     expect(events).toContainEqual({ t: 'rivalFounded', companyId: fresh.id });
     expect(listingOf(s, fresh.id)).toBeDefined();
+    expect(checkInvariants(s)).toEqual([]);
+  });
+
+  it('a cured default withdraws the seizure lots: the sections stay with the player', () => {
+    const s = founded();
+    const charter = charterOf(s, PLAYER);
+    const next = worldOf(s).sections[charter]!.neighbors.find(
+      (n) => !s.sections.some((x) => x.id === n),
+    )!;
+    ownSection(s, next, PLAYER);
+    openBooks(s, PLAYER);
+    const buildings = s.buildings.filter((b) => b.sectionId === next).length;
+    defaulted(s, PLAYER, 100_000, 23);
+    quiet(() => hours(s, 1));
+    const lot = assetsLotOn(s, next);
+    expect(lot.status).toBe('open');
+    // LM 1,000 comes in: the next hour pays the overdue and cures the default.
+    cashIn(s, PLAYER, 500_000, { to: 'revenue', line: 'other' }, 'operating');
+    const events = quiet(() => hours(s, 6));
+    expect(events.some((e) => e.t === 'defaultCured')).toBe(true);
+    expect(lot).toMatchObject({ status: 'unsold', winner: null });
+    expect(s.sections.find((x) => x.id === next)?.owner).toBe(PLAYER);
+    expect(s.buildings.filter((b) => b.sectionId === next)).toHaveLength(buildings);
     expect(checkInvariants(s)).toEqual([]);
   });
 

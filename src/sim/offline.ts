@@ -31,6 +31,8 @@ export interface AwaySummary {
   interestPaidCents: number;
   /** Up to 5 public events from the window, newest first. */
   news: NewsItem[];
+  /** Sections the player held at the start and not at the end: seized for debt. */
+  sectionsLost: number;
 }
 
 const ALERT_TYPES = new Set<SimEvent['t']>([
@@ -39,6 +41,9 @@ const ALERT_TYPES = new Set<SimEvent['t']>([
   'emigration',
   'contractFailed',
   'brownout',
+  'bidDefaulted',
+  'defaulted',
+  'debtWrittenOff',
 ]);
 
 /** The alerts worth showing on return, one per type and place. */
@@ -91,6 +96,7 @@ export function runCatchUp(
   const produced = { ...state.stats.producedKg };
   const sold = { ...state.stats.soldKg };
   const company = playerCompany(state);
+  const held = state.sections.filter((s) => s.owner === PLAYER).map((s) => s.id);
   const ratingFrom = company?.credit.rating ?? 'BBB';
   // The month so far, plus each month that closes in the window (dividends skip net income).
   const period = () => {
@@ -102,10 +108,13 @@ export function runCatchUp(
   const seenNews = new Set(state.news);
   const events: SimEvent[] = [];
   let auctionsLost = 0;
+  const unpaid = new Set<number>();
   // The summary reports the player's company; rivals' events reach the player as news.
   const run = (mode: 'fine' | 'coarse') => {
     for (const e of step(state, { mode, offlineEfficiency: OFFLINE.efficiency })) {
-      if (e.t === 'auctionWon' && e.companyId !== PLAYER) {
+      if (e.t === 'bidDefaulted' && e.companyId === PLAYER) unpaid.add(e.auctionId);
+      // A lot the player won but could not pay for was not lost to a rival.
+      if (e.t === 'auctionWon' && e.companyId !== PLAYER && !unpaid.has(e.auctionId)) {
         const lot = state.auctions.find((a) => a.id === e.auctionId);
         if (lot?.bids.some((b) => b.companyId === PLAYER)) auctionsLost++;
       }
@@ -153,5 +162,8 @@ export function runCatchUp(
     ratingTo: company?.credit.rating ?? ratingFrom,
     interestPaidCents: period().interest + closed.interest - start.interest,
     news: state.news.filter((n) => !seenNews.has(n)).slice(0, 5),
+    sectionsLost: held.filter(
+      (id) => !state.sections.some((s) => s.id === id && s.owner === PLAYER),
+    ).length,
   };
 }

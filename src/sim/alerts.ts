@@ -12,6 +12,9 @@ const ALERT_TYPES = new Set<SimEvent['t']>([
   'emigration',
   'contractFailed',
   'priceMove',
+  'bidDefaulted',
+  'defaulted',
+  'debtWrittenOff',
 ]);
 const KEPT = 20;
 

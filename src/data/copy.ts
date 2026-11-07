@@ -110,6 +110,12 @@ export function alertText(alert: Alert | SimEvent, names: AlertNames): string {
       const pct = Math.round(Math.abs(alert.pct24h) * 100);
       return `${GOODS[alert.goodId].name} ${alert.pct24h < 0 ? 'fell' : 'rose'} ${pct}% in a day.`;
     }
+    case 'bidDefaulted':
+      return 'You could not pay for a lot you won. It went to the next bidder, and you lost reputation.';
+    case 'debtWrittenOff':
+      return `Lenders wrote off ${formatMoney(alert.cents)} of your debt. Your reputation fell.`;
+    case 'defaulted':
+      return `You missed a payment of ${formatMoney(alert.owedCents)}. Lenders sell your stock until it is paid.`;
     default:
       return 'Something needs your attention.';
   }
