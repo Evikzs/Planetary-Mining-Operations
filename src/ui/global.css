@@ -567,6 +567,12 @@ h3 {
   background: var(--c-navy);
 }
 
+/* A tab panel open on the left: chips and legend start beside it, not under it. */
+.shell[data-layout='desktop'][data-panel='open'] .map-filters,
+.shell[data-layout='desktop'][data-panel='open'] .map-legend {
+  left: 480px;
+}
+
 .shell[data-layout='phone'] .map-legend {
   top: 104px;
   left: 8px;
@@ -1940,4 +1946,69 @@ h3 {
 
 .error-banner .action.quiet {
   margin-top: 0;
+}
+
+/* Finance: statements, ratios, loans and shares, one section under another. */
+.finance-tab section + section {
+  margin-top: var(--space-5);
+}
+
+.finance-tab h3 {
+  margin: 0 0 var(--space-2);
+}
+
+.finance-tab h4 {
+  margin: var(--space-3) 0 var(--space-1);
+  font-family: var(--font-display);
+  font-size: 15px;
+}
+
+.finance-tab .facts {
+  margin: var(--space-2) 0;
+}
+
+.finance-tab .facts div {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: var(--space-3);
+  padding: var(--space-1) 0;
+  border-bottom: 1px solid color-mix(in srgb, var(--c-offBlack) 18%, transparent);
+}
+
+.finance-tab .facts dt {
+  font-family: var(--font-display);
+  font-weight: 500;
+}
+
+.finance-tab .facts dd {
+  margin: 0;
+}
+
+.finance-tab .warning {
+  padding: var(--space-2) var(--space-3);
+  border: 2px solid var(--c-rust);
+  color: var(--c-rust);
+  font-weight: 600;
+}
+
+.finance-tab .buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.finance-tab .confirm p {
+  margin: 0 0 var(--space-2);
+}
+
+.statement tbody th {
+  font-family: var(--font-text);
+  font-weight: 400;
+}
+
+.statement tr.strong th,
+.statement tr.strong td {
+  font-weight: 700;
+  border-bottom-color: var(--c-offBlack);
 }

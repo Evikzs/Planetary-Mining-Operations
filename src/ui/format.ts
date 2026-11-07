@@ -8,6 +8,10 @@ export function formatMoney(cents: number): string {
   return cents < 0 ? `−${text}` : text;
 }
 
+/** A change as '+2.1%' or '−3.4%', with a true minus sign. */
+export const formatChange = (change: number): string =>
+  `${change < 0 ? '−' : '+'}${Math.abs(change * 100).toFixed(1)}%`;
+
 /** '850 kg', '4.25 t', '12.3 t', '1,240 t'. */
 export function formatMass(kg: number): string {
   if (Math.abs(kg) < 1000) return `${Math.round(kg)} kg`;

@@ -7,7 +7,7 @@ test('accepting and delivering an ore contract completes it and pays', async ({ 
   await expect
     .poll(() => page.evaluate(() => window.__pmo.ui()?.company !== null), { timeout: 30_000 })
     .toBe(true);
-  await page.keyboard.press('4');
+  await page.keyboard.press('5');
   const tab = page.getByTestId('tab-panel');
   const job = 'Deliver 42.0 t Polar volatiles';
   await tab

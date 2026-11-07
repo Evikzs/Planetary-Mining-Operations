@@ -17,7 +17,7 @@ import { Choices } from '../components/Choices';
 import { ErrorText, useCommand } from '../components/command';
 import { PriceChart } from '../components/PriceChart';
 import { Trend } from '../components/Trend';
-import { formatMass, formatMoney, formatNumber } from '../format';
+import { formatChange, formatMass, formatMoney, formatNumber } from '../format';
 import { Icon } from '../icons';
 import { sectionOfPick } from '../shell/sectionOf';
 
@@ -34,10 +34,6 @@ const KINDS: { id: Order['kind']; label: string }[] = [
   { id: 'limit', label: 'Limit' },
   { id: 'standing', label: 'Standing' },
 ];
-
-/** '+2.1%' or '−3.4%', with a true minus sign. */
-const percent = (change: number): string =>
-  `${change < 0 ? '−' : '+'}${Math.abs(change * 100).toFixed(1)}%`;
 
 function orderTerms(o: Order): string {
   if (o.kind === 'market') return 'at market';
@@ -249,7 +245,7 @@ function GoodsTable(props: {
               <td class="num">{formatMass(props.stock[m.goodId] ?? 0)}</td>
               <td class="num">{formatNumber(m.lastCents / 100, 2)}</td>
               <td class="num">
-                <Trend history={m.history} /> {percent(m.change24h)}
+                <Trend history={m.history} /> {formatChange(m.change24h)}
               </td>
               <td>
                 <button
@@ -297,8 +293,8 @@ export function TradeTab() {
           <h3>{GOODS[m.goodId].name}</h3>
           <p>
             <span class="num">{formatMoney(m.lastCents)}</span> a tonne,{' '}
-            <span class="num">{percent(m.change24h)}</span> in a day. Section {section.id} holds{' '}
-            <span class="num">{formatMass(section.stockKg[m.goodId] ?? 0)}</span>.
+            <span class="num">{formatChange(m.change24h)}</span> in a day. Section {section.id}{' '}
+            holds <span class="num">{formatMass(section.stockKg[m.goodId] ?? 0)}</span>.
           </p>
           <PriceChart history={m.history} label={`${GOODS[m.goodId].name} price, hour by hour`} />
           <OrderForm

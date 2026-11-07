@@ -10,6 +10,7 @@ import { FoundingScreen } from '../screens/FoundingScreen';
 import { BuildTab } from '../tabs/BuildTab';
 import { CodexTab } from '../tabs/CodexTab';
 import { ContractsTab } from '../tabs/ContractsTab';
+import { FinanceTab } from '../tabs/FinanceTab';
 import { PeopleTab } from '../tabs/PeopleTab';
 import { SettingsTab } from '../tabs/SettingsTab';
 import { TradeTab } from '../tabs/TradeTab';
@@ -31,10 +32,14 @@ const TAB_BODY: Record<TabId, () => ComponentChildren> = {
   build: () => <BuildTab />,
   people: () => <PeopleTab />,
   trade: () => <TradeTab />,
+  finance: () => <FinanceTab />,
   contracts: () => <ContractsTab />,
   codex: () => <CodexTab />,
   settings: () => <SettingsTab />,
 };
+
+/** Phones reach these through More. */
+const MORE: TabId[] = ['finance', 'codex', 'settings'];
 
 function isTyping(target: EventTarget | null): boolean {
   const el = target as HTMLElement | null;
@@ -67,7 +72,7 @@ function TabPanel({ desktop }: { desktop: boolean }) {
     return (
       <Sheet title="More" onClose={() => (moreOpen.value = false)}>
         <div class="more-list">
-          {TABS.filter((t) => t.id === 'codex' || t.id === 'settings').map((t) => (
+          {TABS.filter((t) => MORE.includes(t.id)).map((t) => (
             <button
               key={t.id}
               type="button"

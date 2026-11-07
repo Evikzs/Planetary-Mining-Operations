@@ -14,15 +14,15 @@ The game needs WebGL 2: the latest Chrome, Edge or Firefox, or Safari 16 and lat
 
 ## Controls
 
-| Action                                  | Desktop                                                                  | Phone                                              |
-| --------------------------------------- | ------------------------------------------------------------------------ | -------------------------------------------------- |
-| Pan                                     | Drag, or `W` `A` `S` `D`                                                 | Drag with one finger                               |
-| Zoom                                    | Mouse wheel, or `+` and `-`                                              | Pinch                                              |
-| Turn                                    | `Q` and `E`                                                              | Twist with two fingers                             |
-| Lock north                              | `N`, or click the compass                                                | Tap the compass                                    |
-| Select a plot, building, bus or section | Click it                                                                 | Tap it                                             |
-| Open a tab                              | `1` Build, `2` People, `3` Trade, `4` Contracts, `5` Codex, `6` Settings | The bottom tabs; Codex and Settings are under More |
-| Close a panel                           | `Esc`                                                                    | The close button, or swipe the sheet down          |
+| Action                                  | Desktop                                                                               | Phone                                                       |
+| --------------------------------------- | ------------------------------------------------------------------------------------- | ----------------------------------------------------------- |
+| Pan                                     | Drag, or `W` `A` `S` `D`                                                              | Drag with one finger                                        |
+| Zoom                                    | Mouse wheel, or `+` and `-`                                                           | Pinch                                                       |
+| Turn                                    | `Q` and `E`                                                                           | Twist with two fingers                                      |
+| Lock north                              | `N`, or click the compass                                                             | Tap the compass                                             |
+| Select a plot, building, bus or section | Click it                                                                              | Tap it                                                      |
+| Open a tab                              | `1` Build, `2` People, `3` Trade, `4` Finance, `5` Contracts, `6` Codex, `7` Settings | The bottom tabs; Finance, Codex and Settings are under More |
+| Close a panel                           | `Esc`                                                                                 | The close button, or swipe the sheet down                   |
 
 ## Develop
 

@@ -8,7 +8,7 @@ export const moreOpen = signal(false);
 
 export function BottomTabs() {
   const moreActive =
-    moreOpen.value || activeTab.value === 'codex' || activeTab.value === 'settings';
+    moreOpen.value || (activeTab.value !== null && !MAIN.includes(activeTab.value));
   return (
     <nav class="bottom-tabs" data-testid="bottom-tabs" aria-label="Main">
       {TABS.filter((t) => MAIN.includes(t.id)).map((tab) => (
