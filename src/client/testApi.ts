@@ -12,6 +12,8 @@ export interface TestApi {
   ui(): UiSnapshot | null;
   world(): WorldView | null;
   advanceRealMs(ms: number): void;
+  /** Stops game time, or starts it again from the same tick; commands still apply. */
+  freeze(on: boolean): void;
   renderStats(): RenderStats | null;
   camera(): GlobeCameraState | null;
   /** Degrees; heading clockwise from north. A heading of 0 locks north. */
@@ -36,6 +38,7 @@ export function installTestApi(client: SimClient): void {
     ui: () => ui.value,
     world: () => world.value,
     advanceRealMs: (ms) => client.post({ t: 'advanceRealMs', ms }),
+    freeze: (on) => client.post({ t: 'freeze', on }),
     renderStats: () => gameRenderer.value?.stats() ?? null,
     camera: () => gameRenderer.value?.camera() ?? null,
     setCamera(lat, lon, alt, heading) {

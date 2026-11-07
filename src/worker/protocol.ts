@@ -32,6 +32,8 @@ export type ToWorker =
   | { t: 'command'; id: number; cmd: Command }
   | { t: 'saveNow' }
   | { t: 'advanceRealMs'; ms: number }
+  /** Tests only: stops the clock, or starts it again from the same tick. */
+  | { t: 'freeze'; on: boolean }
   | {
       t: 'queryPeople';
       id: number;

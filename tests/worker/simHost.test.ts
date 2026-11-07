@@ -69,6 +69,35 @@ describe('SimHost', () => {
     expect(h.lastTick()).toBe(1);
   });
 
+  it('freeze stops the clock; going on resumes from the same tick, with no catch-up', async () => {
+    const h = setup();
+    await h.init();
+    await h.found();
+    h.setNow(3000);
+    h.host.pump();
+    const at = h.lastTick();
+    expect(at).toBe(3);
+    await h.host.handle({ t: 'freeze', on: true });
+    h.setNow(60_000);
+    h.host.pump();
+    expect(h.lastTick()).toBe(at);
+    await h.host.handle({ t: 'freeze', on: false });
+    h.setNow(62_000);
+    h.host.pump();
+    expect(h.lastTick()).toBe(at + 2);
+  });
+
+  it('going on after a freeze saves at once, so a reload does not count the frozen time', async () => {
+    const h = setup();
+    await h.init();
+    await h.found();
+    await h.host.handle({ t: 'freeze', on: true });
+    h.setNow(60_000);
+    await h.host.handle({ t: 'freeze', on: false });
+    const saved = await h.saves.loadLatestValid();
+    expect(saved).toMatchObject({ savedAtRealMs: 60_000, tick: 0 });
+  });
+
   it('applies commands at once and posts commandResult then snapshot', async () => {
     const h = setup();
     await h.init();

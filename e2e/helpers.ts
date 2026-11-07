@@ -1,4 +1,5 @@
 import { expect, type Page } from '@playwright/test';
+import { formatMoney } from '../src/ui/format';
 
 /**
  * Opens the game with e2e debug flags; defaults speed time up 60x on seed 42. Waits for the test
@@ -51,4 +52,22 @@ export function nearestFreeSection(page: Page): Promise<number> {
     const free = w.sections.filter((s) => s.owner === null && !s.onAuction);
     return free.sort((a, b) => dist(a.center) - dist(b.center))[0]!.id;
   });
+}
+
+/**
+ * Opens a lot on the free section nearest the charter and sets a proxy, in the context panel.
+ * Game time stands still meanwhile: at e2e speeds a lot can close before a slow runner has typed.
+ */
+export async function bidOnNeighbour(page: Page, ceilingLm: number): Promise<number> {
+  await page.evaluate(() => window.__pmo.freeze(true));
+  const id = await nearestFreeSection(page);
+  await page.evaluate((section) => window.__pmo.select({ kind: 'section', id: section }), id);
+  const context = page.getByTestId('context-panel');
+  await context.getByRole('button', { name: 'Open an auction — LM 2,000.00' }).click();
+  const lot = context.getByRole('region', { name: `Auction for section ${id}` });
+  await lot.getByLabel('Bid for me up to (LM)').fill(String(ceilingLm));
+  await lot.getByRole('button', { name: 'Set' }).click();
+  await expect(lot).toContainText(formatMoney(ceilingLm * 100));
+  await page.evaluate(() => window.__pmo.freeze(false));
+  return id;
 }

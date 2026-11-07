@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { foundCompany, gotoGame, nearestFreeSection, openTab } from './helpers';
+import { bidOnNeighbour, foundCompany, gotoGame, openTab } from './helpers';
 
 const snapshot = (page: Page) => page.evaluate(() => window.__pmo.ui()!);
 const RIVAL = 'Tycho Deepworks';
@@ -16,27 +16,9 @@ test('the economy loop: found, win land, borrow, buy shares, read the news, and 
   await page.evaluate(() => window.__pmo.setCamera(0, 0, 200, 0));
   await expect(page.getByRole('list', { name: 'Owners' }).getByRole('listitem')).toHaveCount(6);
 
-  // 2. Open a lot on a neighbour and let a proxy bid. At 120x a lot runs 1.5 real seconds, too
-  // short to type a ceiling, so the proxy goes in directly. In the first game day each rival bids
-  // up to LM 232,848, its cash less three days of wages, so the ceiling is the founding cash.
-  const neighbour = await nearestFreeSection(page);
-  await page.evaluate((id) => window.__pmo.select({ kind: 'section', id }), neighbour);
-  await page
-    .getByTestId('context-panel')
-    .getByRole('button', { name: 'Open an auction — LM 2,000.00' })
-    .click();
-  const proxy = await page.evaluate(async (id) => {
-    for (;;) {
-      const lot = window.__pmo
-        .ui()!
-        .auctions.find((a) => a.status === 'open' && a.lot.sectionId === id);
-      if (lot) {
-        return window.__pmo.send({ t: 'setProxy', auctionId: lot.id, ceilingCents: 25_000_000 });
-      }
-      await new Promise((done) => setTimeout(done, 20));
-    }
-  }, neighbour);
-  expect(proxy).toEqual({ ok: true });
+  // 2. Open a lot on a neighbour and let a proxy bid. In the first game day each rival bids up to
+  // LM 232,848, its cash less three days of wages, so the ceiling is the founding cash.
+  await bidOnNeighbour(page, 250_000);
   await expect
     .poll(async () => (await snapshot(page)).sections.length, { timeout: 30_000 })
     .toBe(2);

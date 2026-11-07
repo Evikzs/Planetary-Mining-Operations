@@ -121,6 +121,14 @@ export class SimHost {
       case 'advanceRealMs':
         this.offsetMs += msg.ms;
         return;
+      case 'freeze':
+        this.flags.freeze = msg.on;
+        if (msg.on) return;
+        // The frozen time never happened: the clock goes on from the tick it stopped at, and a
+        // save made while frozen must not have a reload catch that time up.
+        this.reanchor();
+        await this.save();
+        return;
       case 'queryPeople': {
         const page = queryPeople(this.state, msg.filter, msg.offset, msg.limit);
         this.deps.post({ t: 'peoplePage', id: msg.id, ...page });
