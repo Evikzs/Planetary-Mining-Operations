@@ -2,8 +2,9 @@ import { expect, type Page } from '@playwright/test';
 
 /**
  * Opens the game with e2e debug flags; defaults speed time up 60x on seed 42. Waits for the test
- * API, which arrives once the page holds the game's tab lock, a moment after load; `api: false`
- * skips that for pages that never start the game.
+ * API, which arrives once the page holds the game's tab lock, a moment after load, and for the
+ * renderer, without which `setCamera` does nothing; `api: false` skips that for pages that never
+ * start the game.
  */
 export async function gotoGame(
   page: Page,
@@ -13,7 +14,7 @@ export async function gotoGame(
   const query = new URLSearchParams({ timescale: '60', seed: '42', ...params });
   await page.goto(`/?${query.toString()}`);
   if (opts.api ?? params.nowebgl !== '1') {
-    await page.waitForFunction(() => window.__pmo !== undefined);
+    await page.waitForFunction(() => window.__pmo !== undefined && window.__pmo.camera() !== null);
   }
 }
 
