@@ -62,6 +62,7 @@ This is a personal project. The owner plays it with friends. There is no monetiz
 | M2 scope (2026-11-05) | Two plans. M2a: the economy core and a money rebalance. M2b: research and patents, clinic and recreation needs, the training centre, scientist, pilot and crew skills, haulers, road editing. |
 | Money (2026-11-05) | Tight. In the balance bot's first real day, company value (book equity) ends at 3–5 times its founding value. |
 | Rivals (2026-11-05) | Fully simulated, workers and buses included, under the same rules as the player. |
+| M2b design (2026-11-12) | Research and patents get the most depth. Patents: licence or wait, at a formula price the holder cannot refuse. 50 nodes, then repeatable efficiency research. Haulers: rovers on haul roads and drones on arcs. Pilots drive haulers; crew has no jobs until M4. Roads and belts can be edited. Rivals research, license and haul too. Details: [M2b design](2026-11-12-m2b-research-people-logistics-design.md). |
 
 ---
 
