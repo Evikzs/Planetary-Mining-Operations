@@ -167,3 +167,19 @@ describe('export codes', () => {
     expect(await decodeExportCode('PMO1.@@@')).toEqual({ ok: false, error: 'BAD_DATA' });
   });
 });
+
+describe('the paused flag', () => {
+  it('paused round-trips and is not in the checksum', () => {
+    const s = createGame(42, { rivals: false });
+    const file = toSaveFile(s, 1, true);
+    expect(file.paused).toBe(true);
+    const loaded = fromSaveFile(file);
+    expect(loaded.ok && loaded.paused).toBe(true);
+    const flipped = fromSaveFile({ ...file, paused: false });
+    expect(flipped.ok && flipped.paused).toBe(false);
+    const missing: Partial<SaveFile> = { ...file };
+    delete missing.paused;
+    const old = fromSaveFile(missing);
+    expect(old.ok && old.paused).toBe(false);
+  });
+});

@@ -82,8 +82,8 @@ export function MapCanvas({ flags }: { flags: DebugFlags }) {
     const stopMotion = effect(() => {
       const m = motion.value;
       if (!m) return;
-      r.setMotion(m.view, m.anchorRealMs, flags.timescale);
-      r.freezeAt(flags.freeze ? m.view.tick : null);
+      r.setMotion(m.view, m.anchorRealMs, m.clock.rate);
+      r.freezeAt(m.clock.paused ? m.view.tick : null);
     });
     return () => {
       stopWorld();

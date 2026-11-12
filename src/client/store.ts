@@ -4,12 +4,19 @@ import { DEFAULT_FILTER, type MapFilter } from '../render/overlays/filters';
 import type { GameRenderer, MapPick } from '../render/renderer';
 import type { SimEvent } from '../sim/events';
 import type { AwaySummary } from '../sim/offline';
+import type { ClockState } from '../worker/protocol';
 import type { SimClient } from './simClient';
 import type { MotionView, UiSnapshot, WorldView } from '../sim/views';
 
 export const ui = signal<UiSnapshot | null>(null);
 export const world = signal<WorldView | null>(null);
-export const motion = signal<{ view: MotionView; anchorRealMs: number } | null>(null);
+export const motion = signal<{
+  view: MotionView;
+  anchorRealMs: number;
+  clock: ClockState;
+} | null>(null);
+/** The game clock as the worker last reported it. */
+export const clock = signal<ClockState>({ paused: false, speed: 1, rate: 1, actualSpeed: 1 });
 export const away = signal<AwaySummary | null>(null);
 /** 0..1 while the game catches up on time away; null otherwise. */
 export const catchUpProgress = signal<number | null>(null);

@@ -2,6 +2,8 @@ export interface SaveFile {
   format: 'pmo-save';
   version: number;
   savedAtRealMs: number;
+  /** Whether the clock was paused; saves before D1 lack it and count as running. */
+  paused?: boolean;
   seed: number;
   tick: number;
   state: unknown;

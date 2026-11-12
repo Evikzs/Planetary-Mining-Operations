@@ -19,6 +19,24 @@ export interface DebugFlags {
 
 export type ManualSlot = 1 | 2 | 3 | 4 | 5;
 
+export type Speed = 1 | 2 | 4 | 8;
+
+/**
+ * The clock as the player sees it. `rate` is game minutes per real second (0 while paused);
+ * `actualSpeed` is the speed the machine kept up over the last 2 real seconds.
+ */
+export interface ClockState {
+  paused: boolean;
+  speed: Speed;
+  rate: number;
+  actualSpeed: number;
+}
+
+/** Player choices the worker needs. */
+export interface Prefs {
+  offlineCatchUp: boolean;
+}
+
 /** A filled manual save slot, as the Settings tab lists it. */
 export interface SaveSlot {
   slot: ManualSlot;
@@ -28,12 +46,14 @@ export interface SaveSlot {
 }
 
 export type ToWorker =
-  | { t: 'init'; nowMs: number; debug: DebugFlags }
+  /** `prefs` defaults to offline catch-up on. */
+  | { t: 'init'; nowMs: number; debug: DebugFlags; prefs?: Prefs }
   | { t: 'command'; id: number; cmd: Command }
-  | { t: 'saveNow' }
+  /** With an id, the worker answers `saved` once the write is over. */
+  | { t: 'saveNow'; id?: number }
   | { t: 'advanceRealMs'; ms: number }
-  /** Tests only: stops the clock, or starts it again from the same tick. */
-  | { t: 'freeze'; on: boolean }
+  | { t: 'setClock'; paused: boolean; speed: Speed }
+  | { t: 'setPrefs'; prefs: Prefs }
   | {
       t: 'queryPeople';
       id: number;
@@ -51,9 +71,9 @@ export type ToWorker =
 
 export type FromWorker =
   | { t: 'ready'; founded: boolean }
-  | { t: 'snapshot'; tick: number; anchorRealMs: number; ui: UiSnapshot }
+  | { t: 'snapshot'; tick: number; anchorRealMs: number; clock: ClockState; ui: UiSnapshot }
   | { t: 'world'; world: WorldView }
-  | { t: 'motion'; motion: MotionView; anchorRealMs: number }
+  | { t: 'motion'; motion: MotionView; anchorRealMs: number; clock: ClockState }
   | { t: 'events'; events: SimEvent[] }
   | { t: 'commandResult'; id: number; result: CommandResult }
   | { t: 'peoplePage'; id: number; total: number; rows: PeopleRow[] }
@@ -65,4 +85,5 @@ export type FromWorker =
   | { t: 'saveSlots'; id: number; slots: SaveSlot[]; error?: string }
   | { t: 'error'; message: string }
   | { t: 'catchUp'; progress: number }
+  | { t: 'saved'; id: number }
   | { t: 'away'; summary: AwaySummary };

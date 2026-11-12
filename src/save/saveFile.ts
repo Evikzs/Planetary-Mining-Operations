@@ -8,14 +8,16 @@ export { SAVE_VERSION };
 
 export type LoadError = 'BAD_FORMAT' | 'BAD_CHECKSUM' | 'TOO_NEW' | 'INVALID_STATE';
 export type LoadResult =
-  { ok: true; state: GameState; savedAtRealMs: number } | { ok: false; error: LoadError };
+  | { ok: true; state: GameState; savedAtRealMs: number; paused: boolean }
+  | { ok: false; error: LoadError };
 
 export function computeChecksum(f: Omit<SaveFile, 'checksum' | 'format'>): string {
   const { version, savedAtRealMs, seed, tick, state } = f;
   return cyrb53(canonicalStringify({ version, savedAtRealMs, seed, tick, state })).toString(16);
 }
 
-export function toSaveFile(state: GameState, savedAtRealMs: number): SaveFile {
+/** `paused` stays outside the checksum: it only says how the clock stood. */
+export function toSaveFile(state: GameState, savedAtRealMs: number, paused = false): SaveFile {
   const base = {
     format: 'pmo-save' as const,
     version: SAVE_VERSION,
@@ -24,7 +26,7 @@ export function toSaveFile(state: GameState, savedAtRealMs: number): SaveFile {
     tick: state.tick,
     state: serializeState(state),
   };
-  return { ...base, checksum: computeChecksum(base) };
+  return { ...base, paused, checksum: computeChecksum(base) };
 }
 
 const isNum = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v);
@@ -65,7 +67,7 @@ export function fromSaveFile(file: unknown): LoadResult {
   try {
     const state = deserializeState(migrate(file).state);
     if (!hasStateShape(state)) return { ok: false, error: 'INVALID_STATE' };
-    return { ok: true, state, savedAtRealMs: file.savedAtRealMs };
+    return { ok: true, state, savedAtRealMs: file.savedAtRealMs, paused: file.paused === true };
   } catch {
     return { ok: false, error: 'INVALID_STATE' };
   }

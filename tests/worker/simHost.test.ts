@@ -10,10 +10,11 @@ const codec = {
   exportCode: (file: SaveFile) => Promise.resolve(`PMO1.${JSON.stringify(file)}`),
   importCode: (code: string) =>
     Promise.resolve(code.startsWith('PMO1.') ? (JSON.parse(code.slice(5)) as SaveFile) : null),
-  encode: (state: GameState, savedAtRealMs: number): SaveFile => ({
+  encode: (state: GameState, savedAtRealMs: number, paused: boolean): SaveFile => ({
     format: 'pmo-save',
     version: 1,
     savedAtRealMs,
+    paused,
     seed: state.seed,
     tick: state.tick,
     state: structuredClone(state),
@@ -22,21 +23,31 @@ const codec = {
   decode: (file: SaveFile) => ({
     state: structuredClone(file.state) as GameState,
     savedAtRealMs: file.savedAtRealMs,
+    paused: file.paused ?? false,
   }),
 };
 
-function setup(debug: Partial<{ timescale: number; freeze: boolean; seed: number }> = {}) {
+function setup(
+  debug: Partial<{ timescale: number; freeze: boolean; seed: number }> = {},
+  opts: { saves?: ReturnType<typeof createMemorySaveStore>; offlineCatchUp?: boolean } = {},
+) {
   let now = 0;
   const posted: FromWorker[] = [];
-  const saves = createMemorySaveStore();
+  const saves = opts.saves ?? createMemorySaveStore();
   const host = new SimHost({ post: (m) => posted.push(m), now: () => now, saves, codec });
   const flags = { timescale: 1, freeze: false, seed: 42, scene: 'none' as const, noWebgl: false };
+  const prefs = { offlineCatchUp: opts.offlineCatchUp ?? true };
   return {
     host,
     posted,
     saves,
     setNow: (ms: number) => (now = ms),
-    init: () => host.handle({ t: 'init', nowMs: now, debug: { ...flags, ...debug } }),
+    init: () => host.handle({ t: 'init', nowMs: now, debug: { ...flags, ...debug }, prefs }),
+    clock: () => {
+      const snaps = posted.filter((m) => m.t === 'snapshot');
+      const last = snaps[snaps.length - 1];
+      return last && last.t === 'snapshot' ? last.clock : null;
+    },
     found: () =>
       host.handle({
         t: 'command',
@@ -69,7 +80,7 @@ describe('SimHost', () => {
     expect(h.lastTick()).toBe(1);
   });
 
-  it('freeze stops the clock; going on resumes from the same tick, with no catch-up', async () => {
+  it('pause stops the clock; resuming goes on from the same tick, with no catch-up', async () => {
     const h = setup();
     await h.init();
     await h.found();
@@ -77,23 +88,23 @@ describe('SimHost', () => {
     h.host.pump();
     const at = h.lastTick();
     expect(at).toBe(3);
-    await h.host.handle({ t: 'freeze', on: true });
+    await h.host.handle({ t: 'setClock', paused: true, speed: 1 });
     h.setNow(60_000);
     h.host.pump();
     expect(h.lastTick()).toBe(at);
-    await h.host.handle({ t: 'freeze', on: false });
+    await h.host.handle({ t: 'setClock', paused: false, speed: 1 });
     h.setNow(62_000);
     h.host.pump();
     expect(h.lastTick()).toBe(at + 2);
   });
 
-  it('going on after a freeze saves at once, so a reload does not count the frozen time', async () => {
+  it('resuming saves at once, so a reload does not count the paused time', async () => {
     const h = setup();
     await h.init();
     await h.found();
-    await h.host.handle({ t: 'freeze', on: true });
+    await h.host.handle({ t: 'setClock', paused: true, speed: 1 });
     h.setNow(60_000);
-    await h.host.handle({ t: 'freeze', on: false });
+    await h.host.handle({ t: 'setClock', paused: false, speed: 1 });
     const saved = await h.saves.loadLatestValid();
     expect(saved).toMatchObject({ savedAtRealMs: 60_000, tick: 0 });
   });
@@ -224,7 +235,7 @@ describe('SimHost', () => {
     const h = setup({ freeze: true });
     await h.init();
     await h.found();
-    const file = codec.encode(h.saves.files.at(-1)!.state as GameState, 0);
+    const file = codec.encode(h.saves.files.at(-1)!.state as GameState, 0, false);
     delete (file.state as { sections: { power?: unknown }[] }).sections[0]!.power;
     await h.host.handle({ t: 'importSave', id: 9, code: `PMO1.${JSON.stringify(file)}` });
     expect(h.posted).toContainEqual({
@@ -309,7 +320,7 @@ describe('SimHost', () => {
     expect(h.lastTick()).toBe(60);
   });
 
-  it('freeze runs no ticks', async () => {
+  it('the freeze flag starts the clock paused', async () => {
     const h = setup({ freeze: true });
     await h.init();
     await h.found();
@@ -452,7 +463,7 @@ describe('SimHost', () => {
 
   it('builds a debug scene through the loader instead of loading the save', async () => {
     const saves = createMemorySaveStore();
-    await saves.writeAuto(codec.encode(createGame(1, { rivals: false }), 0));
+    await saves.writeAuto(codec.encode(createGame(1, { rivals: false }), 0, false));
     const posted: FromWorker[] = [];
     const asked: string[] = [];
     const host = new SimHost({
@@ -496,5 +507,202 @@ describe('SimHost', () => {
       debug: { timescale: 1, freeze: false, seed: null, scene: 'none', noWebgl: false },
     });
     expect(posted[0]).toEqual({ t: 'ready', founded: true });
+  });
+  describe('clock', () => {
+    it('pause holds the tick; speed 4 runs four ticks a real second', async () => {
+      const h = setup();
+      await h.init();
+      await h.found();
+      await h.host.handle({ t: 'setClock', paused: true, speed: 1 });
+      h.setNow(10_000);
+      h.host.pump();
+      expect(h.lastTick()).toBe(0);
+      await h.host.handle({ t: 'setClock', paused: false, speed: 4 });
+      h.setNow(11_000);
+      h.host.pump();
+      expect(h.lastTick()).toBe(4);
+      expect(h.clock()).toMatchObject({ paused: false, speed: 4, rate: 4 });
+    });
+
+    it('a paused snapshot has rate 0', async () => {
+      const h = setup();
+      await h.init();
+      await h.found();
+      await h.host.handle({ t: 'setClock', paused: true, speed: 8 });
+      h.setNow(1000);
+      h.host.pump();
+      expect(h.clock()).toMatchObject({ paused: true, speed: 8, rate: 0, actualSpeed: 0 });
+    });
+
+    it('a new game starts running at 1x, and founding starts the clock', async () => {
+      const h = setup();
+      await h.init();
+      await h.found();
+      expect(h.clock()).toMatchObject({ paused: false, speed: 1, rate: 1 });
+    });
+
+    it('a loaded game starts paused at the saved tick', async () => {
+      const a = setup();
+      await a.init();
+      await a.found();
+      a.setNow(5000);
+      a.host.pump();
+      await a.host.handle({ t: 'setClock', paused: true, speed: 1 });
+      const b = setup({}, { saves: a.saves });
+      b.setNow(5000);
+      await b.init();
+      expect(b.lastTick()).toBe(5);
+      expect(b.clock()).toMatchObject({ paused: true, rate: 0 });
+      b.setNow(9000);
+      b.host.pump();
+      expect(b.lastTick()).toBe(5);
+    });
+
+    it('a save made while paused does not catch up on load', async () => {
+      const a = setup();
+      await a.init();
+      await a.found();
+      await a.host.handle({ t: 'setClock', paused: true, speed: 1 });
+      await a.host.handle({ t: 'saveNow' });
+      const b = setup({}, { saves: a.saves });
+      b.setNow(7_200_000);
+      await b.init();
+      expect(b.lastTick()).toBe(0);
+      expect(b.posted.some((m) => m.t === 'away' || m.t === 'catchUp')).toBe(false);
+    });
+
+    it('a save made while running catches up only when the setting is on', async () => {
+      const a = setup();
+      await a.init();
+      await a.found();
+      await a.host.handle({ t: 'saveNow' });
+      const on = setup({}, { saves: a.saves, offlineCatchUp: true });
+      on.setNow(7_200_000);
+      await on.init();
+      expect(on.lastTick()).toBe(7200);
+      const off = setup({}, { saves: a.saves, offlineCatchUp: false });
+      off.setNow(7_200_000);
+      await off.init();
+      expect(off.lastTick()).toBe(0);
+      expect(off.clock()).toMatchObject({ paused: true });
+    });
+
+    it('a save without a paused flag catches up when the setting is on', async () => {
+      const a = setup();
+      await a.init();
+      await a.found();
+      await a.host.handle({ t: 'saveNow' });
+      const file = await a.saves.loadLatestValid();
+      delete (file as { paused?: boolean }).paused;
+      const saves = createMemorySaveStore();
+      await saves.writeAuto(file!);
+      const b = setup({}, { saves });
+      b.setNow(7_200_000);
+      await b.init();
+      expect(b.lastTick()).toBe(7200);
+    });
+
+    it('a backlog during play is dropped, not caught up', async () => {
+      // Each read of the clock costs 10 ms, as if every tick were slow.
+      let now = 0;
+      const posted: FromWorker[] = [];
+      const host = new SimHost({
+        post: (m) => posted.push(m),
+        now: () => (now += 10),
+        saves: createMemorySaveStore(),
+        codec,
+      });
+      const debug = {
+        timescale: 600,
+        freeze: false,
+        seed: 42,
+        scene: 'none' as const,
+        noWebgl: false,
+      };
+      await host.handle({ t: 'init', nowMs: 0, debug, prefs: { offlineCatchUp: true } });
+      await host.handle({
+        t: 'command',
+        id: 1,
+        cmd: { t: 'foundCompany', name: 'Selene Rock Co', companionId: 'veteran' },
+      });
+      await host.handle({ t: 'setClock', paused: false, speed: 8 });
+      for (let i = 0; i < 4; i++) {
+        now += 1000; // a second between pumps owes thousands of ticks; a slow pump runs a few
+        host.pump();
+      }
+      expect(posted.some((m) => m.t === 'catchUp' || m.t === 'away')).toBe(false);
+      const snaps = posted.filter((m) => m.t === 'snapshot');
+      const last = snaps[snaps.length - 1];
+      expect(last?.t === 'snapshot' && last.tick).toBeLessThan(100);
+    });
+
+    it('a slow pump reports the real speed', async () => {
+      let now = 0;
+      const posted: FromWorker[] = [];
+      const host = new SimHost({
+        post: (m) => posted.push(m),
+        now: () => (now += 10),
+        saves: createMemorySaveStore(),
+        codec,
+      });
+      const debug = {
+        timescale: 600,
+        freeze: false,
+        seed: 42,
+        scene: 'none' as const,
+        noWebgl: false,
+      };
+      await host.handle({ t: 'init', nowMs: 0, debug, prefs: { offlineCatchUp: true } });
+      await host.handle({
+        t: 'command',
+        id: 1,
+        cmd: { t: 'foundCompany', name: 'Selene Rock Co', companionId: 'veteran' },
+      });
+      await host.handle({ t: 'setClock', paused: false, speed: 8 });
+      for (let i = 0; i < 60; i++) host.pump();
+      const snaps = posted.filter((m) => m.t === 'snapshot');
+      const last = snaps[snaps.length - 1];
+      const actual = last?.t === 'snapshot' ? last.clock.actualSpeed : 8;
+      expect(actual).toBeGreaterThan(0);
+      expect(actual).toBeLessThan(4);
+    });
+
+    it('a gap with no pumps for over 5 s catches up only when the setting is on', async () => {
+      const on = setup({}, { offlineCatchUp: true });
+      await on.init();
+      await on.found();
+      on.setNow(600_000);
+      on.host.pump();
+      expect(on.lastTick()).toBe(600);
+      const off = setup({}, { offlineCatchUp: false });
+      await off.init();
+      await off.found();
+      off.setNow(600_000);
+      off.host.pump();
+      expect(off.lastTick()).toBe(0);
+      off.setNow(601_000);
+      off.host.pump();
+      expect(off.lastTick()).toBe(1);
+    });
+
+    it('setPrefs changes the gap rule', async () => {
+      const h = setup({}, { offlineCatchUp: true });
+      await h.init();
+      await h.found();
+      await h.host.handle({ t: 'setPrefs', prefs: { offlineCatchUp: false } });
+      h.setNow(600_000);
+      h.host.pump();
+      expect(h.lastTick()).toBe(0);
+    });
+
+    it('saveNow with an id answers saved after the write', async () => {
+      const h = setup();
+      await h.init();
+      await h.found();
+      const before = h.saves.writes;
+      await h.host.handle({ t: 'saveNow', id: 7 });
+      expect(h.saves.writes).toBe(before + 1);
+      expect(h.posted[h.posted.length - 1]).toEqual({ t: 'saved', id: 7 });
+    });
   });
 });

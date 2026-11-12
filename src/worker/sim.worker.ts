@@ -23,7 +23,9 @@ const host = new SimHost({
     encode: toSaveFile,
     decode: (file) => {
       const res = fromSaveFile(file);
-      return res.ok ? { state: res.state, savedAtRealMs: res.savedAtRealMs } : null;
+      return res.ok
+        ? { state: res.state, savedAtRealMs: res.savedAtRealMs, paused: res.paused }
+        : null;
     },
     exportCode: encodeExportCode,
     importCode: async (code) => {

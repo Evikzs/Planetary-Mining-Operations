@@ -15,12 +15,22 @@ import {
 } from '../sim/views';
 import { createMemorySaveStore } from '../save/memoryStore';
 import type { SaveFile, SaveStore } from '../save/types';
-import type { DebugFlags, FromWorker, ManualSlot, SaveSlot, Scene, ToWorker } from './protocol';
+import type {
+  ClockState,
+  DebugFlags,
+  FromWorker,
+  ManualSlot,
+  Prefs,
+  SaveSlot,
+  Scene,
+  Speed,
+  ToWorker,
+} from './protocol';
 import { playerCompany } from '../sim/companies';
 
 export interface SaveCodec {
-  encode(state: GameState, savedAtRealMs: number): SaveFile;
-  decode(file: SaveFile): { state: GameState; savedAtRealMs: number } | null;
+  encode(state: GameState, savedAtRealMs: number, paused: boolean): SaveFile;
+  decode(file: SaveFile): { state: GameState; savedAtRealMs: number; paused: boolean } | null;
   /** A save as a 'PMO1.' code the player can copy. */
   exportCode(file: SaveFile): Promise<string>;
   importCode(code: string): Promise<SaveFile | null>;
@@ -41,6 +51,10 @@ export interface SimHostDeps {
 export const FINE_CATCH_UP_LIMIT = OFFLINE.fineThresholdTicks;
 const PUMP_BUDGET_MS = 50;
 const AUTOSAVE_MS = 30_000;
+/** No pump for this long means the machine slept or the worker stalled: a gap, not a backlog. */
+const GAP_MS = 5_000;
+/** The real-speed readout averages over this window. */
+const SPEED_WINDOW_MS = 2_000;
 
 const DEFAULT_FLAGS: DebugFlags = {
   timescale: 1,
@@ -82,6 +96,13 @@ export class SimHost {
   private saves: SaveStore;
   /** Set when a step threw: the clock stops and nothing more is saved over the last good save. */
   private halted = false;
+  private paused = false;
+  private speed: Speed = 1;
+  private prefs: Prefs = { offlineCatchUp: true };
+  private lastPumpMs = 0;
+  private windowStartMs = 0;
+  private windowTicks = 0;
+  private actualSpeed = 1;
 
   constructor(private readonly deps: SimHostDeps) {
     this.saves = deps.saves;
@@ -103,12 +124,13 @@ export class SimHost {
   private async dispatch(msg: ToWorker): Promise<void> {
     switch (msg.t) {
       case 'init':
-        await this.init(msg.nowMs, msg.debug);
+        await this.init(msg.nowMs, msg.debug, msg.prefs);
         return;
       case 'command': {
         const result = applyCommand(this.state, msg.cmd);
         const founded = result.ok && msg.cmd.t === 'foundCompany';
-        if (founded) this.reanchor();
+        // A new company starts its clock running at 1x (tests may hold it with ?freeze=1).
+        if (founded) this.setClock(this.flags.freeze, 1);
         this.deps.post({ t: 'commandResult', id: msg.id, result });
         this.postViews(false);
         // Each action is saved at once: the save on leaving the page is not sure to finish.
@@ -117,17 +139,19 @@ export class SimHost {
       }
       case 'saveNow':
         await this.save();
+        if (msg.id !== undefined) this.deps.post({ t: 'saved', id: msg.id });
         return;
       case 'advanceRealMs':
         this.offsetMs += msg.ms;
         return;
-      case 'freeze':
-        this.flags.freeze = msg.on;
-        if (msg.on) return;
-        // The frozen time never happened: the clock goes on from the tick it stopped at, and a
-        // save made while frozen must not have a reload catch that time up.
-        this.reanchor();
+      case 'setClock':
+        this.setClock(msg.paused, msg.speed);
+        // A save records how the clock stands: a reload must not count paused time as time away.
         await this.save();
+        this.postViews(false);
+        return;
+      case 'setPrefs':
+        this.prefs = msg.prefs;
         return;
       case 'queryPeople': {
         const page = queryPeople(this.state, msg.filter, msg.offset, msg.limit);
@@ -144,7 +168,7 @@ export class SimHost {
         return;
       case 'exportSave': {
         const code = await this.deps.codec.exportCode(
-          this.deps.codec.encode(this.state, this.now()),
+          this.deps.codec.encode(this.state, this.now(), this.paused),
         );
         this.deps.post({ t: 'exportResult', id: msg.id, code });
         return;
@@ -162,6 +186,7 @@ export class SimHost {
           return;
         }
         this.deps.post({ t: 'loadResult', id: msg.id, ok: true });
+        this.paused = true;
         this.replaceState(loaded.state);
         await this.save();
         return;
@@ -178,7 +203,10 @@ export class SimHost {
         let error: string | undefined;
         try {
           if (!this.saves.writeManual) throw new Error('this browser cannot keep save slots');
-          await this.saves.writeManual(msg.slot, this.deps.codec.encode(this.state, this.now()));
+          await this.saves.writeManual(
+            msg.slot,
+            this.deps.codec.encode(this.state, this.now(), this.paused),
+          );
         } catch (err) {
           error = saveErrorText(err);
         }
@@ -195,6 +223,7 @@ export class SimHost {
           return;
         }
         this.deps.post({ t: 'loadResult', id: msg.id, ok: true });
+        this.paused = true;
         this.replaceState(loaded.state);
         await this.save();
         return;
@@ -202,8 +231,10 @@ export class SimHost {
     }
   }
 
-  private async init(nowMs: number, debug: DebugFlags): Promise<void> {
+  private async init(nowMs: number, debug: DebugFlags, prefs?: Prefs): Promise<void> {
     this.flags = debug;
+    if (prefs) this.prefs = prefs;
+    this.paused = debug.freeze;
     const seed = debug.seed ?? nowMs >>> 0;
     let file: SaveFile | null = null;
     try {
@@ -226,12 +257,18 @@ export class SimHost {
     } else if (loaded) {
       this.state = loaded.state;
       this.reanchor();
-      if (playerCompany(this.state)) this.catchUp(this.now() - loaded.savedAtRealMs);
+      const ranWhileClosed = this.prefs.offlineCatchUp && !loaded.paused;
+      if (playerCompany(this.state) && ranWhileClosed) {
+        this.catchUp(this.now() - loaded.savedAtRealMs);
+      }
+      // A loaded game waits for the player.
+      this.paused = true;
     } else {
       this.state = createGame(usableSeed(seed));
       this.reanchor();
     }
     this.lastSaveMs = this.now();
+    this.resetSpeedWindow();
     this.deps.post({ t: 'ready', founded: playerCompany(this.state) !== undefined });
     this.postViews(true);
   }
@@ -258,19 +295,27 @@ export class SimHost {
   }
 
   private advance(): void {
-    if (!playerCompany(this.state) || this.flags.freeze) return;
+    if (!playerCompany(this.state) || this.paused) return;
     const start = this.now();
+    const sincePump = start - this.lastPumpMs;
+    this.lastPumpMs = start;
     const target = this.anchorTick + this.ticksFor(start - this.anchorRealMs);
     let due = target - this.state.tick;
     if (due <= 0) return this.maybeAutosave();
     const events: SimEvent[] = [];
-    if (due > FINE_CATCH_UP_LIMIT) {
-      this.catchUp(start - this.realMsOfTick());
+    const before = this.state.tick;
+    if (due > FINE_CATCH_UP_LIMIT && sincePump > GAP_MS) {
+      // The machine slept or the worker stalled: time away, if the player wants it to count.
+      if (this.prefs.offlineCatchUp) this.catchUp(start - this.realMsOfTick());
+      else this.reanchor();
     } else {
       while (due > 0 && this.now() - start < PUMP_BUDGET_MS) {
         events.push(...step(this.state, { mode: 'fine' }));
         due--;
       }
+      // Too slow for this speed: drop the backlog rather than run it under offline rules.
+      if (due > FINE_CATCH_UP_LIMIT) this.reanchor();
+      this.measure(start, this.state.tick - before);
     }
     if (events.length) this.deps.post({ t: 'events', events });
     for (const problem of this.deps.checkInvariants?.(this.state) ?? []) {
@@ -289,18 +334,58 @@ export class SimHost {
     if (summary.gameHours >= OFFLINE.awayScreenMinHours) this.deps.post({ t: 'away', summary });
   }
 
+  /** Game minutes per real second while running. */
+  private runRate(): number {
+    return this.flags.timescale * this.speed;
+  }
+
+  private clock(): ClockState {
+    return {
+      paused: this.paused,
+      speed: this.speed,
+      rate: this.paused ? 0 : this.runRate(),
+      actualSpeed: this.paused ? 0 : this.actualSpeed,
+    };
+  }
+
+  private setClock(paused: boolean, speed: Speed): void {
+    // The time so far runs at the old rate; the new rate counts from now.
+    this.reanchor();
+    this.paused = paused;
+    this.speed = speed;
+    this.resetSpeedWindow();
+  }
+
+  private resetSpeedWindow(): void {
+    this.actualSpeed = this.speed;
+    this.windowStartMs = this.now();
+    this.windowTicks = 0;
+  }
+
+  /** Ticks run against real time, over windows of SPEED_WINDOW_MS. */
+  private measure(at: number, ticks: number): void {
+    this.windowTicks += ticks;
+    const span = at - this.windowStartMs;
+    if (span < SPEED_WINDOW_MS) return;
+    this.actualSpeed =
+      Math.round(((this.windowTicks * 1000) / span / this.flags.timescale) * 10) / 10;
+    this.windowStartMs = at;
+    this.windowTicks = 0;
+  }
+
   /** The real time at which the current tick was due. */
   private realMsOfTick(): number {
-    return this.anchorRealMs + ((this.state.tick - this.anchorTick) * 1000) / this.flags.timescale;
+    return this.anchorRealMs + ((this.state.tick - this.anchorTick) * 1000) / this.runRate();
   }
 
   private ticksFor(realMs: number): number {
-    return Math.floor((Math.max(0, realMs) * this.flags.timescale) / 1000);
+    return Math.floor((Math.max(0, realMs) * this.runRate()) / 1000);
   }
 
   private reanchor(): void {
     this.anchorTick = this.state.tick;
     this.anchorRealMs = this.now();
+    this.lastPumpMs = this.anchorRealMs;
   }
 
   private maybeAutosave(): void {
@@ -311,7 +396,7 @@ export class SimHost {
     if (this.halted || (!playerCompany(this.state) && !evenUnfounded)) return;
     this.lastSaveMs = this.now();
     try {
-      await this.saves.writeAuto(this.deps.codec.encode(this.state, this.lastSaveMs));
+      await this.saves.writeAuto(this.deps.codec.encode(this.state, this.lastSaveMs, this.paused));
     } catch (err) {
       this.reportSaveError(err);
     }
@@ -339,10 +424,11 @@ export class SimHost {
       this.deps.post({ t: 'world', world: buildWorldView(this.state, ++this.worldVersion) });
     }
     const anchorRealMs = this.realMsOfTick();
+    const clock = this.clock();
     if (withMotion) {
-      this.deps.post({ t: 'motion', motion: buildMotionView(this.state), anchorRealMs });
+      this.deps.post({ t: 'motion', motion: buildMotionView(this.state), anchorRealMs, clock });
     }
     const ui = buildUiSnapshot(this.state);
-    this.deps.post({ t: 'snapshot', tick: this.state.tick, anchorRealMs, ui });
+    this.deps.post({ t: 'snapshot', tick: this.state.tick, anchorRealMs, clock, ui });
   }
 }

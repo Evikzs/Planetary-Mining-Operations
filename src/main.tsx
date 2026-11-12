@@ -13,6 +13,7 @@ import { createSimClient } from './client/simClient';
 import {
   away,
   catchUpProgress,
+  clock,
   gameRenderer,
   motion,
   motionPref,
@@ -50,11 +51,15 @@ function start(root: HTMLElement): void {
   const worker = new Worker(new URL('./worker/sim.worker.ts', import.meta.url), { type: 'module' });
   const client = createSimClient(worker);
   simClient.value = client;
-  client.on('snapshot', (msg) => (ui.value = msg.ui));
+  client.on('snapshot', (msg) => {
+    ui.value = msg.ui;
+    clock.value = msg.clock;
+  });
   client.on('world', (msg) => (world.value = msg.world));
   client.on(
     'motion',
-    (msg) => (motion.value = { view: msg.motion, anchorRealMs: msg.anchorRealMs }),
+    (msg) =>
+      (motion.value = { view: msg.motion, anchorRealMs: msg.anchorRealMs, clock: msg.clock }),
   );
   client.on('away', (msg) => (away.value = msg.summary));
   client.on('error', (msg) => (workerError.value = msg.message));
@@ -69,7 +74,7 @@ function start(root: HTMLElement): void {
   });
   if (debugEnabled()) installTestApi(client);
   const flags = parseDebugFlags(location.search, debugEnabled());
-  client.post({ t: 'init', nowMs: Date.now(), debug: flags });
+  client.post({ t: 'init', nowMs: Date.now(), debug: flags, prefs: { offlineCatchUp: true } });
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'hidden') client.saveNow();
   });

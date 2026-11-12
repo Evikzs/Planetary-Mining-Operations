@@ -4,7 +4,7 @@ import { fromLatLon } from '../shared/vec3';
 import type { Command, CommandResult } from '../sim/commands';
 import type { UiSnapshot, WorldView } from '../sim/views';
 import type { SimClient } from './simClient';
-import { gameRenderer, selection, ui, world } from './store';
+import { clock, gameRenderer, selection, ui, world } from './store';
 
 /** Hooks for e2e tests and debugging; dev and e2e builds put them on window.__pmo. */
 export interface TestApi {
@@ -12,7 +12,7 @@ export interface TestApi {
   ui(): UiSnapshot | null;
   world(): WorldView | null;
   advanceRealMs(ms: number): void;
-  /** Stops game time, or starts it again from the same tick; commands still apply. */
+  /** Pauses game time, or starts it again from the same tick at the same speed. */
   freeze(on: boolean): void;
   renderStats(): RenderStats | null;
   camera(): GlobeCameraState | null;
@@ -38,7 +38,7 @@ export function installTestApi(client: SimClient): void {
     ui: () => ui.value,
     world: () => world.value,
     advanceRealMs: (ms) => client.post({ t: 'advanceRealMs', ms }),
-    freeze: (on) => client.post({ t: 'freeze', on }),
+    freeze: (on) => client.post({ t: 'setClock', paused: on, speed: clock.value.speed }),
     renderStats: () => gameRenderer.value?.stats() ?? null,
     camera: () => gameRenderer.value?.camera() ?? null,
     setCamera(lat, lon, alt, heading) {
