@@ -6,7 +6,7 @@ export type ManualSlot = 1 | 2 | 3 | 4 | 5;
 
 const AUTO_SLOTS = 3;
 
-function looksLikeSave(v: unknown): v is SaveFile {
+export function looksLikeSave(v: unknown): v is SaveFile {
   return typeof v === 'object' && v !== null && typeof (v as SaveFile).savedAtRealMs === 'number';
 }
 

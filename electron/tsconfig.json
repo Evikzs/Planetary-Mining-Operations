@@ -1,0 +1,16 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "node16",
+    "moduleResolution": "node16",
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "types": ["node"],
+    "lib": ["ES2023"],
+    "outDir": "../dist-electron",
+    "rootDir": ".",
+    "skipLibCheck": true,
+    "esModuleInterop": true
+  },
+  "include": ["*.ts", "*.cts"]
+}

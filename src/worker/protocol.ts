@@ -46,8 +46,10 @@ export interface SaveSlot {
 }
 
 export type ToWorker =
-  /** `prefs` defaults to offline catch-up on. */
-  | { t: 'init'; nowMs: number; debug: DebugFlags; prefs?: Prefs }
+  /** `prefs` defaults to offline catch-up on; `fileSaves` when the desktop app keeps the saves. */
+  | { t: 'init'; nowMs: number; debug: DebugFlags; prefs?: Prefs; fileSaves?: boolean }
+  /** The page's answer to a storeCall. */
+  | { t: 'storeResult'; id: number; ok: boolean; value?: unknown; error?: string }
   | { t: 'command'; id: number; cmd: Command }
   /** With an id, the worker answers `saved` once the write is over. */
   | { t: 'saveNow'; id?: number }
@@ -86,4 +88,6 @@ export type FromWorker =
   | { t: 'error'; message: string }
   | { t: 'catchUp'; progress: number }
   | { t: 'saved'; id: number }
+  /** The desktop app's save files live behind the page: the worker asks it. */
+  | { t: 'storeCall'; id: number; op: 'list' | 'read' | 'write'; slot?: string; text?: string }
   | { t: 'away'; summary: AwaySummary };

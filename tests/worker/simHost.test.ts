@@ -705,4 +705,13 @@ describe('SimHost', () => {
       expect(h.posted[h.posted.length - 1]).toEqual({ t: 'saved', id: 7 });
     });
   });
+  it('useSaves swaps the save store before init', async () => {
+    const a = setup();
+    await a.init();
+    await a.found();
+    const b = setup();
+    b.host.useSaves(a.saves);
+    await b.init();
+    expect(b.posted).toContainEqual({ t: 'ready', founded: true });
+  });
 });

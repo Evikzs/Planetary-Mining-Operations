@@ -9,7 +9,7 @@ import { effect } from '@preact/signals';
 import { render } from 'preact';
 import { debugEnabled, parseDebugFlags } from './client/debugFlags';
 import { loadMotionPref, loadOfflinePref, loadUiScale } from './client/preferences';
-import { createSimClient } from './client/simClient';
+import { createSimClient, type SimClient } from './client/simClient';
 import {
   away,
   catchUpProgress,
@@ -77,12 +77,44 @@ function start(root: HTMLElement): void {
   if (debugEnabled()) installTestApi(client);
   const flags = parseDebugFlags(location.search, debugEnabled());
   const prefs = { offlineCatchUp: loadOfflinePref() };
-  client.post({ t: 'init', nowMs: Date.now(), debug: flags, prefs });
+  const desktop = connectDesktop(client);
+  client.post({ t: 'init', nowMs: Date.now(), debug: flags, prefs, fileSaves: desktop });
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'hidden') client.saveNow();
   });
   const webgl = !flags.noWebgl && isWebGL2Available();
   render(<App flags={flags} webgl={webgl} />, root);
+}
+
+/**
+ * In the desktop app, the worker's save files go through the preload, and the window waits for a
+ * last save before it closes. False in a browser.
+ */
+function connectDesktop(client: SimClient): boolean {
+  const saves = window.pmoSaves;
+  if (!saves) return false;
+  client.on('storeCall', (msg) => {
+    const run =
+      msg.op === 'list'
+        ? saves.list()
+        : msg.op === 'read'
+          ? saves.read(msg.slot ?? '')
+          : saves.write(msg.slot ?? '', msg.text ?? '');
+    run.then(
+      (value) => client.post({ t: 'storeResult', id: msg.id, ok: true, value }),
+      (err: unknown) =>
+        client.post({ t: 'storeResult', id: msg.id, ok: false, error: String(err) }),
+    );
+  });
+  let closeId = 0;
+  window.pmoApp?.onCloseRequest(() => {
+    const id = ++closeId;
+    client.on('saved', (msg) => {
+      if (msg.id === id) window.pmoApp?.closeReady();
+    });
+    client.post({ t: 'saveNow', id });
+  });
+  return true;
 }
 
 /** Income flies from where it was made to the cash readout: one token per plot per batch. */

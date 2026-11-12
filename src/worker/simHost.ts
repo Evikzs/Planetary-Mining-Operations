@@ -112,6 +112,11 @@ export class SimHost {
     return this.deps.now() + this.offsetMs;
   }
 
+  /** The desktop app keeps saves in files: the worker learns so with init, before it loads. */
+  useSaves(store: SaveStore): void {
+    this.saves = store;
+  }
+
   /** Answers one message; a failure becomes an error message rather than a silent stop. */
   async handle(msg: ToWorker): Promise<void> {
     try {

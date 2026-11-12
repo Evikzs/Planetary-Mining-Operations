@@ -15,5 +15,5 @@
     "skipLibCheck": true,
     "noEmit": true
   },
-  "include": ["src", "tests", "bot", "e2e", "scripts", "*.ts"]
+  "include": ["src", "tests", "bot", "e2e", "scripts", "*.ts", "electron", "e2e-electron"]
 }

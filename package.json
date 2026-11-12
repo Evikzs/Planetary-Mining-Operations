@@ -3,6 +3,7 @@
   "private": true,
   "version": "0.1.0",
   "type": "module",
+  "main": "dist-electron/main.js",
   "engines": {
     "node": ">=22.12"
   },
@@ -19,7 +20,10 @@
     "bot": "vitest run --config vitest.bot.config.ts",
     "size": "node scripts/check-bundle-size.mjs",
     "check": "npm run typecheck && npm run lint && npm run test",
-    "fixtures": "vitest run --config vitest.scripts.config.ts"
+    "fixtures": "vitest run --config vitest.scripts.config.ts",
+    "build:electron": "tsc -p electron/tsconfig.json",
+    "app": "npm run build && npm run build:electron && electron .",
+    "test:app": "playwright test -c playwright.electron.config.ts"
   },
   "dependencies": {
     "@fontsource-variable/jost": "5.3.0",
@@ -39,6 +43,8 @@
     "@preact/preset-vite": "2.10.6",
     "@types/node": "22.20.5",
     "@types/three": "0.186.0",
+    "electron": "45.1.0",
+    "electron-builder": "26.18.1",
     "eslint": "10.13.0",
     "fake-indexeddb": "6.2.6",
     "fast-check": "4.10.2",

@@ -5,6 +5,8 @@ import { defineConfig, globalIgnores } from 'eslint/config';
 export default defineConfig(
   globalIgnores([
     'dist',
+    'dist-electron',
+    'release',
     'coverage',
     'playwright-report',
     'test-results',

@@ -2,7 +2,9 @@ import { debugEnabled } from '../client/debugFlags';
 import { decodeExportCode, encodeExportCode } from '../save/exportCode';
 import { createMemorySaveStore } from '../save/memoryStore';
 import { fromSaveFile, toSaveFile } from '../save/saveFile';
+import { createFileSaveStore } from '../save/fileStore';
 import { createIdbSaveStore } from '../save/slots';
+import { createBridgeSlotIo } from './storeBridge';
 import { checkInvariants } from '../sim/invariants';
 import type { FromWorker, ToWorker } from './protocol';
 import { SimHost } from './simHost';
@@ -47,7 +49,12 @@ const host = new SimHost({
     : undefined,
 });
 
+const bridge = createBridgeSlotIo((msg) => scope.postMessage(msg, []));
+
 scope.onmessage = (e) => {
-  void host.handle(e.data);
+  const msg = e.data;
+  if (msg.t === 'storeResult') return bridge.settle(msg);
+  if (msg.t === 'init' && msg.fileSaves) host.useSaves(createFileSaveStore(bridge.io));
+  void host.handle(msg);
 };
 setInterval(() => host.pump(), 250);
