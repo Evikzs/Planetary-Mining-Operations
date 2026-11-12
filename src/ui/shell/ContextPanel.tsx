@@ -18,7 +18,6 @@ import { AuctionPanel, OpenAuction } from '../components/AuctionPanel';
 import { formatGameDuration, formatMass } from '../format';
 import { Icon } from '../icons';
 import { activeTab } from './tabs';
-import { isDesktop } from './useBreakpoint';
 
 interface Fact {
   label: string;
@@ -196,8 +195,6 @@ function describe(
 export function ContextPanel() {
   const pick = selection.value;
   const w = world.value;
-  // On phones an open tab sheet takes the bottom of the screen.
-  if (!isDesktop.value && activeTab.value) return null;
   const view = pick && w ? describe(pick, w, ui.value, motion.value?.view.trips ?? []) : null;
   if (!view) return null;
   return (

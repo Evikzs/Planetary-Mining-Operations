@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test';
 import { gotoGame } from './helpers';
 
-test('a new player founds a company and Ox Varga speaks', async ({ page }, info) => {
+test('a new player founds a company and Ox Varga speaks', async ({ page }) => {
   await gotoGame(page);
   const founding = page.getByRole('dialog', { name: 'Found your company' });
   await expect(founding).toBeVisible();
@@ -21,9 +21,6 @@ test('a new player founds a company and Ox Varga speaks', async ({ page }, info)
   await expect
     .poll(() => page.evaluate(() => window.__pmo.camera()?.altitude ?? 0))
     .toBeLessThan(5);
-  if (info.project.name === 'phone') {
-    await page.getByRole('button', { name: 'Talk to Ox Varga' }).click();
-  }
   await expect(page.getByText(/Ox Varga\. Thirty years cutting rock/)).toBeVisible();
 });
 

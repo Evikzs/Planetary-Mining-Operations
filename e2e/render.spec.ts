@@ -21,7 +21,7 @@ test('?nowebgl=1 shows the WebGL 2 message', async ({ page }) => {
 test('at planetary altitude the ownership legend lists 6 companies', async ({ page }) => {
   await gotoGame(page);
   await foundCompany(page);
-  // From orbit, over the equator: phones start closer in.
+  // From orbit, over the equator.
   await page.evaluate(() => window.__pmo.setCamera(0, 0, 200, 0));
   const legend = page.getByRole('list', { name: 'Owners' });
   await expect(legend.getByRole('listitem')).toHaveCount(6);

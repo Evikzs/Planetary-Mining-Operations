@@ -10,15 +10,10 @@ async function finance(page: Page) {
   return page.getByTestId('tab-panel');
 }
 
-test('key F opens Finance; on phones it is under More', async ({ page }, info) => {
+test('key F opens Finance', async ({ page }) => {
   await gotoGame(page, { seed: '42', timescale: '60' });
   await foundCompany(page);
-  if (info.project.name === 'desktop') {
-    await page.keyboard.press('f');
-  } else {
-    await page.getByTestId('bottom-tabs').getByRole('button', { name: 'More' }).click();
-    await page.getByTestId('tab-panel').getByRole('button', { name: 'Finance' }).click();
-  }
+  await page.keyboard.press('f');
   await expect(
     page.getByTestId('tab-panel').getByRole('heading', { name: 'Statements' }),
   ).toBeVisible();

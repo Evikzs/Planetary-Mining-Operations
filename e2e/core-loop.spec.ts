@@ -9,7 +9,7 @@ const ilmenite = async (page: Page) => (await snapshot(page)).sections[0]?.stock
 
 // Seed 42 offers ilmenite deliveries from game hour 21 to 69 and 113 to 253, whenever the mine
 // is built; the mine fills the depot with about 6 t an hour.
-test('the core loop: found, build, sell, deliver, expand, and reload', async ({ page }, info) => {
+test('the core loop: found, build, sell, deliver, expand, and reload', async ({ page }) => {
   // About 80 s here and twice that on CI's runner, with five rivals simulated alongside: past the
   // 180 s that test.slow() gives.
   test.setTimeout(300_000);
@@ -44,10 +44,7 @@ test('the core loop: found, build, sell, deliver, expand, and reload', async ({ 
   await page.mouse.move(cx + 40, cy, { steps: 4 });
   await page.mouse.up();
   await page.mouse.wheel(0, -50);
-  if (info.project.name === 'phone') {
-    await page.getByRole('button', { name: 'Talk to Ox Varga' }).click();
-  }
-  const speech = info.project.name === 'phone' ? panel : page.getByTestId('companion');
+  const speech = page.getByTestId('companion');
   for (let i = 0; i < 3; i++) await speech.getByRole('button', { name: 'Next' }).click();
   await expect
     .poll(async () => (await snapshot(page)).story.codex, { timeout: 15_000 })

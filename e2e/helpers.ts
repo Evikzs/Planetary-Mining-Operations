@@ -28,19 +28,9 @@ export async function foundCompany(page: Page): Promise<void> {
   await expect(page.getByTestId('top-bar')).toContainText('Selene Rock Co');
 }
 
-/** Opens a tab from the rail on desktop, or from the bottom tabs and More on phones. */
+/** Opens a tab from the rail. */
 export async function openTab(page: Page, label: string): Promise<void> {
-  if ((page.viewportSize()?.width ?? 0) >= 1024) {
-    await page.getByTestId('tab-rail').getByRole('button', { name: label }).click();
-    return;
-  }
-  const tabs = page.getByTestId('bottom-tabs');
-  if (['Build', 'People', 'Trade', 'Contracts'].includes(label)) {
-    await tabs.getByRole('button', { name: label }).click();
-    return;
-  }
-  await tabs.getByRole('button', { name: 'More' }).click();
-  await page.getByTestId('tab-panel').getByRole('button', { name: label }).click();
+  await page.getByTestId('tab-rail').getByRole('button', { name: label }).click();
 }
 
 /** The unowned section nearest the player's charter, with no lot open on it. */

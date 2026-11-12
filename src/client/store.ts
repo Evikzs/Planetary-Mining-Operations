@@ -43,8 +43,6 @@ export const workerError = signal<string | null>(null);
 export const flyHome = signal(false);
 /** A Codex entry to open next, as when the companion points at one. */
 export const codexFocus = signal<string | null>(null);
-/** The companion's dialogue sheet on phones. */
-export const companionOpen = signal(false);
 
 export type MotionPref = 'system' | 'on' | 'off';
 /** The player's reduced-motion choice; 'system' follows the browser. */

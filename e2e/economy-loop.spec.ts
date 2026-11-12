@@ -6,7 +6,7 @@ const RIVAL = 'Tycho Deepworks';
 
 test('the economy loop: found, win land, borrow, buy shares, read the news, and reload', async ({
   page,
-}, info) => {
+}) => {
   test.slow();
   await gotoGame(page, { timescale: '120' });
   const panel = page.getByTestId('tab-panel');
@@ -42,14 +42,11 @@ test('the economy loop: found, win land, borrow, buy shares, read the news, and 
   await form.getByRole('button', { name: 'Place order' }).click();
   await expect(panel.getByText('You hold 100 shares.')).toBeVisible({ timeout: 15_000 });
 
-  // 5. Rivals in the news: the ticker on desktop, the Finance tab on phones.
+  // 5. Rivals in the news ticker.
   const rivals = (await snapshot(page)).companies
     .filter((c) => c.kind === 'rival')
     .map((c) => c.name);
-  const news =
-    info.project.name === 'desktop'
-      ? page.getByTestId('news-ticker')
-      : panel.getByRole('list', { name: 'News' });
+  const news = page.getByTestId('news-ticker');
   await expect
     .poll(
       async () => {

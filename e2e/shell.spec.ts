@@ -1,34 +1,16 @@
 import { expect, test } from '@playwright/test';
 import { foundCompany, gotoGame } from './helpers';
 
-test('desktop shows the rail, phone shows bottom tabs', async ({ page }, info) => {
+test('the rail shows every tab', async ({ page }) => {
   await gotoGame(page);
   await foundCompany(page);
-  if (info.project.name === 'desktop') {
-    await expect(page.getByTestId('tab-rail')).toBeVisible();
-    await expect(page.getByTestId('bottom-tabs')).toBeHidden();
-  } else {
-    await expect(page.getByTestId('bottom-tabs')).toBeVisible();
-    await expect(page.getByTestId('tab-rail')).toBeHidden();
+  const rail = page.getByTestId('tab-rail');
+  for (const label of ['Build', 'People', 'Trade', 'Finance', 'Contracts', 'Codex', 'Settings']) {
+    await expect(rail.getByRole('button', { name: label })).toBeVisible();
   }
 });
 
-test('phone tab buttons are at least 44x44', async ({ page }, info) => {
-  test.skip(info.project.name !== 'phone', 'phone layout only');
-  await gotoGame(page);
-  await foundCompany(page);
-  const buttons = page.getByTestId('bottom-tabs').getByRole('button');
-  const count = await buttons.count();
-  expect(count).toBe(5);
-  for (let i = 0; i < count; i++) {
-    const box = await buttons.nth(i).boundingBox();
-    expect(box?.width).toBeGreaterThanOrEqual(44);
-    expect(box?.height).toBeGreaterThanOrEqual(44);
-  }
-});
-
-test('keyboard P opens People and Esc closes', async ({ page }, info) => {
-  test.skip(info.project.name !== 'desktop', 'desktop keyboard');
+test('keyboard P opens People and Esc closes', async ({ page }) => {
   await gotoGame(page);
   await foundCompany(page);
   await page.keyboard.press('p');

@@ -3,9 +3,7 @@ import { foundCompany, gotoGame } from './helpers';
 
 test('the desktop ticker shows rival news; reduced motion shows one item without movement', async ({
   page,
-  isMobile,
 }) => {
-  test.skip(isMobile, 'phones read news in the Finance tab');
   await gotoGame(page);
   await foundCompany(page);
   const rivals = await page.evaluate(() =>

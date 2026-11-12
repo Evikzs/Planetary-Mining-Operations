@@ -17,7 +17,6 @@ import { ShareOrderForm } from '../components/ShareOrderForm';
 import { StatementTable, type StatementRow } from '../components/StatementTable';
 import { Trend } from '../components/Trend';
 import { formatChange, formatMoney, formatNumber } from '../format';
-import { isDesktop } from '../shell/useBreakpoint';
 
 export const nameOf = (snap: UiSnapshot) => (id: CompanyId) =>
   id === PLAYER ? 'You' : (snap.companies.find((c) => c.id === id)?.name ?? 'A rival');
@@ -400,7 +399,7 @@ function Stocks({ snap }: { snap: UiSnapshot }) {
   );
 }
 
-/** Phones have no ticker: the latest news reads here. */
+/** The latest news, beside the ticker's one item at a time. */
 function News({ snap }: { snap: UiSnapshot }) {
   const name = nameOf(snap);
   return (
@@ -433,7 +432,7 @@ export function FinanceTab() {
       <Debt f={f} />
       <OwnShares snap={snap} />
       <Stocks snap={snap} />
-      {!isDesktop.value && <News snap={snap} />}
+      <News snap={snap} />
     </div>
   );
 }
