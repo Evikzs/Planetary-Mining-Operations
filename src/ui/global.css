@@ -94,9 +94,29 @@ h3 {
   z-index: 3;
 }
 
+.topbar {
+  container: topbar / inline-size;
+}
+
 .topbar h1 {
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
   font-size: 17px;
+  text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+/* A narrow bar (a small window at a large interface size) keeps the figures and the clock. */
+@container topbar (max-width: 1000px) {
+  .topbar .goods,
+  .topbar .slot-label {
+    display: none;
+  }
+
+  .topbar h1 {
+    max-width: 140px;
+  }
 }
 
 .topbar .slot {
