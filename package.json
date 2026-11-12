@@ -23,7 +23,8 @@
     "fixtures": "vitest run --config vitest.scripts.config.ts",
     "build:electron": "tsc -p electron/tsconfig.json",
     "app": "npm run build && npm run build:electron && electron .",
-    "test:app": "playwright test -c playwright.electron.config.ts"
+    "test:app": "playwright test -c playwright.electron.config.ts",
+    "package": "npm run build && npm run build:electron && electron-builder --dir"
   },
   "dependencies": {
     "@fontsource-variable/jost": "5.3.0",

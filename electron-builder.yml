@@ -1,0 +1,21 @@
+# Unpacked app folders, the form Steam takes. Installers and signing wait for the Steam milestone.
+appId: io.github.evikzs.pmo
+productName: Planetary Mining Operations
+executableName: planetary-mining-operations
+directories:
+  output: release
+# The web build is bundled, and the main process needs only Electron and Node: no node_modules.
+files:
+  - dist/**
+  - dist-electron/**
+  - package.json
+  - '!node_modules/**/*'
+asar: true
+linux:
+  target: dir
+  category: Game
+win:
+  target: dir
+mac:
+  target: dir
+  category: public.app-category.strategy-games
