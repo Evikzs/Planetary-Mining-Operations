@@ -20,7 +20,7 @@ export interface TestApi {
   setCamera(lat: number, lon: number, alt: number, heading: number): void;
   /** Where a plot's pick sphere shows on screen, in CSS pixels; null when out of sight. */
   project(plotId: number): { x: number; y: number } | null;
-  /** Selects as a tap on the map would. */
+  /** Selects as a click on the map would. */
   select(pick: MapPick | null): void;
 }
 

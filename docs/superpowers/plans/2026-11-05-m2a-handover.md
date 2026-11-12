@@ -1,5 +1,7 @@
 # M2a handover (2026-11-07)
 
+> **Complete.** M2a finished on 2026-11-07 (tasks 1–20, the final review and its fixes). The next handover is [the D1 handover](2026-11-12-d1-handover.md).
+
 This note lets a new session continue the M2a plan without the earlier conversation. Read it first, then the plan.
 
 - Plan: [2026-11-05-m2a-economy-core.md](2026-11-05-m2a-economy-core.md). 20 tasks, headings "Task N (CN)". The task scripts need that form.

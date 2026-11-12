@@ -109,7 +109,7 @@ export class RoverLayer {
     this.shown = k;
   }
 
-  /** The trip of the drawn bus nearest a tap, when one lies within reach. */
+  /** The trip of the drawn bus nearest a click, when one lies within reach. */
   nearest(distance: (at: Vector3) => number, within: number): number | null {
     let best: number | null = null;
     let reach = within;

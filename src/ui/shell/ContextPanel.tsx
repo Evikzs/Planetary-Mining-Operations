@@ -178,7 +178,7 @@ function describe(
 ): View | null {
   switch (pick.kind) {
     case 'plot': {
-      // A plot with a building on it shows the building, as a tap on the map would.
+      // A plot with a building on it shows the building, as a click on the map would.
       const built = w.buildings.find((b) => b.plotId === pick.id);
       return built ? buildingView(built.id, w, snap) : plotView(pick.id, w, snap);
     }

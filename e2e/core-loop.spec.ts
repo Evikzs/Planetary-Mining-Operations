@@ -32,7 +32,7 @@ test('the core loop: found, build, sell, deliver, expand, and reload', async ({ 
       timeout: 20_000,
     })
     .toBe('active');
-  // Esc closes the tab and the mine's details, which cover Ox's portrait on phones.
+  // Esc closes the tab and the mine's details.
   await page.keyboard.press('Escape');
 
   // 4. Pan and zoom a little, so the hub stays in sight for the income token; then hear Ox

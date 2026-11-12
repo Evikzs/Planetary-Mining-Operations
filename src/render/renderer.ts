@@ -53,7 +53,7 @@ export interface RenderStats {
   walkers: number;
 }
 
-/** What a tap on the map hit. Not named Pick: that would shadow TypeScript's Pick<T, K>. */
+/** What a click on the map hit. Not named Pick: that would shadow TypeScript's Pick<T, K>. */
 export interface MapPick {
   kind: 'plot' | 'building' | 'rover' | 'section';
   id: number;
@@ -104,7 +104,7 @@ const START_DIR = normalize([0, -0.6, 0.8]);
 const START_ALTITUDE = 200;
 /** One turn of the Moon in four minutes. */
 const SPIN_RADIANS_PER_MS = (2 * Math.PI) / 240_000;
-/** A bus is small: a tap this close to one, in CSS pixels, picks it. */
+/** A bus is small: a click this close to one, in CSS pixels, picks it. */
 const BUS_REACH_PX = 22;
 
 export function createRenderer(canvas: HTMLCanvasElement, opts: RendererOptions): GameRenderer {

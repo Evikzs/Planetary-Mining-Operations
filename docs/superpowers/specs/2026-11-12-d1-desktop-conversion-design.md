@@ -45,12 +45,12 @@ The simulation already counts in ticks (1 tick = 1 game minute). Only the wordin
 
 ### 3.1 Structure
 
-- `electron/main.ts` and `electron/preload.ts`, built with the same toolchain into `dist-electron/`.
+- `electron/main.ts`, `electron/saveFiles.ts` and `electron/preload.cts` (CommonJS, as sandboxed preloads must be), built with `tsc` into `dist-electron/`.
 - The main process serves the Vite build from a custom `app://` protocol. It does not load `file://` URLs and does not open remote pages.
 - Security: `contextIsolation: true`, `nodeIntegration: false`, `sandbox: true`, a strict Content-Security-Policy, and no remote content. Links to the web open in the system browser.
 - One window: minimum 1280×720, default 1600×900, its size, position and maximised state remembered in the user-data folder. F11 toggles fullscreen. No menu bar.
 - The app quits when its window closes. The page saves on `beforeunload`, and the main process waits up to 2 seconds for that save.
-- Dev: `npm run app` builds and starts the app against the Vite dev server.
+- Dev: `npm run app` builds the game and starts the app. For hot reload, run `npm run dev` and start the app with `PMO_DEV_URL=http://localhost:5173 npx electron .`.
 
 ### 3.2 Saves
 

@@ -1,4 +1,7 @@
 import { describe, expect, it } from 'vitest';
+import { CODEX } from '../../src/data/codex';
+import { NARRATOR_LINES } from '../../src/data/companions/narrator';
+import { VETERAN_LINES } from '../../src/data/companions/veteran';
 import { alertText, ERROR_COPY } from '../../src/data/copy';
 
 describe('copy', () => {
@@ -76,5 +79,19 @@ describe('copy', () => {
     expect(alertText({ t: 'priceMove', goodId: 'steel', pct24h: 0.31, tick: 0 }, names)).toBe(
       'Steel rose 31% in a day.',
     );
+  });
+});
+
+const MOBILE_WORDS = /\b(tap|taps|tapping|tapped|phone|phones|swipe|real (minute|second)s?)\b/i;
+
+describe('player-facing copy', () => {
+  it('never says tap, phone, swipe or real minutes', () => {
+    const texts = [
+      ...Object.values(CODEX).flatMap((e) => [e.title, e.body]),
+      ...Object.values(NARRATOR_LINES).flat(),
+      ...Object.values(VETERAN_LINES).flat(),
+      ...Object.values(ERROR_COPY),
+    ];
+    expect(texts.filter((t) => MOBILE_WORDS.test(t))).toEqual([]);
   });
 });
