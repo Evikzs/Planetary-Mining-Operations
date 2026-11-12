@@ -23,7 +23,7 @@ import {
   timeLeft,
 } from '../components/AuctionPanel';
 import { ErrorText, useCommand } from '../components/command';
-import { formatGameDuration, formatMass, formatMoney, formatRealFromGame } from '../format';
+import { formatGameDuration, formatMass, formatMoney } from '../format';
 import { sectionOfPick } from '../shell/sectionOf';
 import { nameOf } from './FinanceTab';
 
@@ -75,8 +75,7 @@ function purposeText(def: BuildingDef, plot: Plot): string | null {
   return null;
 }
 
-const readyIn = (hours: number): string =>
-  `Ready in ${formatGameDuration(hours * 60)} (${formatRealFromGame(hours * 60)}).`;
+const readyIn = (hours: number): string => `Ready in ${formatGameDuration(hours * 60)}.`;
 
 /** Cash and materials, each marked when this section's depot or the bank falls short. */
 function Needs({

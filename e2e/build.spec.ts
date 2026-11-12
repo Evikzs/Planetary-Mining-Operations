@@ -7,7 +7,7 @@ test('builds a mine from the Build tab and sees it finish', async ({ page }) => 
   await page.evaluate(() =>
     window.__pmo.send({ t: 'foundCompany', name: 'Selene Rock Co', companionId: 'veteran' }),
   );
-  await page.keyboard.press('1');
+  await page.keyboard.press('b');
   const tab = page.getByTestId('tab-panel');
   await tab.getByRole('button', { name: 'Ilmenite deposit' }).first().click();
   await tab.getByRole('button', { name: 'Build Mine' }).click();

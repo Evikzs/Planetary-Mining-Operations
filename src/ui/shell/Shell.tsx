@@ -26,6 +26,8 @@ import { Sheet } from './Sheet';
 import { TabRail } from './TabRail';
 import { activeTab, TABS, toggleTab, type TabId } from './tabs';
 import { TopBar } from './TopBar';
+import { setClock, togglePause } from './ClockControls';
+import type { Speed } from '../../worker/protocol';
 import { isDesktop } from './useBreakpoint';
 
 const TAB_BODY: Record<TabId, () => ComponentChildren> = {
@@ -37,6 +39,8 @@ const TAB_BODY: Record<TabId, () => ComponentChildren> = {
   codex: () => <CodexTab />,
   settings: () => <SettingsTab />,
 };
+
+const SPEED_KEYS: Record<string, Speed> = { '1': 1, '2': 2, '3': 4, '4': 8 };
 
 /** Phones reach these through More. */
 const MORE: TabId[] = ['finance', 'codex', 'settings'];
@@ -50,8 +54,14 @@ function useShortcuts() {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.ctrlKey || e.metaKey || e.altKey || isTyping(e.target)) return;
-      const tab = TABS.find((t) => t.key === e.key);
+      const tab = TABS.find((t) => t.key === e.key.toLowerCase());
+      const speed = SPEED_KEYS[e.key];
       if (tab) toggleTab(tab.id);
+      else if (e.code === 'Space') {
+        // A focused button would also take Space as a click.
+        e.preventDefault();
+        togglePause();
+      } else if (speed) setClock(false, speed);
       else if (e.key === 'Escape') {
         activeTab.value = null;
         moreOpen.value = false;

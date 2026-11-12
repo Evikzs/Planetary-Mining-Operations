@@ -1,10 +1,10 @@
 /** Section auctions: timing, steps, fees and limits (spec 7.8). */
 export const AUCTION = {
-  /** 3 real minutes at the normal clock. */
+  /** 3 game hours. */
   durationTicks: 180,
-  /** A bid in the last 30 ticks pushes the end to 30 ticks after it. */
+  /** A bid in the last 30 game minutes pushes the end to 30 game minutes after it. */
   softCloseTicks: 30,
-  /** No auction runs longer than 10 real minutes. */
+  /** No auction runs longer than 10 game hours. */
   maxDurationTicks: 600,
   minIncrementCents: 100_000,
   minIncrementPct: 0.05,

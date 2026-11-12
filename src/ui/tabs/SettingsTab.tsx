@@ -1,12 +1,12 @@
 import { useState } from 'preact/hooks';
-import { saveMotionPref } from '../../client/preferences';
+import { loadOfflinePref, saveMotionPref, saveOfflinePref } from '../../client/preferences';
 import { motionPref, simClient, ui, type MotionPref } from '../../client/store';
 import { ERROR_COPY } from '../../data/copy';
 import type { HintCategory } from '../../sim/story/beats';
 import { Choices } from '../components/Choices';
 import { ErrorText, useCommand } from '../components/command';
 import { ImportSave, SaveSlots } from '../components/SaveControls';
-import { activeTab } from '../shell/tabs';
+import { activeTab, OTHER_KEYS, TABS } from '../shell/tabs';
 
 const MOTION: { id: MotionPref; label: string }[] = [
   { id: 'system', label: 'System' },
@@ -85,7 +85,57 @@ function NewGame() {
   );
 }
 
-/** Motion, companion hints, saves, export and import, and a fresh start. */
+/** Whether the world runs while the game is closed; the worker learns of a change at once. */
+function OfflineChoice() {
+  const [on, setOn] = useState(loadOfflinePref);
+  return (
+    <section aria-labelledby="settings-clock">
+      <h3 id="settings-clock">Clock</h3>
+      <label class="check">
+        <input
+          type="checkbox"
+          checked={on}
+          onChange={(e) => {
+            const next = e.currentTarget.checked;
+            setOn(next);
+            saveOfflinePref(next);
+            simClient.value?.post({ t: 'setPrefs', prefs: { offlineCatchUp: next } });
+          }}
+        />
+        Run the world while closed
+      </label>
+      <p class="meta">
+        When on, a game that was running when you closed it catches up when you return: up to 8 game
+        hours, your own work at half rate.
+      </p>
+    </section>
+  );
+}
+
+const KEY_ROWS: [string, string][] = [
+  ...TABS.map((t): [string, string] => [t.key.toUpperCase(), t.label]),
+  ...OTHER_KEYS,
+];
+
+function KeyList() {
+  return (
+    <section aria-labelledby="settings-keys">
+      <h3 id="settings-keys">Keys</h3>
+      <table class="goods-table" aria-label="Keys">
+        <tbody>
+          {KEY_ROWS.map(([key, action]) => (
+            <tr key={key}>
+              <td>{key}</td>
+              <td>{action}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </section>
+  );
+}
+
+/** Motion, the clock, companion hints, keys, saves, export and import, and a fresh start. */
 export function SettingsTab() {
   const { error, run } = useCommand();
   const snap = ui.value;
@@ -123,6 +173,8 @@ export function SettingsTab() {
           ))}
         </fieldset>
       </section>
+      <OfflineChoice />
+      <KeyList />
       <section aria-labelledby="settings-saves">
         <h3 id="settings-saves">Saved games</h3>
         <p class="meta">The game also saves itself every 30 seconds.</p>

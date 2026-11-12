@@ -9,6 +9,7 @@ import { formatMass, formatMoney } from '../format';
 import { Icon } from '../icons';
 import { EASE } from '../motion/eases';
 import { AlertsBell } from './Alerts';
+import { ClockControls } from './ClockControls';
 import { sectionOfPick } from './sectionOf';
 
 /** Top-bar labels for goods with long names; the full name shows on hover. */
@@ -128,6 +129,7 @@ export function TopBar() {
         <span class="num" data-testid="game-date">
           {snap?.date ?? ''}
         </span>
+        {founded && <ClockControls />}
       </span>
       {founded && <AlertsBell />}
     </header>

@@ -7,7 +7,7 @@ test.beforeEach(async ({ page }) => {
   await expect
     .poll(() => page.evaluate(() => window.__pmo.ui()?.workforce.total ?? 0), { timeout: 30_000 })
     .toBe(10_000);
-  await page.keyboard.press('2');
+  await page.keyboard.press('p');
 });
 
 test('the list renders only the rows in view and reaches worker 10,000', async ({ page }) => {

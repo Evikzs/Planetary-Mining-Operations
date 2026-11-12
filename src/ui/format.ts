@@ -31,13 +31,6 @@ export function formatGameDuration(minutes: number): string {
   return `${mins} min`;
 }
 
-/** The real wait for a span of game time: one game minute passes in one real second. */
-export function formatRealFromGame(minutes: number): string {
-  const real = Math.max(1, Math.round(minutes / 60));
-  const hours = Math.floor(real / 60);
-  return hours > 0 ? `≈ ${hours} h ${real % 60} min` : `≈ ${real} min`;
-}
-
 /** The latest price against 24 hours before it: up or down past 2%, else flat. */
 export function trendOf(history: number[]): 'up' | 'down' | 'flat' {
   if (history.length < 25) return 'flat';

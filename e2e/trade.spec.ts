@@ -7,7 +7,7 @@ test('selling ilmenite at market fills at the next clearing and pays', async ({ 
   await expect
     .poll(() => page.evaluate(() => window.__pmo.ui()?.company !== null), { timeout: 30_000 })
     .toBe(true);
-  await page.keyboard.press('3');
+  await page.keyboard.press('t');
   const tab = page.getByTestId('tab-panel');
   await tab.getByRole('button', { name: /^Ilmenite/ }).click();
   await tab.getByRole('radio', { name: 'Sell' }).check();
@@ -32,7 +32,7 @@ test('the quote shows even when game hours pass faster than the form waits', asy
   await expect
     .poll(() => page.evaluate(() => window.__pmo.ui()?.company !== null), { timeout: 30_000 })
     .toBe(true);
-  await page.keyboard.press('3');
+  await page.keyboard.press('t');
   const tab = page.getByTestId('tab-panel');
   await tab.getByRole('button', { name: /^Ilmenite/ }).click();
   await tab.getByLabel('Amount (t)').fill('10');

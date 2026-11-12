@@ -19,3 +19,22 @@ export function saveMotionPref(pref: MotionPref): void {
     // Storage is blocked (private mode): the choice lasts until the page closes.
   }
 }
+
+const OFFLINE_KEY = 'pmo.offlineCatchUp';
+
+/** Whether the world runs while the game is closed; on unless the player turned it off. */
+export function loadOfflinePref(): boolean {
+  try {
+    return localStorage.getItem(OFFLINE_KEY) !== 'off';
+  } catch {
+    return true;
+  }
+}
+
+export function saveOfflinePref(on: boolean): void {
+  try {
+    localStorage.setItem(OFFLINE_KEY, on ? 'on' : 'off');
+  } catch {
+    // Storage is blocked (private mode): the choice lasts until the page closes.
+  }
+}

@@ -27,11 +27,11 @@ test('phone tab buttons are at least 44x44', async ({ page }, info) => {
   }
 });
 
-test('keyboard 2 opens People and Esc closes', async ({ page }, info) => {
+test('keyboard P opens People and Esc closes', async ({ page }, info) => {
   test.skip(info.project.name !== 'desktop', 'desktop keyboard');
   await gotoGame(page);
   await foundCompany(page);
-  await page.keyboard.press('2');
+  await page.keyboard.press('p');
   await expect(page.getByTestId('tab-panel')).toBeVisible();
   await expect(page.getByTestId('tab-panel').getByRole('heading', { level: 2 })).toHaveText(
     'People',

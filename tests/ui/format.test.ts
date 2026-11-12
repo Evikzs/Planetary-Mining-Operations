@@ -1,11 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import {
-  formatGameDuration,
-  formatMass,
-  formatMoney,
-  formatRealFromGame,
-  trendOf,
-} from '../../src/ui/format';
+import { formatGameDuration, formatMass, formatMoney, trendOf } from '../../src/ui/format';
 import { bezierPoint, flightControl } from '../../src/ui/motion/incomeTokens';
 
 describe('format', () => {
@@ -22,9 +16,6 @@ describe('format', () => {
     expect(formatGameDuration(252)).toBe('4 h 12 min');
     expect(formatGameDuration(240)).toBe('4 h');
     expect(formatGameDuration(35)).toBe('35 min');
-    expect(formatRealFromGame(4560)).toBe('≈ 1 h 16 min');
-    expect(formatRealFromGame(90)).toBe('≈ 2 min');
-    expect(formatRealFromGame(10)).toBe('≈ 1 min');
   });
 
   it('trendOf uses ±2% over 24 entries', () => {

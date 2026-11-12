@@ -131,6 +131,27 @@ h3 {
 
 .topbar .date {
   margin-left: auto;
+  gap: var(--space-3);
+}
+
+.clock-controls {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.clock-controls .speed {
+  min-height: 28px;
+  padding: 0 var(--space-2);
+  border: 2px solid var(--c-offBlack);
+  border-radius: 999px;
+  background: var(--c-cream);
+  font-family: var(--font-display);
+  font-size: 13px;
+}
+
+.clock-controls .speed[aria-pressed='true'] {
+  background: var(--c-mustard);
 }
 
 .topbar .slot svg {

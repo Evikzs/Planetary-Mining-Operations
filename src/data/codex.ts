@@ -147,7 +147,7 @@ const OTHER: Record<string, CodexEntry> = {
   'mech.auctions': {
     title: 'Auctions',
     category: 'mechanics',
-    body: 'Sections change hands at auction. Any company can open a lot on an unowned section for LM 2,000; the Lunar Authority opens one every 12 game hours. Bids start at the LM 30,000 reserve and count for their amount times a reputation bonus. A lot runs 3 real minutes; a late bid adds 30 seconds, up to 10 minutes. A proxy bids the minimum for you up to your ceiling, even while you are away.',
+    body: 'Sections change hands at auction. Any company can open a lot on an unowned section for LM 2,000; the Lunar Authority opens one every 12 game hours. Bids start at the LM 30,000 reserve and count for their amount times a reputation bonus. A lot runs 3 game hours; a late bid adds 30 game minutes, up to 10 game hours. A proxy bids the minimum for you up to your ceiling, even while you are away.',
   },
   'mech.rivals': {
     title: 'Rivals',

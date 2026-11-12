@@ -3,7 +3,7 @@ import { ui } from '../../client/store';
 import { AUCTION } from '../../data/auctions';
 import { formatGameDate } from '../../sim/clock';
 import type { AuctionView, UiSnapshot } from '../../sim/views';
-import { formatMoney, formatRealFromGame } from '../format';
+import { formatGameDuration, formatMoney } from '../format';
 import { nameOf } from '../tabs/FinanceTab';
 import { ErrorText, useCommand } from './command';
 
@@ -16,9 +16,9 @@ export const LOT_KIND: Record<AuctionView['lot']['kind'], string> = {
 export const leaderOf = (snap: UiSnapshot, a: AuctionView): string =>
   a.leader === null ? 'No bids' : nameOf(snap)(a.leader);
 
-/** The real wait until a lot closes: '≈ 3 min'. */
+/** Game time until a lot closes: '2 h 40 min'. */
 export const timeLeft = (snap: UiSnapshot, a: AuctionView): string =>
-  formatRealFromGame(a.endTick - snap.tick);
+  formatGameDuration(a.endTick - snap.tick);
 
 const toCents = (lm: string) => Math.round(Number(lm) * 100);
 const valid = (cents: number) => Number.isSafeInteger(cents) && cents > 0;

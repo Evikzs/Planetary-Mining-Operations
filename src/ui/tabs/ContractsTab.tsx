@@ -9,7 +9,7 @@ import { maxActive } from '../../sim/contracts/rewards';
 import type { Command } from '../../sim/commands';
 import type { UiSnapshot } from '../../sim/views';
 import { ErrorText, useCommand } from '../components/command';
-import { formatGameDuration, formatMass, formatMoney, formatRealFromGame } from '../format';
+import { formatGameDuration, formatMass, formatMoney } from '../format';
 
 type Run = (cmd: Command) => Promise<boolean>;
 
@@ -59,9 +59,6 @@ function stageShare(stage: Stage): number {
   }
 }
 
-/** Game time and its real-time equivalent: '2 d 9 h (≈ 57 min)'. */
-const span = (minutes: number) => `${formatGameDuration(minutes)} (${formatRealFromGame(minutes)})`;
-
 function Card(props: { c: Contract; children?: ComponentChildren; status?: string }) {
   const { c } = props;
   return (
@@ -93,7 +90,7 @@ function Offer(props: { c: Contract; snap: UiSnapshot; full: boolean; run: Run }
     <Card c={c}>
       <Reward c={c} />
       <p>
-        Due {span(c.hours * 60)} after you accept. The offer ends in{' '}
+        Due {formatGameDuration(c.hours * 60)} after you accept. The offer ends in{' '}
         {formatGameDuration(c.deadlineTick - snap.tick)}.
       </p>
       <button
@@ -176,7 +173,7 @@ function Active(props: { c: Contract; snap: UiSnapshot; run: Run }) {
   const held = snap.sections.find((s) => s.id === depot)?.stockKg ?? {};
   return (
     <Card c={c}>
-      <p>Due in {span(Math.max(0, c.deadlineTick - snap.tick))}.</p>
+      <p>Due in {formatGameDuration(Math.max(0, c.deadlineTick - snap.tick))}.</p>
       <Reward c={c} />
       <p class="meta">
         Step {Math.min(c.stageIndex + 1, c.stages.length)} of {c.stages.length}

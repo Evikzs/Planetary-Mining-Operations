@@ -8,7 +8,7 @@ import './ui/global.css';
 import { effect } from '@preact/signals';
 import { render } from 'preact';
 import { debugEnabled, parseDebugFlags } from './client/debugFlags';
-import { loadMotionPref } from './client/preferences';
+import { loadMotionPref, loadOfflinePref } from './client/preferences';
 import { createSimClient } from './client/simClient';
 import {
   away,
@@ -74,7 +74,8 @@ function start(root: HTMLElement): void {
   });
   if (debugEnabled()) installTestApi(client);
   const flags = parseDebugFlags(location.search, debugEnabled());
-  client.post({ t: 'init', nowMs: Date.now(), debug: flags, prefs: { offlineCatchUp: true } });
+  const prefs = { offlineCatchUp: loadOfflinePref() };
+  client.post({ t: 'init', nowMs: Date.now(), debug: flags, prefs });
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'hidden') client.saveNow();
   });
