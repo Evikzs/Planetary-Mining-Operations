@@ -136,19 +136,23 @@ test('the core loop: found, build, sell, deliver, expand, and reload', async ({ 
     .poll(async () => (await snapshot(page)).sections.length, { timeout: 30_000 })
     .toBe(2);
 
-  // 9. Reload: the autosave brings back the company, and the clock has kept time.
+  // 9. Reload: the autosave brings back the company, the clock caught up to the reload, and the
+  // loaded game waits, paused.
   const before = await page.evaluate(() => ({ tick: window.__pmo.ui()!.tick, at: Date.now() }));
+  const reloadAt = Date.now();
   await page.reload();
   await expect(page.getByTestId('top-bar')).toContainText('Selene Rock Co', { timeout: 20_000 });
+  await expect(page.getByTestId('paused')).toBeVisible();
   const after = await page.evaluate(() => ({
     tick: window.__pmo.ui()!.tick,
     at: Date.now(),
     sections: window.__pmo.ui()!.sections.length,
     mine: window.__pmo.world()!.buildings.some((b) => b.type === 'mine'),
   }));
-  const expected = before.tick + ((after.at - before.at) * TIMESCALE) / 1000;
+  const ticksBy = (at: number) => before.tick + ((at - before.at) * TIMESCALE) / 1000;
   // Each tick read is the latest snapshot, which a busy runner can deliver up to a second late.
-  expect(Math.abs(after.tick - expected)).toBeLessThanOrEqual(2 * TIMESCALE);
+  expect(after.tick).toBeGreaterThanOrEqual(ticksBy(reloadAt) - 2 * TIMESCALE);
+  expect(after.tick).toBeLessThanOrEqual(ticksBy(after.at) + 2 * TIMESCALE);
   expect(after.sections).toBe(2);
   expect(after.mine).toBe(true);
 });
