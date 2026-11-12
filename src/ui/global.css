@@ -1871,13 +1871,24 @@ h3 {
 .tooltip {
   position: fixed;
   z-index: 50;
-  max-width: 280px;
   padding: var(--space-1) var(--space-2);
   border: 2px solid var(--c-offBlack);
   background: var(--c-cream);
   color: var(--c-offBlack);
-  font-size: 13px;
+  font-size: calc(13px * var(--ui-scale, 1));
   pointer-events: none;
   transform: translateX(-50%);
   white-space: nowrap;
+}
+
+/* Every panel and control, scaled by the interface size; the map stays outside it. */
+.hud {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  zoom: var(--ui-scale, 1);
+}
+
+.hud > * {
+  pointer-events: auto;
 }

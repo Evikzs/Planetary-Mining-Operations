@@ -38,3 +38,27 @@ export function saveOfflinePref(on: boolean): void {
     // Storage is blocked (private mode): the choice lasts until the page closes.
   }
 }
+
+export const UI_SCALES = [0.8, 0.9, 1, 1.1, 1.25, 1.5] as const;
+export type UiScale = (typeof UI_SCALES)[number];
+const SCALE_KEY = 'pmo.uiScale';
+
+/** The saved interface size; with none, 90% in a window under 1440 px wide, else 100%. */
+export function loadUiScale(windowWidth: number): UiScale {
+  try {
+    const saved = Number(localStorage.getItem(SCALE_KEY));
+    const known = UI_SCALES.find((s) => s === saved);
+    if (known !== undefined) return known;
+  } catch {
+    // Storage is blocked: fall through to the default.
+  }
+  return windowWidth < 1440 ? 0.9 : 1;
+}
+
+export function saveUiScale(scale: UiScale): void {
+  try {
+    localStorage.setItem(SCALE_KEY, String(scale));
+  } catch {
+    // Storage is blocked (private mode): the choice lasts until the page closes.
+  }
+}

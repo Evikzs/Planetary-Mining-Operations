@@ -8,7 +8,7 @@ import './ui/global.css';
 import { effect } from '@preact/signals';
 import { render } from 'preact';
 import { debugEnabled, parseDebugFlags } from './client/debugFlags';
-import { loadMotionPref, loadOfflinePref } from './client/preferences';
+import { loadMotionPref, loadOfflinePref, loadUiScale } from './client/preferences';
 import { createSimClient } from './client/simClient';
 import {
   away,
@@ -22,6 +22,7 @@ import {
   simClient,
   systemReducedMotion,
   ui,
+  uiScale,
   workerError,
   world,
 } from './client/store';
@@ -42,6 +43,7 @@ const reduced = matchMedia('(prefers-reduced-motion: reduce)');
 systemReducedMotion.value = reduced.matches;
 reduced.addEventListener('change', (e) => (systemReducedMotion.value = e.matches));
 motionPref.value = loadMotionPref();
+uiScale.value = loadUiScale(window.innerWidth);
 effect(() => {
   html.dataset.motion = reducedMotion.value ? 'reduced' : 'full';
 });

@@ -78,7 +78,7 @@ The simulation already counts in ticks (1 tick = 1 game minute). Only the wordin
 ### 4.2 Layout and scale
 
 - One layout: the left tab rail, the top bar, the right context panel, the bottom news ticker and companion. It is designed at 1920×1080 and must work at 1280×720 with a tab open and a selection in the context panel.
-- **UI scale** in Settings: 80%, 90%, 100%, 110%, 125% and 150%. It scales the whole interface through the root font size. Default: 100%, or 90% when the window is under 1440 px wide at first start.
+- **UI scale** in Settings: 80%, 90%, 100%, 110%, 125% and 150%. It scales the whole interface with CSS `zoom` on one HUD layer above the map (the stylesheet sizes in px, so a root font size would scale nothing). The map stays outside the layer, so picks keep their coordinates. Default: 100%, or 90% when the window is under 1440 px wide at first start.
 - The 3D view fills the space the panels leave.
 
 ### 4.3 Mouse

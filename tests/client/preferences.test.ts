@@ -1,5 +1,10 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { loadOfflinePref, saveOfflinePref } from '../../src/client/preferences';
+import {
+  loadOfflinePref,
+  loadUiScale,
+  saveOfflinePref,
+  saveUiScale,
+} from '../../src/client/preferences';
 
 function fakeStorage(): Storage {
   const m = new Map<string, string>();
@@ -30,5 +35,21 @@ describe('the offline preference', () => {
     expect(loadOfflinePref()).toBe(false);
     saveOfflinePref(true);
     expect(loadOfflinePref()).toBe(true);
+  });
+});
+
+describe('the interface size', () => {
+  it('defaults to 90% under 1440 px and 100% above', () => {
+    expect(loadUiScale(1280)).toBe(0.9);
+    expect(loadUiScale(1920)).toBe(1);
+  });
+
+  it('a saved size wins, and a bad value counts as unset', () => {
+    const store = fakeStorage();
+    vi.stubGlobal('localStorage', store);
+    saveUiScale(1.25);
+    expect(loadUiScale(1280)).toBe(1.25);
+    store.setItem('pmo.uiScale', '3');
+    expect(loadUiScale(1920)).toBe(1);
   });
 });

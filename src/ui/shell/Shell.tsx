@@ -1,6 +1,6 @@
 import type { ComponentChildren } from 'preact';
 import { useEffect } from 'preact/hooks';
-import { selection, ui } from '../../client/store';
+import { selection, ui, uiScale } from '../../client/store';
 import type { DebugFlags } from '../../worker/protocol';
 import { CompanionBubble } from '../companion/CompanionBubble';
 import { Icon } from '../icons';
@@ -99,25 +99,33 @@ export function Shell({ flags }: { flags: DebugFlags }) {
   const snap = ui.value;
   // Until the company exists, the founding screen is all there is over the turning Moon.
   return (
-    <div class="shell" data-testid="app" data-panel={activeTab.value ? 'open' : 'closed'}>
+    <div
+      class="shell"
+      data-testid="app"
+      data-panel={activeTab.value ? 'open' : 'closed'}
+      style={{ '--ui-scale': String(uiScale.value) }}
+    >
       <MapCanvas flags={flags} />
-      {snap?.company && (
-        <>
-          <Compass />
-          <MapFilters />
-          <TopBar />
-          <TabRail />
-          <TabPanel />
-          <ContextPanel />
-          <AlertsList />
-          <CompanionBubble />
-          <NewsTicker />
-        </>
-      )}
-      {snap && !snap.company && <FoundingScreen />}
-      <AwayScreen />
-      <CatchUpOverlay />
-      <ErrorBanner />
+      {/* The interface scales as one layer; the map keeps its pixels, so picks stay true. */}
+      <div class="hud">
+        {snap?.company && (
+          <>
+            <Compass />
+            <MapFilters />
+            <TopBar />
+            <TabRail />
+            <TabPanel />
+            <ContextPanel />
+            <AlertsList />
+            <CompanionBubble />
+            <NewsTicker />
+          </>
+        )}
+        {snap && !snap.company && <FoundingScreen />}
+        <AwayScreen />
+        <CatchUpOverlay />
+        <ErrorBanner />
+      </div>
       <Tooltip />
     </div>
   );

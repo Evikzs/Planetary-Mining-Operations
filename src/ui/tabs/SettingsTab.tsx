@@ -1,6 +1,12 @@
 import { useState } from 'preact/hooks';
-import { loadOfflinePref, saveMotionPref, saveOfflinePref } from '../../client/preferences';
-import { motionPref, simClient, ui, type MotionPref } from '../../client/store';
+import {
+  loadOfflinePref,
+  saveMotionPref,
+  saveOfflinePref,
+  saveUiScale,
+  UI_SCALES,
+} from '../../client/preferences';
+import { motionPref, simClient, ui, uiScale, type MotionPref } from '../../client/store';
 import { ERROR_COPY } from '../../data/copy';
 import type { HintCategory } from '../../sim/story/beats';
 import { Choices } from '../components/Choices';
@@ -172,6 +178,19 @@ export function SettingsTab() {
             </label>
           ))}
         </fieldset>
+      </section>
+      <section>
+        <Choices
+          legend="Interface size"
+          name="ui-scale"
+          options={UI_SCALES.map((s) => ({ id: String(s), label: `${Math.round(s * 100)}%` }))}
+          value={String(uiScale.value)}
+          onChange={(id) => {
+            const scale = UI_SCALES.find((s) => String(s) === id) ?? 1;
+            uiScale.value = scale;
+            saveUiScale(scale);
+          }}
+        />
       </section>
       <OfflineChoice />
       <KeyList />

@@ -5,6 +5,7 @@ import type { GameRenderer, MapPick } from '../render/renderer';
 import type { SimEvent } from '../sim/events';
 import type { AwaySummary } from '../sim/offline';
 import type { ClockState } from '../worker/protocol';
+import type { UiScale } from './preferences';
 import type { SimClient } from './simClient';
 import type { MotionView, UiSnapshot, WorldView } from '../sim/views';
 
@@ -15,6 +16,8 @@ export const motion = signal<{
   anchorRealMs: number;
   clock: ClockState;
 } | null>(null);
+/** The interface size the player chose (Settings). */
+export const uiScale = signal<UiScale>(1);
 /** The game clock as the worker last reported it. */
 export const clock = signal<ClockState>({ paused: false, speed: 1, rate: 1, actualSpeed: 1 });
 export const away = signal<AwaySummary | null>(null);
