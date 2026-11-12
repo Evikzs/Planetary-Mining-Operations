@@ -3,6 +3,7 @@
 - **Status:** design approved in conversation on 2026-11-12. This file waits for the owner's review.
 - **Parent:** [the game design specification](2026-10-27-planetary-mining-operations-design.md), sections 4.5–4.7 and 6.
 - **Scope (owner log, 2026-11-05):** research and patents, clinic and recreation needs, the training centre, scientist, pilot and crew skills, haulers, road editing.
+- **Platform:** desktop only, after the [D1 conversion](2026-11-12-d1-desktop-conversion-design.md). "Real day" means one real day at 1× speed: 60 game days.
 - **Numbers:** every number here is a starting value. The balance bot tunes them; the plan records each change as a ruling.
 
 ## 1. Owner decisions (2026-11-12)
@@ -166,7 +167,7 @@ When every node in a branch is done or licensed, the branch's repeatable node op
 
 ### 2.6 Patents
 
-- The first company to complete a patentable node holds its patent for 720 game days (2 game years, about 12 real days).
+- The first company to complete a patentable node holds its patent for 720 game days (2 game years, about 12 real days at 1×).
 - While a patent runs, other companies cannot research the node, and points already put into it stay frozen. They can buy a licence at once.
 - **Licence price:** an upfront fee of `node RP × LM 30`, then a royalty each game month of 10% of the upfront fee, until the patent expires. The licensee gets the node's effects at once.
 - The holder cannot refuse a licence.
@@ -256,21 +257,21 @@ Unlocked by S5. LM 60,000, 250 t prefab structures, 60 t glass, 40 t steel. 14 g
 ### 5.1 Roads
 
 - In a section's context panel, "Edit roads" starts the road tool.
-- Tap a start and an end. The game routes a road on the section's grid and shows the cost: LM 75 per grid cell. Confirm to build.
-- Tap a road segment to remove it. The game refuses if a building would lose its road link to the hub.
+- Click a start and an end. The game routes a road on the section's grid and shows the cost: LM 75 per grid cell. Confirm to build.
+- Click a road segment to remove it. Right-click leaves the tool. The game refuses if a building would lose its road link to the hub.
 - Buses and walkers use the edited network. Route caches clear for that section.
 
 ### 5.2 Belts
 
-- **Re-route:** select a building, then "Re-route belt". Tap up to 4 waypoints inside the section. The belt passes them in order. Transit time follows the new length. Goods already on the belt keep their arrival time.
+- **Re-route:** select a building, then "Re-route belt". Click up to 4 waypoints inside the section. The belt passes them in order. Transit time follows the new length. Goods already on the belt keep their arrival time.
 - **Direct belt:** select a building, then "Belt to…", then a target building in the same section. Each game minute, the goods the source makes that the target's recipe takes go straight to the target's input lane, up to the belt's capacity. The rest goes to the depot as before. Costs LM 2,000 and 1 t of steel per 5 units of length.
 - A direct belt can be removed. Its goods go to the depot. A depot belt can be re-routed but not removed.
 - Saves keep waypoints and direct belts. The belt lines themselves are still rebuilt on load (the C19 rule).
 
 ## 6. Presentation
 
-- **Research tab:** key `6`; Codex moves to `7` and Settings to `8`. On phones it sits under More.
-  - Desktop: the six branches as columns. Phone: a branch picker, then a list.
+- **Research tab:** key `R`.
+  - The six branches as columns.
   - A node card shows its name, effect, cost, prerequisites and state: done, active, queued, available, locked, patented by a company, licensed or open.
   - Actions on a card: research now, queue, licence (with the price), and the repeatable level.
   - The header shows RP a game hour, the active node's progress, patents held, licences paid and licence income.
@@ -282,14 +283,14 @@ Unlocked by S5. LM 60,000, 250 t prefab structures, 60 t glass, 40 t steel. 14 g
 
 - `SAVE_VERSION` goes to 4. The migration adds empty research, patents, licences, haulers, routes, haul roads, training queues, belt waypoints and direct belts. Workers keep their skills and levels.
 - Performance: on the rival bench, the median fine tick and the slowest tick of a day stay within 10% of the M2a figures. Research runs once a game hour.
-- **Balance bot, first real day on seed 42:**
+- **Balance bot, first 60 game days on seed 42:**
   - equity 3–5 times founding value (unchanged);
   - 6–10 nodes done;
   - at least 1 patent won;
   - the rivals hold at least 2 patents between them;
   - at least one haul route delivered goods;
   - no strike caused by unmet clinic or recreation needs.
-- **End-to-end:** research and queue a node; win a patent race against a rival; buy a licence; train a worker; build a haul road and run a route; edit a road; re-route a belt and add a direct belt. Phone and desktop.
+- **End-to-end:** research and queue a node; win a patent race against a rival; buy a licence; train a worker; build a haul road and run a route; edit a road; re-route a belt and add a direct belt. Both desktop viewports (1920×1080 and 1280×720).
 
 ## 8. M2a deferred minors
 

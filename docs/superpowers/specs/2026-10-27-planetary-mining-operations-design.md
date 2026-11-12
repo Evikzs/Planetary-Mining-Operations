@@ -3,7 +3,8 @@
 - **Date:** 2026-10-27
 - **Status:** Draft for owner review
 - **Working title:** Planetary Mining Operations
-- **Scope of this document:** the whole game. Each milestone in section 13 gets its own implementation plan.
+- **Scope of this document:** the whole game. Each milestone in section 15 gets its own implementation plan.
+- **Platform change (2026-11-12):** the game is now a desktop game, with a Steam release as the end goal. The [D1 design](2026-11-12-d1-desktop-conversion-design.md) holds the details. All current graphics are placeholder.
 
 ---
 
@@ -11,7 +12,7 @@
 
 ### 1.1 Purpose
 
-This is a personal project. The owner plays it with friends. There is no monetization, no store release and no analytics. The game must still be complete, deep and well made. The only corner we cut is the server: the game runs without one.
+This is a personal project. The owner plays it with friends. The end goal is a release on Steam. There are no ads, no analytics and no microtransactions. The game must be complete, deep and well made. It runs without a server.
 
 ### 1.2 Pillars
 
@@ -19,14 +20,14 @@ This is a personal project. The owner plays it with friends. There is no monetiz
 2. **A genuine economy.** Markets, finance and macro-economics follow real-world mechanics. A player who goes deep learns real economics.
 3. **Expansion through contracts.** You grow by winning rights at auction and by completing contracts. You grow from one Moon section to a galactic conglomerate.
 4. **A companion, not a manual.** A story character teaches the game, stays with you and becomes the in-game wiki (the Codex).
-5. **Short sessions, long arc.** Sessions are 5–15 minutes. A run lasts 1–2 weeks of real time. Each new run starts stronger than the one before.
-6. **Crafted, not generic.** A retro-futurist poster style with deliberate motion. Nothing may look like a default template.
+5. **Play at your pace, long arc.** Pause and four speeds. A run lasts 1–2 weeks of real time at 1×. Each new run starts stronger than the one before.
+6. **Crafted, not generic.** Deliberate motion, and an art style of its own (section 9.6: the current graphics are placeholder). Nothing may look like a default template.
 
 ### 1.3 Non-goals
 
 - No server, accounts, multiplayer or online leaderboard.
-- No monetization, ads or analytics.
-- No fast-forward of the world clock.
+- No ads, analytics or microtransactions.
+- No phone or tablet version.
 - No mining on Earth. Earth is a market only.
 - No real-scale distances. Scale is tuned for play.
 
@@ -37,8 +38,8 @@ This is a personal project. The owner plays it with friends. There is no monetiz
 | Topic | Decision |
 |---|---|
 | Purpose | Fun for the owner and friends. |
-| Platform | Browser. Mobile first, full desktop version. |
-| Offline | Offline progress at a reduced rate, capped. |
+| Platform | ~~Browser. Mobile first, full desktop version.~~ Replaced on 2026-11-12: a desktop game (Electron), Steam as the end goal. |
+| Offline | Offline progress at a reduced rate, capped. Since 2026-11-12 it is a setting, and runs only if the game was not paused. |
 | Economy | Full simulation, inspired by real life. Hard to master on purpose. |
 | Expansion | Auctions against AI rivals for section, planet and system rights. |
 | Contracts | 19 types (section 8). Ore delivery and local infrastructure are the most common. Interplanetary development pays the most and always covers the full production cost. |
@@ -60,9 +61,10 @@ This is a personal project. The owner plays it with friends. There is no monetiz
 | People | A full residential and workforce system. About 10,000 individual employees at end-game. |
 | Look | Retro-futurist 1970s space-agency poster. |
 | M2 scope (2026-11-05) | Two plans. M2a: the economy core and a money rebalance. M2b: research and patents, clinic and recreation needs, the training centre, scientist, pilot and crew skills, haulers, road editing. |
-| Money (2026-11-05) | Tight. In the balance bot's first real day, company value (book equity) ends at 3–5 times its founding value. |
+| Money (2026-11-05) | Tight. In the balance bot's first 60 game days (one real day at 1×), company value (book equity) ends at 3–5 times its founding value. |
 | Rivals (2026-11-05) | Fully simulated, workers and buses included, under the same rules as the player. |
 | M2b design (2026-11-12) | Research and patents get the most depth. Patents: licence or wait, at a formula price the holder cannot refuse. 50 nodes, then repeatable efficiency research. Haulers: rovers on haul roads and drones on arcs. Pilots drive haulers; crew has no jobs until M4. Roads and belts can be edited. Rivals research, license and haul too. Details: [M2b design](2026-11-12-m2b-research-people-logistics-design.md). |
+| Desktop (2026-11-12) | The mobile version is dropped. A desktop game in Electron, with the web build kept as a playtest link. Mouse and keyboard, minimum window 1280×720, UI scale. Hybrid time: pause and speeds 1×–8×, offline catch-up as a setting. All graphics are placeholder until a later redo. Steam is the end goal. Details: [D1 design](2026-11-12-d1-desktop-conversion-design.md). |
 
 ---
 
@@ -70,26 +72,26 @@ This is a personal project. The owner plays it with friends. There is no monetiz
 
 ### 3.1 Game clock
 
-- 1 game hour = 1 real minute while the game is open.
-- 1 game day = 24 real minutes. 1 game month (30 game days) = 12 real hours. 1 game year ≈ 6 real days.
-- The world clock never pauses and never speeds up. Only voyage combat has a tactical pause (section 9.5).
-- A work day has 3 shifts. A shift change happens every 8 real minutes. A typical commute takes about 30 real seconds on screen, so most sessions show at least one rush hour.
+- At 1× speed, 1 game hour = 1 real minute.
+- At 1×: 1 game day = 24 real minutes. 1 game month (30 game days) = 12 real hours. 1 game year ≈ 6 real days.
+- The player can pause and pick 1×, 2×, 4× or 8× (D1 design, section 2). Commands work while paused.
+- A work day has 3 shifts. At 1×, a shift change happens every 8 real minutes and a typical commute takes about 30 real seconds on screen, so most sessions show at least one rush hour.
 - This scale is chosen for the motion pillar: things on the surface move at a speed the eye can follow.
 
 ### 3.2 Simulation tick
 
-- **Online tick:** 1 game minute (1 real second). People, production and logistics update each tick. Markets clear once per game hour (every real minute).
+- **Online tick:** 1 game minute (1 real second at 1×). People, production and logistics update each tick. Markets clear once per game hour.
 - **Coarse tick:** 1 game hour. Used for offline catch-up and by the balance bot. People are processed as cohorts. Commutes are summarised.
 - The renderer does not wait for ticks. Moving things (rovers, crates, ships) have a schedule: start time, path and speed. The renderer computes their position from the current time.
 
 ### 3.3 Pacing targets (first run)
 
-| Real day | Target |
+| Game days (60 = one real day at 1×) | Target |
 |---|---|
-| Day 1 | 2–4 Moon sections. First refinery. First rival auction won. |
-| Day 2–3 | Mars subsidiary founded. |
-| Day 4–6 | Presence in the Belt and the Jovian moons. |
-| Day 7–10 | First exoplanet colony (Regional tier). |
+| 1–60 | 2–4 Moon sections. First refinery. First rival auction won. |
+| 61–180 | Mars subsidiary founded. |
+| 181–360 | Presence in the Belt and the Jovian moons. |
+| 361–600 | First exoplanet colony (Regional tier). |
 
 Later runs reach each target sooner because of Founder Legacy perks. The balance bot (section 14.3) checks these targets.
 
@@ -101,9 +103,9 @@ Later runs reach each target sooner because of Founder Legacy perks. The balance
 
 Survey → bid for rights → build on plots → extract → move goods → refine and assemble → sell on the market or complete contracts → earn cash and reputation → research and patents → bid for bigger rights.
 
-### 4.2 Session loop (5–15 minutes)
+### 4.2 Session loop
 
-1. Read the "While you were away" page.
+1. Read the "While you were away" page, if the world ran while the game was closed.
 2. Check the contract board. Accept, deliver or renew contracts.
 3. Check prices, orders and positions.
 4. Bid in open auctions.
@@ -135,7 +137,7 @@ Each drive needs a compound found only in the space the previous drive opened. E
 - Each section has fixed **plots**:
   - **Deposit plots** sit on resource deposits. Only extraction buildings go there.
   - **Build plots** take every other building.
-- You build by tapping a plot. Free placement on the sphere is not used. This keeps building precise on touch screens.
+- You build by clicking a plot. Free placement on the sphere is not used. This keeps building precise and quick.
 - Roads and conveyor belts connect plots. They are routed automatically (section 9.3). The player can add, remove and re-route them.
 
 ### 4.5 Buildings
@@ -162,7 +164,7 @@ All buildings have upgrade levels 1–10. Full list in Appendix B.
 
 - 6 branches: Extraction, Processing, Logistics, Finance, Exploration, Society (housing, morale, training).
 - Research belongs to the group. Every subsidiary gets it at once.
-- Some nodes are **patentable**. The first company to complete one owns the patent. Other companies pay a licence fee to use it, or wait until it expires. Patents run for 2 game years (about 12 real days).
+- Some nodes are **patentable**. The first company to complete one owns the patent. Other companies pay a licence fee to use it, or wait until it expires. Patents run for 2 game years (about 12 real days at 1×).
 - Research points come from research labs and from patent licence income.
 
 ---
@@ -225,7 +227,7 @@ All buildings have upgrade levels 1–10. Full list in Appendix B.
 - Lists that render only the visible rows.
 - Filters by body, section, skill, morale and housing.
 - Bulk assignment rules.
-- Tap any worker or rover to see who they are, where they live and where they work.
+- Click any worker or rover to see who they are, where they live and where they work.
 
 ---
 
@@ -236,7 +238,7 @@ The economy follows real-world mechanics. It is meant to be deep and hard to mas
 ### 7.1 Markets and price discovery
 
 - Every good on every body has its own **limit order book**: bids, asks, spread, depth and price impact.
-- NPC colonies and NPC industry provide liquidity as **supply and demand curves**. Rivals and the player place real orders on top of the curves. The market clears once per game hour (every real minute).
+- NPC colonies and NPC industry provide liquidity as **supply and demand curves**. Rivals and the player place real orders on top of the curves. The market clears once per game hour.
 - Thin markets on frontier bodies have wide spreads and large price swings.
 - **Elasticity per good:** necessities (air, water, food) are inelastic. Luxury goods are elastic.
 - **Substitution and complements:** NPC industry switches between substitutes when relative prices change (for example, titanium alloy to steel). Complements are bought together.
@@ -327,7 +329,7 @@ Each jurisdiction has:
 
 ### 7.8 Auctions
 
-- Timed, open-bid (ascending) auctions. They last a few real minutes. Rival bids appear live.
+- Timed, open-bid (ascending) auctions. They last a few game hours. Rival bids appear live.
 - **Bid score** = cash bid × a reputation bonus.
 - Bids can be funded with credit.
 - **Proxy bids:** the player can set a ceiling. The game bids for the player up to the ceiling, also while offline.
@@ -415,10 +417,10 @@ One continuous zoom covers Bird's-eye to Planetary. Further zoom-out changes sce
 
 ### 9.2 Camera (Bird's-eye and Planetary)
 
-- **Pan:** moves along the surface of the sphere (drag, or WASD on desktop).
-- **Rotate:** changes heading (two-finger twist, or Q/E).
-- **Lock north:** keeps the heading on the local meridian. A compass shows north.
-- **Zoom:** pinch or scroll. Changes altitude from low bird's-eye to orbit.
+- **Pan:** moves along the surface of the sphere (left-drag, or WASD).
+- **Rotate:** changes heading (right-drag, or Q/E).
+- **Lock north:** keeps the heading on the local meridian (N, or click the compass). A compass shows north.
+- **Zoom:** the mouse wheel, or + and -. Changes altitude from low bird's-eye to orbit.
 - The player can circle the whole planet and cross the poles. At bird's-eye altitude a full circle takes more than 10 minutes of panning.
 
 ### 9.3 The motion pillar
@@ -434,22 +436,14 @@ One continuous zoom covers Bird's-eye to Planetary. Further zoom-out changes sce
 
 ### 9.4 Layout
 
-**Desktop (≥ 1024 px):**
+One desktop layout, designed at 1920×1080. It works down to a 1280×720 window. A UI scale setting runs from 80% to 150%.
 
-- **Top bar:** cash per currency, pinned goods with trend arrows, workforce, power, reputation, date, alerts.
+- **Top bar:** cash per currency, pinned goods with trend arrows, workforce, power, reputation, date with pause and speed controls, alerts.
 - **Left tab rail:** Build, People, Trade (market, orders, FX, futures), Finance (statements, stocks, loans, bonds), Contracts, Research, Fleet / Voyages, Codex, Settings.
 - **Right:** context panel for the current selection.
 - **Bottom:** news ticker and companion portrait.
-- **Keyboard shortcuts** for every tab and the camera.
-
-**Mobile (< 1024 px):**
-
-- **Top strip:** pinned resources, scrolls sideways.
-- **Bottom tab bar:** 5 main tabs plus "More".
-- **Panels:** bottom sheets at half or full height.
-- **Selection:** a peek sheet.
-- **Companion:** a floating portrait.
-- Touch targets are at least 44 × 44 px.
+- **Keyboard shortcuts** for every tab, the clock and the camera (D1 design, section 4.4).
+- **Mouse:** hover tooltips on every control; right-click cancels the current tool or selection.
 
 ### 9.5 Voyage mode
 
@@ -457,14 +451,16 @@ One continuous zoom covers Bird's-eye to Planetary. Further zoom-out changes sce
 - Voyage kinds: transfer, travel, freight, colonist transport, piracy (the player raids), recon, escort, salvage, rescue, survey, smuggling.
 - **Ship view:** 2D side cut-away in the poster style. Rooms, crew, systems and power bars.
 - **Operating parameters:** the player tunes engines, shields, sensors, weapons, cargo bay and life support. Settings trade speed against safety, fuel use and cargo condition.
-- **Legs:** a trip is split into legs of 1 game day (24 real minutes). A Moon–Mars trip takes 5–10 game days, so it has 5–10 legs. Each leg has a 10% chance of an event. Events can be good or bad: pirates, a derelict to salvage, an ion storm, a stowaway, a lucky find, a distress call.
+- **Legs:** a trip is split into legs of 1 game day (24 real minutes at 1×). A Moon–Mars trip takes 5–10 game days, so it has 5–10 legs. Each leg has a 10% chance of an event. Events can be good or bad: pirates, a derelict to salvage, an ion storm, a stowaway, a lucky find, a distress call.
 - **Live:** when an event fires, the ship holds position and waits for the player's decision. Holding costs time and can put a deadline at risk. Opportunities (salvage, rescue, trade offers) appear only on live voyages.
 - **Autopilot:** the ship never waits. Bad events resolve by ship stats and dice. Opportunities never appear.
-- **Combat:** real-time with pause, like FTL. The player assigns crew to rooms, moves power between systems and targets enemy systems. Combat runs as its own local simulation at 30 Hz. The world clock keeps running.
-- **Touch controls:** tap a crew member, then tap a room. Drag power bars. A large pause button.
+- **Combat:** real-time with pause, like FTL. The player assigns crew to rooms, moves power between systems and targets enemy systems. Combat runs as its own local simulation at 30 Hz. The world clock keeps running unless the player pauses it.
+- **Controls:** click a crew member, then click a room. Drag power bars. Space pauses combat.
 - **Bridge inbox:** lists all live voyages that wait for a decision.
 
 ### 9.6 Art direction: retro-futurist poster
+
+> **Placeholder (2026-11-12).** All current graphics are placeholder. The art is redone later, and this section is rewritten then. Until the redo, add no new art: no models, shaders, palettes or icons.
 
 - **Palette:** 8 core colours: deep navy, burnt orange, mustard, teal, cream paper, rust, off-black, dusty pink. Each body has an accent: Luna grey, Mars rust, Europa ice-teal, Titan amber haze.
 - **3D rendering:** banded lighting in 3–4 steps, halftone in shadow areas, paper grain, a very small print-offset (colour misregistration), soft outlines from an edge-detection pass.
@@ -479,16 +475,14 @@ One continuous zoom covers Bird's-eye to Planetary. Further zoom-out changes sce
 - All sound effects are generated with the Web Audio API: belt hum, rover engines, machinery, UI clicks.
 - Generative ambient music in a 1970s synthesiser style. A different mood for each body.
 - Mixer with separate volumes and mute.
-- Haptics through the Vibration API where the browser supports it (not iOS Safari).
 
 ### 9.8 Accessibility
 
 - Colour-blind-safe palette option.
-- Text scaling.
-- Keyboard shortcuts on desktop.
+- UI scale, 80% to 150%.
+- Keyboard shortcuts for every tab, the clock and the camera.
 - Screen-reader labels on all UI panels. The 3D view is described by the selection panel.
 - Reduced-motion mode.
-- Minimum touch target 44 × 44 px.
 
 ---
 
@@ -523,7 +517,7 @@ The pirate's tone puts the game at 16+.
 - Entries for every good, building, contract type, mechanic and economic concept.
 - An entry unlocks when the player first meets the subject.
 - Entries are built from the data tables plus written text in the companion's voice.
-- Always one tap away, from any screen.
+- Always one click away, from any screen.
 
 ### 10.5 Writing budget
 
@@ -535,6 +529,7 @@ Writing volume is a known risk: 4 voices × tutorial beats, story chapters, even
 
 ### 11.1 Offline catch-up
 
+- Catch-up is a setting, "Run the world while closed" (default on). It runs only if the game was running, not paused, when it was saved. Otherwise the game opens paused at the saved tick.
 - On return, the game computes elapsed real time. Negative time (clock changed backwards) counts as zero.
 - **Catch-up window** = elapsed time, capped at 8 hours. Beyond the cap, the world waits for the player.
 - During the window:
@@ -549,8 +544,8 @@ Writing volume is a known risk: 4 voices × tutorial beats, story chapters, even
 
 ### 11.2 Saves
 
-- Stored in IndexedDB.
-- 3 rolling autosave slots, written every 30 seconds and when the tab becomes hidden. Plus manual slots.
+- The desktop app stores each slot as a file in its user-data folder (D1 design, section 3.2). The web build uses IndexedDB.
+- 3 rolling autosave slots, written every 30 seconds and when the window closes or is hidden. Plus manual slots.
 - Only changes are saved. Terrain is regenerated from the seed. A save holds companies, people, markets, built plots, roads, contracts and voyages. A 10,000-worker save stays at a few MB.
 - Each save has a schema version and a checksum.
 - Each schema change has a migration, tested with fixture saves.
@@ -560,7 +555,7 @@ Writing volume is a known risk: 4 voices × tutorial beats, story chapters, even
 ### 11.3 Share card
 
 - A generated image in the poster style: group value, bodies held, best achievements, companion portrait.
-- Saved as a PNG or shared through the Web Share API.
+- Saved as a PNG.
 
 ---
 
@@ -586,8 +581,8 @@ Writing volume is a known risk: 4 voices × tutorial beats, story chapters, even
 | UI | Preact + @preact/signals |
 | Motion | GSAP (UI motion, bezier paths) |
 | Tests | Vitest, fast-check, Playwright |
-| Offline / install | PWA with a service worker |
-| Hosting | GitHub Pages, deployed by GitHub Actions |
+| Desktop app | Electron, packaged with electron-builder |
+| Playtest build | The same web build on GitHub Pages, deployed by GitHub Actions |
 
 Exact versions are pinned in `package.json`.
 
@@ -595,7 +590,8 @@ Exact versions are pinned in `package.json`.
 
 | Thread | Owns |
 |---|---|
-| Main | Three.js rendering, Preact UI, input, audio |
+| Electron main process | The window, the `app://` protocol, save files |
+| Main (page) | Three.js rendering, Preact UI, input, audio |
 | Simulation worker | The whole game state and all game rules |
 | Chunk workers (pool) | Terrain chunk geometry |
 
@@ -623,20 +619,21 @@ Exact versions are pinned in `package.json`.
 
 | Item | Budget |
 |---|---|
-| Frame rate, mid-range 2021 phone | 60 fps target, never below 30 fps |
+| Frame rate at 1920×1080, 2020 laptop with integrated graphics | 60 fps target, never below 30 fps |
 | Main thread work per frame | < 8 ms |
-| Simulation online tick at 10,000 workers | < 4 ms (in the worker) |
+| Simulation online tick at 10,000 workers | < 4 ms (in the worker), so 8× speed fits in a third of a core |
 | Draw calls at bird's-eye | < 300 |
-| Triangles on phones | < 1.5 million |
+| Triangles | < 3 million |
 | Initial JavaScript (gzip) | < 1.5 MB |
-| Time to interactive on 4G, mid-range phone | < 4 s |
+| App start to interactive | < 4 s |
 
 - Device pixel ratio adapts to hold the frame rate.
-- Rendering stops when the tab is hidden.
+- Rendering stops when the window is hidden or minimised.
 
 ### 13.6 Browser support
 
-- Latest 2 versions of Chrome, Edge, Firefox and Safari (iOS 16 and later).
+- The desktop app runs on Electron's own Chromium, on Windows, macOS and Linux.
+- The playtest web build supports the latest 2 desktop versions of Chrome, Edge and Firefox. Safari is best effort.
 - WebGL 2 is required. Without it, the game shows a clear message.
 
 ### 13.7 Project layout
@@ -648,8 +645,9 @@ src/
   render/       Three.js: globe, chunks, camera, maps, poster pass, instancing
   ui/           Preact: shell, tabs, panels, companion, Codex
   data/         goods, buildings, recipes, contracts, research, companions, balance constants
-  save/         IndexedDB, migrations, export and import
+  save/         save stores (files, IndexedDB), migrations, export and import
   audio/        Web Audio sound effects and music
+electron/       desktop app: main process and preload
 tests/          unit and property tests
 bot/            headless balance bot
 e2e/            Playwright tests
@@ -675,7 +673,7 @@ e2e/            Playwright tests
 ### 14.3 Balance bot
 
 - A headless scripted player that runs in Node with coarse ticks.
-- It plays a 10-real-day run in less than 2 minutes.
+- It plays a 600-game-day run (10 real days at 1×) in less than 2 minutes.
 - CI fails if the pacing targets in section 3.3 are missed.
 
 ### 14.4 Save migrations
@@ -684,9 +682,10 @@ e2e/            Playwright tests
 
 ### 14.5 End-to-end (Playwright)
 
-- Viewports: 390 × 844 (phone) and 1440 × 900 (desktop).
-- Screenshot comparison of key screens.
-- Touch gestures: pan, pinch, two-finger rotate.
+- Viewports: 1920 × 1080 and 1280 × 720 (the minimum window).
+- No screenshot comparison while the graphics are placeholder.
+- Mouse and keys: pan, turn, zoom, right-click cancel, pause and speeds.
+- An Electron smoke test on the packaged app: start, found, save, quit, start again.
 
 ### 14.6 Performance
 
@@ -696,7 +695,7 @@ e2e/            Playwright tests
 ### 14.7 CI
 
 - GitHub Actions runs: strict type check, lint, unit and property tests, determinism tests, balance bot, Playwright, performance benchmark.
-- A push to `main` deploys to GitHub Pages.
+- A push to the deploy branch deploys the web build to GitHub Pages. CI also builds the Linux desktop app.
 
 ---
 
@@ -708,12 +707,14 @@ Each milestone gets its own implementation plan.
 |---|---|---|
 | M0 | Foundations | Vite + TypeScript project, CI, simulation worker shell, deterministic clock and RNG, save system, design tokens. |
 | M1 | Moon vertical slice | Globe with streamed chunks. Bird's-eye camera (pan, rotate, lock north, zoom). Sections and plots. About 20 goods. Belts and roads. People with housing, jobs and commuter rovers. Local order book in one currency. Ore delivery and infrastructure contracts. Companion chapter 1 for one companion. Poster rendering. **The core loop feels great.** |
+| D1 | Desktop conversion | The mobile version is gone. Electron app with file saves. Pause and speeds. Offline catch-up as a setting. Desktop layout, UI scale, tooltips, right-click and hotkeys. Graphics marked placeholder. |
 | M2 | Economy core | Rivals with AI, auctions, stocks, loans, reputation, financial statements, Lunar Mark currency. |
 | M3 | Mars and the group | Listed subsidiaries, IPO, takeovers and game over, freight between bodies, Solar map, FX markets, central banks and cycles. |
 | M4 | Voyage mode | Ship cut-away, operating parameters, legs and events, real-time combat with pause, autopilot, voyage contracts, the pirate rescue arc. |
 | M5 | Outer Sol | Belt, Jovian moons, Titan and Enceladus, Mercury and Venus. All 105 goods. Futures, short selling, bonds, insurance, transfer pricing. All 19 contract types. Achievements. |
 | M6 | Beyond Sol | Regional and Galactic maps, procedural star systems, information lag, FTL tiers, more rivals. |
-| M7 | Meta and polish | Founder Legacy perks, full arcs for all 4 companions, full audio, share card, PWA install, accessibility pass. |
+| M7 | Meta and polish | Founder Legacy perks, full arcs for all 4 companions, full audio, share card, the art redo, accessibility pass. |
+| S1 | Steam release | Windows, macOS and Linux builds, Steamworks (achievements, cloud saves), signing, store page. Gamepad and Steam Deck controls if wanted. |
 
 ---
 
