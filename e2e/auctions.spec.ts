@@ -17,6 +17,8 @@ test('open a lot on a neighbour section, set a proxy of LM 250,000, and own the 
   await openTab(page, 'Build');
   const land = page.getByTestId('tab-panel').getByRole('region', { name: 'Land and auctions' });
   await expect(land).toContainText('Reserve LM 30,000.00');
+  // The clock waits while the test types: a slow runner can spend a whole lot on it.
+  await page.evaluate(() => window.__pmo.freeze(true));
   await land.getByRole('button', { name: 'Open an auction — LM 2,000.00' }).click();
 
   const lot = land.getByRole('region', { name: `Auction for section ${id}` });
@@ -25,6 +27,7 @@ test('open a lot on a neighbour section, set a proxy of LM 250,000, and own the 
   await lot.getByRole('button', { name: 'Set' }).click();
   await expect(lot).toContainText('LM 250,000.00');
   await expect(land.getByRole('list', { name: 'Open lots' })).toContainText(`Section ${id}`);
+  await page.evaluate(() => window.__pmo.freeze(false));
 
   await expect
     // A late bid can stretch a lot to 10 game hours: 60 real seconds here.

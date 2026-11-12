@@ -41,6 +41,8 @@ export function MapCanvas({ flags }: { flags: DebugFlags }) {
       reducedMotion: reduced,
       fixedPixelRatio: flags.freeze,
       onPick: (pick) => (selection.value = pick),
+      // Right-click lets go of the selection; later, it also leaves an editing tool.
+      onCancel: () => (selection.value = null),
       onCamera(s) {
         const h = heading(s);
         const shown = compass.value;

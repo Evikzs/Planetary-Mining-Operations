@@ -15,6 +15,7 @@ export function Compass() {
       class="compass"
       data-testid="compass"
       aria-label="Lock north"
+      data-tip="Lock north (N)"
       aria-pressed={lockNorth}
       onClick={toggle}
     >

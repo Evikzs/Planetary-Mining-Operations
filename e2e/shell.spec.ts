@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { foundCompany, gotoGame } from './helpers';
+import { foundCompany, gotoGame, openTab } from './helpers';
 
 test('the rail shows every tab', async ({ page }) => {
   await gotoGame(page);
@@ -61,4 +61,44 @@ test('a second tab of the game waits for the first, so their saves never collide
   // The second tab never starts the game, so it cannot save over the first.
   expect(await second.evaluate(() => typeof window.__pmo)).toBe('undefined');
   await foundCompany(page);
+});
+
+test('hovering a rail button shows its tooltip with the key', async ({ page }) => {
+  await gotoGame(page);
+  await foundCompany(page);
+  await page.getByTestId('tab-rail').getByRole('button', { name: 'Finance' }).hover();
+  await expect(page.getByRole('tooltip')).toHaveText('Finance (F)');
+  await page.mouse.move(5, 500);
+  await expect(page.getByRole('tooltip')).toBeHidden();
+});
+
+test('right-click on the map clears the selection', async ({ page }) => {
+  await gotoGame(page);
+  await foundCompany(page);
+  const home = await page.evaluate(() => window.__pmo.ui()!.sections[0]!.id);
+  await page.evaluate((id) => window.__pmo.select({ kind: 'section', id }), home);
+  await expect(page.getByTestId('context-panel')).toBeVisible();
+  const box = (await page.getByTestId('map-canvas').boundingBox())!;
+  await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2, { button: 'right' });
+  await expect(page.getByTestId('context-panel')).toBeHidden();
+});
+
+test('right-click keeps the text menu in fields', async ({ page }) => {
+  await gotoGame(page);
+  await foundCompany(page);
+  await openTab(page, 'Settings');
+  const field = page.getByTestId('tab-panel').getByLabel('Paste a save code');
+  const blocked = (target: 'field' | 'map') =>
+    page.evaluate((t) => {
+      const el =
+        t === 'field'
+          ? document.querySelector('textarea')!
+          : document.querySelector('[data-testid="map-canvas"]')!;
+      const e = new MouseEvent('contextmenu', { bubbles: true, cancelable: true });
+      el.dispatchEvent(e);
+      return e.defaultPrevented;
+    }, target);
+  await expect(field).toBeVisible();
+  expect(await blocked('field')).toBe(false);
+  expect(await blocked('map')).toBe(true);
 });

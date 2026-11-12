@@ -1867,3 +1867,17 @@ h3 {
   font-weight: 700;
   border-bottom-color: var(--c-offBlack);
 }
+
+.tooltip {
+  position: fixed;
+  z-index: 50;
+  max-width: 280px;
+  padding: var(--space-1) var(--space-2);
+  border: 2px solid var(--c-offBlack);
+  background: var(--c-cream);
+  color: var(--c-offBlack);
+  font-size: 13px;
+  pointer-events: none;
+  transform: translateX(-50%);
+  white-space: nowrap;
+}

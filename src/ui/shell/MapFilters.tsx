@@ -49,6 +49,7 @@ export function MapFilters() {
                 key={c.label}
                 type="button"
                 aria-pressed={same(f.planetary, c.value)}
+                data-tip={`Map: ${c.label}`}
                 onClick={() => (mapFilter.value = { ...f, planetary: c.value })}
               >
                 {c.label}
@@ -59,6 +60,7 @@ export function MapFilters() {
                 key={c.label}
                 type="button"
                 aria-pressed={f.local === c.value}
+                data-tip={`Map: ${c.label}`}
                 onClick={() =>
                   (mapFilter.value = { ...f, local: f.local === c.value ? 'none' : c.value })
                 }

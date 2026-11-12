@@ -25,26 +25,19 @@ test('dragging the map pans the camera', async ({ page }) => {
   ).toBeGreaterThan(0.01);
 });
 
-test('a two-pointer pinch changes the altitude', async ({ page }) => {
-  const before = (await camera(page))!.altitude;
-  await page.getByTestId('map-canvas').evaluate((el) => {
-    const fire = (type: string, pointerId: number, x: number, y: number) =>
-      el.dispatchEvent(
-        new PointerEvent(type, {
-          pointerId,
-          clientX: x,
-          clientY: y,
-          bubbles: true,
-          isPrimary: pointerId === 1,
-        }),
-      );
-    fire('pointerdown', 1, 300, 400);
-    fire('pointerdown', 2, 340, 400);
-    for (let i = 1; i <= 5; i++) fire('pointermove', 2, 340 + i * 30, 400);
-    fire('pointerup', 2, 490, 400);
-    fire('pointerup', 1, 300, 400);
-  });
-  expect((await camera(page))!.altitude).toBeLessThan(before);
+test('right-drag turns the camera; the wheel zooms', async ({ page }) => {
+  const before = (await camera(page))!;
+  const box = (await page.getByTestId('map-canvas').boundingBox())!;
+  const [x, y] = [box.x + box.width / 2, box.y + box.height / 2];
+  await page.mouse.move(x, y);
+  await page.mouse.down({ button: 'right' });
+  await page.mouse.move(x + 120, y, { steps: 6 });
+  await page.mouse.up({ button: 'right' });
+  const turned = (await camera(page))!;
+  expect(turned.lockNorth).toBe(false);
+  expect(turned.pos).toEqual(before.pos);
+  await page.mouse.wheel(0, -400);
+  await expect.poll(async () => (await camera(page))!.altitude).toBeLessThan(before.altitude);
 });
 
 test('N toggles lock north', async ({ page }) => {

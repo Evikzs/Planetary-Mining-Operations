@@ -10,6 +10,7 @@ export function TabRail() {
           type="button"
           aria-pressed={activeTab.value === tab.id}
           aria-keyshortcuts={tab.key.toUpperCase()}
+          data-tip={`${tab.label} (${tab.key.toUpperCase()})`}
           onClick={() => toggleTab(tab.id)}
         >
           <Icon name={tab.icon} />

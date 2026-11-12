@@ -58,7 +58,7 @@ function Cash({ cents }: { cents: number | null }) {
 
 function GoodSlot({ good, kg, history }: { good: GoodId; kg: number; history: number[] }) {
   return (
-    <li class="slot" title={GOODS[good].name}>
+    <li class="slot" data-tip={GOODS[good].name}>
       <span class="slot-label">{SHORT_NAME[good] ?? GOODS[good].name}</span>
       <span class="num">{formatMass(kg)}</span>
       <Trend history={history} />
@@ -85,7 +85,7 @@ function Readouts({ snap }: { snap: UiSnapshot }) {
             />
           ))}
       </ul>
-      <span class="slot" title="Workers employed, of all workers">
+      <span class="slot" data-tip="Workers employed, of all workers">
         <span class="visually-hidden">Workforce</span>
         <Icon name="workforce" size={18} />
         <span class="num">
@@ -96,7 +96,7 @@ function Readouts({ snap }: { snap: UiSnapshot }) {
         <span
           class="slot"
           data-short={section.powerSupplyKw < section.powerDemandKw || undefined}
-          title={`Power in section ${section.id}: supply and demand`}
+          data-tip={`Power in section ${section.id}: supply and demand`}
         >
           <span class="visually-hidden">Power</span>
           <Icon name="power" size={18} />
@@ -105,7 +105,7 @@ function Readouts({ snap }: { snap: UiSnapshot }) {
           </span>
         </span>
       )}
-      <span class="slot" title="Reputation">
+      <span class="slot" data-tip="Reputation">
         <span class="visually-hidden">Reputation</span>
         <Icon name="reputation" size={18} />
         <span class="num">{Math.round(snap.reputation.luna)}</span>
@@ -120,7 +120,7 @@ export function TopBar() {
   return (
     <header class="topbar" data-testid="top-bar">
       <h1>{snap?.company?.name ?? APP_TITLE}</h1>
-      <span class="slot">
+      <span class="slot" data-tip="Cash">
         <span class="slot-label">Cash</span>
         <Cash cents={founded ? founded.cashCents : null} />
       </span>

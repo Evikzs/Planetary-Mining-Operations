@@ -83,8 +83,10 @@ export interface RendererOptions {
   reducedMotion: boolean;
   /** Keeps the pixel ratio still, so frozen screenshots do not depend on frame speed. */
   fixedPixelRatio?: boolean;
-  /** A tap on the map, with what it hit. */
+  /** A click on the map, with what it hit. */
   onPick?(pick: MapPick | null): void;
+  /** A right-click on the map that did not drag. */
+  onCancel?(): void;
   /** The camera moved, turned, zoomed or changed lock north. */
   onCamera?(s: GlobeCameraState): void;
   onGesture?(kind: 'panned' | 'zoomed'): void;
@@ -169,6 +171,7 @@ export function createRenderer(canvas: HTMLCanvasElement, opts: RendererOptions)
     radius,
     reducedMotion: opts.reducedMotion,
     onTap: (x, y) => opts.onPick?.(pick(x, y)),
+    onCancel: () => opts.onCancel?.(),
     onGesture: (kind) => {
       flight = null; // the player takes the camera back
       opts.onGesture?.(kind);

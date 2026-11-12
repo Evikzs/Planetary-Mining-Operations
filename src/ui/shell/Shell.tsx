@@ -24,6 +24,7 @@ import { MapFilters } from './MapFilters';
 import { TabRail } from './TabRail';
 import { activeTab, TABS, toggleTab, type TabId } from './tabs';
 import { TopBar } from './TopBar';
+import { Tooltip } from './Tooltip';
 import { setClock, togglePause } from './ClockControls';
 import type { Speed } from '../../worker/protocol';
 
@@ -62,8 +63,16 @@ function useShortcuts() {
         selection.value = null;
       }
     };
+    // The browser's menu never opens over the game, except in fields, for copy and paste.
+    const onMenu = (e: MouseEvent) => {
+      if (!isTyping(e.target)) e.preventDefault();
+    };
     window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
+    window.addEventListener('contextmenu', onMenu);
+    return () => {
+      window.removeEventListener('keydown', onKey);
+      window.removeEventListener('contextmenu', onMenu);
+    };
   }, []);
 }
 
@@ -109,6 +118,7 @@ export function Shell({ flags }: { flags: DebugFlags }) {
       <AwayScreen />
       <CatchUpOverlay />
       <ErrorBanner />
+      <Tooltip />
     </div>
   );
 }

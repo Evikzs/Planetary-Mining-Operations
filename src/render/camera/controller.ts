@@ -12,6 +12,8 @@ export interface ControllerOptions {
   radius: number;
   reducedMotion: boolean;
   onTap(x: number, y: number): void;
+  /** A right-click that did not drag. */
+  onCancel(): void;
   onGesture(kind: 'panned' | 'zoomed'): void;
 }
 
@@ -24,8 +26,7 @@ const KEY_ZOOM = 2; // factor per second
 const WHEEL_BASE = 1.0015;
 const INERTIA_MS = 250;
 const FLICK_WINDOW_MS = 80;
-// A pinch always twists a little; rotation starts only past this, so lock north survives zooming.
-const TWIST_START = (10 * Math.PI) / 180;
+const TURN_PER_PX = 0.005; // radians of heading per pixel of right-drag
 
 const KEY_OF: Record<string, string> = {
   w: 'w',
@@ -45,9 +46,7 @@ function isTyping(target: EventTarget | null): boolean {
   return !!el && (el.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(el.tagName));
 }
 
-const wrap = (a: number): number => Math.atan2(Math.sin(a), Math.cos(a));
-
-/** Drag, pinch, twist, wheel and keys on `el` move the globe camera. */
+/** Left-drag pans, right-drag turns, the wheel and keys zoom and move the globe camera. */
 export function createCameraController(
   el: HTMLElement,
   initial: GlobeCameraState,
@@ -55,10 +54,9 @@ export function createCameraController(
 ): CameraController {
   let state = initial;
   let changed = true;
-  const pointers = new Map<number, { x: number; y: number }>();
-  let tap: { id: number; t: number; travel: number } | null = null;
-  let twist = 0;
-  let twisting = false;
+  // One pointer drives the camera at a time; a second one is ignored.
+  let drag: { id: number; x: number; y: number; turn: boolean; t: number; travel: number } | null =
+    null;
   let velocity = { right: 0, forward: 0 }; // world units per ms
   const flick: { t: number; right: number; forward: number }[] = [];
   const held = new Set<string>();
@@ -74,7 +72,7 @@ export function createCameraController(
   };
 
   function onDown(e: PointerEvent): void {
-    pointers.set(e.pointerId, local(e));
+    if (drag || (e.button !== 0 && e.button !== 2)) return;
     try {
       el.setPointerCapture(e.pointerId);
     } catch {
@@ -82,56 +80,41 @@ export function createCameraController(
     }
     velocity = { right: 0, forward: 0 };
     flick.length = 0;
-    twist = 0;
-    twisting = false;
-    tap = pointers.size === 1 ? { id: e.pointerId, t: e.timeStamp, travel: 0 } : null;
+    const p = local(e);
+    drag = { id: e.pointerId, ...p, turn: e.button === 2, t: e.timeStamp, travel: 0 };
   }
 
   function onMove(e: PointerEvent): void {
-    const prev = pointers.get(e.pointerId);
-    if (!prev) return;
+    if (drag?.id !== e.pointerId) return;
     const next = local(e);
-    pointers.set(e.pointerId, next);
-    if (tap?.id === e.pointerId) tap.travel += Math.hypot(next.x - prev.x, next.y - prev.y);
-    const k = unitsPerPx();
-    if (pointers.size === 1) {
-      const right = -(next.x - prev.x) * k;
-      const forward = (next.y - prev.y) * k;
-      panBy(right, forward);
-      flick.push({ t: e.timeStamp, right, forward });
-      o.onGesture('panned');
+    const dx = next.x - drag.x;
+    const dy = next.y - drag.y;
+    drag.travel += Math.hypot(dx, dy);
+    drag.x = next.x;
+    drag.y = next.y;
+    if (drag.turn) {
+      state = rotate(state, dx * TURN_PER_PX);
+      changed = true;
       return;
     }
-    const other = [...pointers].find(([id]) => id !== e.pointerId)?.[1];
-    if (!other || pointers.size !== 2) return;
-    // The midpoint moves half as far as the finger that moved.
-    panBy((-(next.x - prev.x) / 2) * k, ((next.y - prev.y) / 2) * k);
-    const before = Math.hypot(prev.x - other.x, prev.y - other.y);
-    const after = Math.hypot(next.x - other.x, next.y - other.y);
-    if (before > 0 && after > 0) {
-      state = zoom(state, before / after);
-      o.onGesture('zoomed');
-    }
-    // Fingers turning clockwise on screen turn the map clockwise, so the heading turns back.
-    const turn = wrap(
-      Math.atan2(next.y - other.y, next.x - other.x) -
-        Math.atan2(prev.y - other.y, prev.x - other.x),
-    );
-    twist += turn;
-    if (!twisting && Math.abs(twist) > TWIST_START) {
-      twisting = true;
-      state = rotate(state, -twist);
-    } else if (twisting) state = rotate(state, -turn);
+    const k = unitsPerPx();
+    const right = -dx * k;
+    const forward = dy * k;
+    panBy(right, forward);
+    flick.push({ t: e.timeStamp, right, forward });
+    o.onGesture('panned');
   }
 
   function onUp(e: PointerEvent): void {
-    if (!pointers.delete(e.pointerId)) return;
-    if (tap?.id === e.pointerId && tap.travel < TAP_MOVE_PX && e.timeStamp - tap.t < TAP_MS) {
+    if (drag?.id !== e.pointerId) return;
+    const { turn, travel, t } = drag;
+    drag = null;
+    if (travel < TAP_MOVE_PX && e.timeStamp - t < TAP_MS) {
       const p = local(e);
-      o.onTap(p.x, p.y);
+      if (turn) o.onCancel();
+      else o.onTap(p.x, p.y);
     }
-    tap = null;
-    if (pointers.size > 0 || o.reducedMotion) return;
+    if (turn || o.reducedMotion) return;
     const recent = flick.filter((f) => f.t >= e.timeStamp - FLICK_WINDOW_MS);
     if (recent.length >= 2) {
       const span = e.timeStamp - recent[0]!.t + 16;
