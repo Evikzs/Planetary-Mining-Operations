@@ -10,6 +10,8 @@ function fileOf(dir: string, slot: string): string {
   return path.join(dir, `${slot}.json`);
 }
 
+let writes = 0;
+
 const missing = (err: unknown) => (err as NodeJS.ErrnoException).code === 'ENOENT';
 
 export async function listSlots(dir: string): Promise<string[]> {
@@ -41,7 +43,8 @@ export async function readSlot(dir: string, slot: string): Promise<string | null
 export async function writeSlot(dir: string, slot: string, text: string): Promise<void> {
   const file = fileOf(dir, slot);
   await fs.promises.mkdir(dir, { recursive: true });
-  const tmp = `${file}.tmp`;
+  // Each write has its own temporary file, so two writes at once never share one.
+  const tmp = `${file}.${process.pid}.${++writes}.tmp`;
   const handle = await fs.promises.open(tmp, 'w');
   try {
     await handle.writeFile(text, 'utf8');

@@ -3,6 +3,7 @@ import { app, BrowserWindow, ipcMain, Menu, net, protocol, shell } from 'electro
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
+import { editMenuTemplate } from './editMenu.js';
 import { listSlots, readSlot, removeSlot, writeSlot } from './saveFiles.js';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -108,6 +109,10 @@ function createWindow(): void {
     e.preventDefault();
     if (isWebLink(url)) void shell.openExternal(url);
   });
+  win.webContents.on('context-menu', (_e, params) => {
+    const template = editMenuTemplate(params);
+    if (template.length) Menu.buildFromTemplate(template).popup({ window: win });
+  });
   win.webContents.on('before-input-event', (_e, input) => {
     if (input.type === 'keyDown' && input.key === 'F11') win.setFullScreen(!win.isFullScreen());
   });
@@ -132,12 +137,23 @@ function createWindow(): void {
   void win.loadURL(process.env.PMO_DEV_URL ?? 'app://game/');
 }
 
-void app.whenReady().then(() => {
-  Menu.setApplicationMenu(null);
-  serveApp();
-  handleSaves();
-  createWindow();
-});
+// One game at a time: a second start would write the same save files. It hands over to the first.
+if (!app.requestSingleInstanceLock()) {
+  app.quit();
+} else {
+  app.on('second-instance', () => {
+    const win = BrowserWindow.getAllWindows()[0];
+    if (!win) return;
+    if (win.isMinimized()) win.restore();
+    win.focus();
+  });
+  void app.whenReady().then(() => {
+    Menu.setApplicationMenu(null);
+    serveApp();
+    handleSaves();
+    createWindow();
+  });
+}
 
 // The app quits when its window closes, on every OS.
 app.on('window-all-closed', () => app.quit());

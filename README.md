@@ -19,7 +19,7 @@ The game needs WebGL 2 and a window of at least 1280 × 720. In a browser, use t
 - At 1×, a game hour takes a real minute. Pause and pick 1×, 2×, 4× or 8× beside the date in the top bar.
 - You can give orders while the game is paused.
 - A saved game opens paused.
-- "Run the world while closed" (Settings) lets a game that was running when you closed it catch up when you return: up to 8 game hours, with your own work at half rate.
+- "Run the world while closed" (Settings) lets a game that was running when you closed it catch up when you return: up to 8 hours of time away, with your own work at half rate.
 
 ## Controls
 

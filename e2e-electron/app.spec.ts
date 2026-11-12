@@ -1,5 +1,7 @@
 import { _electron as electron, expect, test, type ElectronApplication } from '@playwright/test';
+import { spawn } from 'node:child_process';
 import fs from 'node:fs';
+import { createRequire } from 'node:module';
 import os from 'node:os';
 import path from 'node:path';
 
@@ -73,6 +75,30 @@ test('an external link opens outside the app', async () => {
   await expect
     .poll(() => app.evaluate(() => (globalThis as { pmoOpened?: string[] }).pmoOpened ?? []))
     .toEqual(['https://example.com/']);
+  expect(app.windows()).toHaveLength(1);
+  await app.close();
+});
+
+test('a second start quits and leaves the first window alone', async () => {
+  const app = await launch(userData);
+  await app.firstWindow();
+  const electronPath = createRequire(import.meta.url)('electron') as string;
+  const second = process.env.PMO_APP_PATH
+    ? spawn(process.env.PMO_APP_PATH, SWITCHES, {
+        env: { ...process.env, PMO_USER_DATA: userData },
+      })
+    : spawn(electronPath, ['.', ...SWITCHES], { env: { ...process.env, PMO_USER_DATA: userData } });
+  const code = await new Promise<number | null>((resolve) => {
+    const timer = setTimeout(() => {
+      second.kill();
+      resolve(-1);
+    }, 15_000);
+    second.on('exit', (c) => {
+      clearTimeout(timer);
+      resolve(c);
+    });
+  });
+  expect(code).toBe(0);
   expect(app.windows()).toHaveLength(1);
   await app.close();
 });

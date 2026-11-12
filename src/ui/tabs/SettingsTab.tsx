@@ -111,8 +111,8 @@ function OfflineChoice() {
         Run the world while closed
       </label>
       <p class="meta">
-        When on, a game that was running when you closed it catches up when you return: up to 8 game
-        hours, your own work at half rate.
+        When on, a game that was running when you closed it catches up when you return: up to 8
+        hours of time away, with your own work at half rate.
       </p>
     </section>
   );

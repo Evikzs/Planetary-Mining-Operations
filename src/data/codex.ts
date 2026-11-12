@@ -102,7 +102,7 @@ const OTHER: Record<string, CodexEntry> = {
   'mech.camera': {
     title: 'Looking around',
     category: 'mechanics',
-    body: 'Drag to pan, pinch or scroll to zoom, and twist with two fingers to rotate. On a keyboard: W, A, S and D pan, Q and E rotate, and N locks north. Zoom far out to see the whole Moon.',
+    body: 'Drag to pan, scroll to zoom, and drag with the right button to turn. On the keyboard: W, A, S and D pan, Q and E turn, + and - zoom, and N locks north. Zoom far out to see the whole Moon.',
   },
   'mech.belts': {
     title: 'Conveyor belts',

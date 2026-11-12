@@ -27,30 +27,39 @@ export function createFileSaveStore(io: SlotIo): SaveStore {
     Promise.all(AUTO_SLOTS.map(async (slot) => ({ slot, file: parse(await io.read(slot)) })));
   // The next autosave slot; found once from the files, then it rotates.
   let next: number | null = null;
+  // Writes run one at a time: an autosave starts only after the one before it has landed.
+  let queue: Promise<unknown> = Promise.resolve();
+  const inTurn = <T>(job: () => Promise<T>): Promise<T> => {
+    const run = queue.then(job, job);
+    queue = run.catch(() => undefined);
+    return run;
+  };
   return {
-    async writeAuto(file) {
-      if (next === null) {
-        const all = await autos();
-        const empty = all.findIndex((a) => !a.file);
-        next =
-          empty >= 0
-            ? empty
-            : all.reduce(
-                (oldest, a, i) =>
-                  a.file!.savedAtRealMs < all[oldest]!.file!.savedAtRealMs ? i : oldest,
-                0,
-              );
-      }
-      await io.write(AUTO_SLOTS[next]!, JSON.stringify(file));
-      next = (next + 1) % AUTO_SLOTS.length;
-    },
+    writeAuto: (file) =>
+      inTurn(async () => {
+        if (next === null) {
+          const all = await autos();
+          const empty = all.findIndex((a) => !a.file);
+          next =
+            empty >= 0
+              ? empty
+              : all.reduce(
+                  (oldest, a, i) =>
+                    a.file!.savedAtRealMs < all[oldest]!.file!.savedAtRealMs ? i : oldest,
+                  0,
+                );
+        }
+        const slot = AUTO_SLOTS[next]!;
+        next = (next + 1) % AUTO_SLOTS.length;
+        await io.write(slot, JSON.stringify(file));
+      }),
     async loadLatestValid(accept) {
       const files = (await autos())
         .flatMap((a) => (a.file ? [a.file] : []))
         .sort((a, b) => b.savedAtRealMs - a.savedAtRealMs);
       return files.find((f) => fromSaveFile(f).ok && (accept?.(f) ?? true)) ?? null;
     },
-    writeManual: (slot, file) => io.write(`manual-${slot}`, JSON.stringify(file)),
+    writeManual: (slot, file) => inTurn(() => io.write(`manual-${slot}`, JSON.stringify(file))),
     async readManual(slot) {
       const f = parse(await io.read(`manual-${slot}`));
       return f && fromSaveFile(f).ok ? f : null;

@@ -92,3 +92,14 @@ test('ui scale does not move map picks', async ({ page }) => {
   await page.mouse.click(at.x, at.y);
   await expect(page.getByTestId('context-panel')).toContainText('Ilmenite');
 });
+
+test('the companion and the overlays let map clicks through their empty space', async ({
+  page,
+}) => {
+  await gotoGame(page, { freeze: '1' });
+  await foundCompany(page);
+  const events = await page.evaluate(
+    () => getComputedStyle(document.querySelector('[data-testid="companion"]')!).pointerEvents,
+  );
+  expect(events).toBe('none');
+});

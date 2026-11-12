@@ -56,4 +56,24 @@ describe('the file save store', () => {
       { slot: 'manual-2', savedAtRealMs: 7, tick: founded.tick, company: 'Selene Rock Co' },
     ]);
   });
+
+  it('overlapping autosaves go to different slots, one after the other', async () => {
+    const io = memoryIo();
+    let writing = 0;
+    let most = 0;
+    const slow: SlotIo = {
+      ...io,
+      async write(slot, text) {
+        most = Math.max(most, ++writing);
+        await new Promise((r) => setTimeout(r, 5));
+        await io.write(slot, text);
+        writing--;
+      },
+    };
+    const store = createFileSaveStore(slow);
+    await Promise.all([store.writeAuto(save(1)), store.writeAuto(save(2))]);
+    expect(most).toBe(1);
+    expect(savedAt(io, 'auto-0')).toBe(1);
+    expect(savedAt(io, 'auto-1')).toBe(2);
+  });
 });

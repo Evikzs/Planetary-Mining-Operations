@@ -40,15 +40,21 @@ const TAB_BODY: Record<TabId, () => ComponentChildren> = {
 
 const SPEED_KEYS: Record<string, Speed> = { '1': 1, '2': 2, '3': 4, '4': 8 };
 
+const NOT_TEXT = ['checkbox', 'radio', 'button', 'submit', 'reset', 'range', 'color', 'file'];
+
+/** A field that takes typed text; a checkbox or radio with focus does not stop the shortcuts. */
 function isTyping(target: EventTarget | null): boolean {
   const el = target as HTMLElement | null;
-  return !!el && (el.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(el.tagName));
+  if (!el) return false;
+  if (el instanceof HTMLInputElement) return !NOT_TEXT.includes(el.type);
+  return el.isContentEditable || ['TEXTAREA', 'SELECT'].includes(el.tagName);
 }
 
 function useShortcuts() {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.ctrlKey || e.metaKey || e.altKey || isTyping(e.target)) return;
+      // A held key repeats: one press, one action.
+      if (e.repeat || e.ctrlKey || e.metaKey || e.altKey || isTyping(e.target)) return;
       const tab = TABS.find((t) => t.key === e.key.toLowerCase());
       const speed = SPEED_KEYS[e.key];
       if (tab) toggleTab(tab.id);

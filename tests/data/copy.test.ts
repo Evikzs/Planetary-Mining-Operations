@@ -82,7 +82,8 @@ describe('copy', () => {
   });
 });
 
-const MOBILE_WORDS = /\b(tap|taps|tapping|tapped|phone|phones|swipe|real (minute|second)s?)\b/i;
+const MOBILE_WORDS =
+  /\b(tap|taps|tapping|tapped|phone|phones|swipe|pinch|twist|fingers?|real (minute|second)s?)\b/i;
 
 describe('player-facing copy', () => {
   it('never says tap, phone, swipe or real minutes', () => {

@@ -41,4 +41,11 @@ describe('save files', () => {
     await expect(writeSlot(dir, 'auto-1', 'version 2')).rejects.toThrow('disk full');
     expect(await readSlot(dir, 'auto-1')).toBe('version 1');
   });
+
+  it('two writes to one slot at once both finish, and the file holds one of them', async () => {
+    const a = 'a'.repeat(50_000);
+    const b = 'b'.repeat(10);
+    await Promise.all([writeSlot(dir, 'auto-0', a), writeSlot(dir, 'auto-0', b)]);
+    expect([a, b]).toContain(await readSlot(dir, 'auto-0'));
+  });
 });

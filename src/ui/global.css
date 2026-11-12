@@ -1909,6 +1909,7 @@ h3 {
   zoom: var(--ui-scale, 1);
 }
 
-.hud > * {
+/* Zero specificity: a layer that lets clicks through (the companion, founding) keeps its rule. */
+:where(.hud > *) {
   pointer-events: auto;
 }

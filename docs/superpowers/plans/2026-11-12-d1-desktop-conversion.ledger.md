@@ -29,3 +29,26 @@ Task 6: complete (commits 27ddf7f..9b06a8a, tests: npx vitest run tests/electron
 Task 7: Ruling: the packaged app leaves node_modules out of app.asar — electron-builder added 30 MB of runtime dependencies that the bundled web build never loads (asar now 6.6 MB) — cost if wrong: a future main-process dependency must be listed in files.
 Task 7: complete (commits 9b06a8a..d8fb46d, tests: env PMO_APP_PATH=release/linux-unpacked/planetary-mining-operations xvfb-run -a npm run test:app →   3 passed (11.9s))
 Task 8: note: tests/data/copy.test.ts already existed; a first write replaced it, caught by git diff before any commit; the guard is appended to it instead, and a check found no other new file had replaced one.
+Task 8: complete (commits d8fb46d..7091c57, tests: npx vitest run tests/data →    Duration  307ms (transform 276ms, setup 0ms, import 374ms, tests 40ms, environment 0ms))
+Final review: fresh reviewer on the most capable model (Fable), range c7b5aa9..7091c57. Verdict "with fixes": 0 Critical, 5 Important (overlapping file saves, no edit menu in the app, no single-instance lock, Codex teaches pinch and twist, key repeat), 20 Minor.
+Final: Ruling: re-graded by effect into the fix pass — `.hud > *` overrides pointer-events: none, so the companion box swallows map clicks; the Settings text says 8 game hours where the cap is 8 real hours; isTyping counts checkboxes and radios, so every shortcut dies after a setting is clicked — each misleads or blocks a player in normal play — cost if wrong: three small fixes.
+Final: minor (deferred): "Running at 0.0×" flashes for one window after a sleep gap (the catch-up and re-anchor branches do not reset the speed window).
+Final: minor (deferred): one unreadable slot file (EACCES) rejects the file store's autos() and the game starts in memory with a browser-worded message, although other autosaves are fine.
+Final: minor (deferred): PMO_DEV_URL is honoured in the packaged app; CSP lacks base-uri, form-action and frame-ancestors; no permission request handler; IPC handlers do not check the sender or the text type and size.
+Final: minor (deferred): a second click on the close button during the save wait closes at once (the write stays atomic).
+Final: minor (deferred): icon buttons without tooltips: alerts bell and close, panel close, context-panel close, Trade pin.
+Final: minor (deferred): shortcuts fire under the founding, away and catch-up screens.
+Final: minor (deferred): dev reload compares PMO_DEV_URL exactly; a trailing slash sends the reload to the system browser.
+Final: minor (deferred): a saved window position is not checked against the current displays.
+Final: minor (deferred): the app smoke test does not prove the close save (founding already saved).
+Final: minor (deferred): stale phone words in comments (global.css:385 and 1307, store.ts:33 "tapped", controller onTap, finance.ts:4 "146 real days").
+Final: minor (deferred): pmoSaves.remove is exposed but unused; main.tsx adds a 'saved' listener per close request; source maps ship in the packaged app.
+Final: Ruling (declined-to-judge list): macOS menu accelerators and Windows rename errors wait for S1; Chromium worker-timer throttling in a minimized window is unverified — worth a manual check or backgroundThrottling: false before S1; catch-up after an in-session sleep runs at 1× like time away; manual load and import never catch up (M2a); every action autosaves (M2a); preferences stay in localStorage; fullscreen is not remembered (spec lists size, position and maximised) — cost if wrong: each is a small follow-up.
+Final: fixed I1 overlapping file saves — the file store runs writes one at a time and picks the slot before it writes; each write has its own temp file — "overlapping autosaves go to different slots, one after the other" and "two writes to one slot at once both finish" RED→GREEN, suite 476/477 (the tick budget, container noise).
+Final: fixed I4 the Codex taught pinch and twist — mech.camera rewritten for mouse and keys; the copy guard now also bans pinch, twist and finger — "never says tap, phone, swipe or real minutes" RED→GREEN, suite 476/477.
+Final: fixed I2 no edit menu in the app — main shows cut, copy, paste and select all over editable fields — "offers cut, copy, paste and select all in a text field" RED→GREEN, suite 476/477.
+Final: fixed I3 no single-instance lock — a second start quits and focuses the first window — "a second start quits and leaves the first window alone" RED→GREEN (app smoke 4/4), suite 476/477.
+Final: fixed I5 key repeat — a repeated keydown does nothing — "a held key does not repeat its shortcut" RED→GREEN, suite 476/477.
+Final: fixed shortcuts died after a setting was clicked — isTyping counts only text-taking inputs — "shortcuts still work after clicking a setting" RED→GREEN, suite 476/477.
+Final: fixed .hud > * overrode pointer-events: none — the rule is :where(.hud > *) — "the companion and the overlays let map clicks through their empty space" RED→GREEN, suite 476/477.
+Final: fixed the offline setting said 8 game hours — Settings and the README say 8 hours of time away — "the offline setting states its cap in time away" RED→GREEN, suite 476/477.

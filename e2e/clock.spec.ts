@@ -101,3 +101,30 @@ test('the offline setting persists', async ({ page }) => {
     page.getByTestId('tab-panel').getByRole('checkbox', { name: 'Run the world while closed' }),
   ).not.toBeChecked();
 });
+
+test('a held key does not repeat its shortcut', async ({ page }) => {
+  await page.evaluate(() =>
+    window.dispatchEvent(
+      new KeyboardEvent('keydown', { key: ' ', code: 'Space', repeat: true, bubbles: true }),
+    ),
+  );
+  await page.waitForTimeout(500);
+  await expect(page.getByTestId('paused')).toBeHidden();
+});
+
+test('shortcuts still work after clicking a setting', async ({ page }) => {
+  await openTab(page, 'Settings');
+  await page
+    .getByTestId('tab-panel')
+    .getByRole('checkbox', { name: 'Run the world while closed' })
+    .click();
+  await page.keyboard.press('b');
+  await expect(page.getByTestId('tab-panel').getByRole('heading', { level: 2 })).toHaveText(
+    'Build',
+  );
+});
+
+test('the offline setting states its cap in time away', async ({ page }) => {
+  await openTab(page, 'Settings');
+  await expect(page.getByTestId('tab-panel')).toContainText('up to 8 hours of time away');
+});
