@@ -24,14 +24,17 @@ test('the economy loop: found, win land, borrow, buy shares, read the news, and 
     .toBe(2);
   await page.evaluate(() => window.__pmo.select(null));
 
-  // 3. A 3-month loan of LM 50,000.
+  // 3. A 3-month loan of LM 50,000. The clock waits meanwhile: at 120x a slow runner pays days
+  // of wages between reading the cash and taking the loan.
   await openTab(page, 'Finance');
+  await page.evaluate(() => window.__pmo.freeze(true));
   const before = (await snapshot(page)).cashCents;
   await panel.getByLabel('Loan amount (LM)').fill('50000');
   await panel.getByRole('radio', { name: '3 months' }).check();
   await panel.getByRole('button', { name: 'Take loan' }).click();
   await expect(panel.getByRole('list', { name: 'Loans' })).toContainText('LM 50,000.00');
   expect((await snapshot(page)).cashCents).toBeGreaterThan(before + 4_000_000);
+  await page.evaluate(() => window.__pmo.freeze(false));
 
   // 4. 100 shares of a rival at market: the holding shows after the next hourly clearing.
   await panel.getByRole('table', { name: 'Stocks' }).getByRole('button', { name: RIVAL }).click();
