@@ -15,6 +15,8 @@ export type Quality = 'high' | 'low';
 
 export interface Composer {
   render(): void;
+  /** Draws another scene from another camera: the view of Sol uses the same chain. */
+  setView(scene: Scene, camera: Camera): void;
   setSize(w: number, h: number, dpr: number): void;
   /** Bloom strength: a little more at night, when the lamps carry the scene. */
   setBloom(strength: number): void;
@@ -32,8 +34,10 @@ export function createComposer(
   quality: Quality,
 ): Composer {
   if (quality === 'low') {
+    let view = { scene, camera };
     return {
-      render: () => renderer.render(scene, camera),
+      render: () => renderer.render(view.scene, view.camera),
+      setView: (s, c) => (view = { scene: s, camera: c }),
       setSize: () => undefined,
       setBloom: () => undefined,
       dispose: () => undefined,
@@ -42,11 +46,16 @@ export function createComposer(
   const target = new WebGLRenderTarget(1, 1, { type: HalfFloatType, samples: 4 });
   const composer = new EffectComposer(renderer, target);
   const bloom = new UnrealBloomPass(new Vector2(1, 1), 0.3, 0.4, 1.05);
-  composer.addPass(new RenderPass(scene, camera));
+  const pass = new RenderPass(scene, camera);
+  composer.addPass(pass);
   composer.addPass(bloom);
   composer.addPass(new OutputPass());
   return {
     render: () => composer.render(),
+    setView(s, c) {
+      pass.scene = s;
+      pass.camera = c;
+    },
     setSize(w, h, dpr) {
       composer.setPixelRatio(dpr);
       composer.setSize(w, h);

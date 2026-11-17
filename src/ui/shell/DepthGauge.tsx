@@ -1,10 +1,16 @@
-import { cameraAltitude, gameRenderer, reducedMotion } from '../../client/store';
+import {
+  cameraAltitude,
+  gameRenderer,
+  reducedMotion,
+  systemReading,
+  viewMode,
+} from '../../client/store';
 import { MAX_ALTITUDE, MIN_ALTITUDE } from '../../render/camera/globeCamera';
 import { METRES_PER_UNIT } from '../../render/world/kit';
 
 /** One rock layer of the log for each scale of the view; a click flies there. */
 export const TIERS = [
-  { name: 'System', alt: null, say: '' },
+  { name: 'System', alt: null, say: 'Click a world to read it. Scroll in on Luna to go down.' },
   { name: 'Orbit', alt: 200, say: 'Pick a filter to read the whole Moon. Scroll in to go down.' },
   { name: 'Region', alt: 30, say: 'Click a name to fly there. Scroll in to see a section.' },
   {
@@ -59,11 +65,17 @@ const PATTERNS = [
 /** The depth gauge: where the view is, from the system down to one street. */
 export function DepthGauge() {
   const alt = cameraAltitude.value;
-  const pos = gaugePosition(alt);
-  const tier = Math.min(4, Math.floor(pos));
-  const fly = (to: number) => {
+  const sol = viewMode.value === 'system';
+  const reading = systemReading.value;
+  const pos = sol ? reading.gauge : gaugePosition(alt);
+  const tier = sol ? 0 : Math.min(4, Math.floor(pos));
+  // From the view of Sol, a lower tier first goes down to Luna.
+  const fly = (to: number | null) => {
     const r = gameRenderer.value;
-    if (r) r.flyTo(r.camera().pos, to, reducedMotion.value ? 0 : FLY_MS);
+    if (!r) return;
+    if (to === null) r.rise();
+    else if (r.mode() === 'system') r.dive();
+    else r.flyTo(r.camera().pos, to, reducedMotion.value ? 0 : FLY_MS);
   };
   return (
     <div class="gauge" data-testid="depth-gauge" role="group" aria-label="View depth">
@@ -86,16 +98,16 @@ export function DepthGauge() {
             key={t.name}
             type="button"
             aria-current={i === tier}
-            disabled={t.alt === null}
-            data-tip={t.alt === null ? 'The Sol system view comes later' : `Fly to ${t.name}`}
-            onClick={() => t.alt !== null && fly(t.alt)}
+            data-tip={t.alt === null ? 'Rise to the view of Sol' : `Fly to ${t.name}`}
+            onClick={() => fly(t.alt)}
           >
             {t.name}
           </button>
         ))}
       </div>
       <p class="alt">
-        From the ground <b class="num">{groundDistance(alt)}</b>
+        {sol ? 'From the Sun ' : 'From the ground '}
+        <b class="num">{sol ? `${reading.au.toFixed(1)} AU` : groundDistance(alt)}</b>
       </p>
       <p class="say">{TIERS[tier]!.say}</p>
     </div>

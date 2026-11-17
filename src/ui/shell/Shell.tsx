@@ -1,6 +1,6 @@
 import type { ComponentChildren } from 'preact';
 import { useEffect } from 'preact/hooks';
-import { selection, ui, uiScale } from '../../client/store';
+import { selection, ui, uiScale, viewMode } from '../../client/store';
 import type { DebugFlags } from '../../worker/protocol';
 import { CompanionBubble } from '../companion/CompanionBubble';
 import { Icon } from '../icons';
@@ -113,8 +113,12 @@ export function Shell({ flags }: { flags: DebugFlags }) {
         {snap?.company && (
           <>
             <SceneMarks />
-            <Compass />
-            <MapFilters />
+            {viewMode.value === 'moon' && (
+              <>
+                <Compass />
+                <MapFilters />
+              </>
+            )}
             <TopBar />
             <TabRail />
             <DepthGauge />

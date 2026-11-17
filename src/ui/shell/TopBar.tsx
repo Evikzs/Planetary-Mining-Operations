@@ -219,8 +219,19 @@ export function TopBar() {
         <nav class="crumbs" aria-label="Location">
           <button
             type="button"
+            data-tip="Rise to the view of Sol"
+            onClick={() => gameRenderer.value?.rise()}
+          >
+            Sol
+          </button>
+          <button
+            type="button"
             data-tip="See the whole Moon"
-            onClick={() => fly(undefined, ORBIT_ALTITUDE)}
+            onClick={() =>
+              gameRenderer.value?.mode() === 'system'
+                ? gameRenderer.value.dive()
+                : fly(undefined, ORBIT_ALTITUDE)
+            }
           >
             Luna
           </button>

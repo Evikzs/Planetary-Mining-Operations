@@ -121,7 +121,19 @@ export class LightLayer {
     this.farMat = farLightMaterial(u, glow);
   }
 
+  /** What the lights were last built from: the world view is resent on any change. */
+  private key = '';
+
   setWorld(w: WorldView): void {
+    const key = [
+      w.roads.map((r) => `${r.id}:${r.points.length}`).join(','),
+      w.buildings
+        .map((b) => `${b.id}:${b.type}:${b.level}:${b.status === 'constructing'}`)
+        .join(','),
+      w.clientAssets.map((a) => `${a.plotId}:${a.asset}`).join(','),
+    ].join('|');
+    if (key === this.key) return;
+    this.key = key;
     const plots = new Map(w.plots.map((p) => [p.id, p]));
     const placed: Placed[] = [];
     for (const b of w.buildings) {

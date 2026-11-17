@@ -22,5 +22,7 @@ export function sectionOfPick(
       return plotSection(w.buildings.find((b) => b.id === pick.id)?.plotId);
     case 'rover':
       return trips.find((t) => t.id === pick.id)?.sectionId ?? null;
+    case 'body':
+      return null;
   }
 }

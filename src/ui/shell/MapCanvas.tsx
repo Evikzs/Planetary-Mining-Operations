@@ -12,7 +12,9 @@ import {
   reducedMotion,
   selection,
   simClient,
+  systemReading,
   ui,
+  viewMode,
   world,
 } from '../../client/store';
 import { heading, type GlobeCameraState } from '../../render/camera/globeCamera';
@@ -58,6 +60,12 @@ export function MapCanvas({ flags }: { flags: DebugFlags }) {
         const alt = Number(s.altitude.toPrecision(3));
         if (alt !== cameraAltitude.value) cameraAltitude.value = alt;
       },
+      onMode(mode) {
+        viewMode.value = mode;
+        // What was picked in one view is not in sight in the other.
+        selection.value = null;
+      },
+      onSystem: (gauge, au) => (systemReading.value = { gauge, au }),
       onGesture(kind) {
         if (taught[kind] || !ui.value?.company || !simClient.value) return;
         taught[kind] = true;
@@ -102,6 +110,7 @@ export function MapCanvas({ flags }: { flags: DebugFlags }) {
       stopSpin();
       stopFly();
       kept = { seed, camera: r.camera() };
+      viewMode.value = 'moon';
       r.dispose();
       gameRenderer.value = null;
     };

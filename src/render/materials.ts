@@ -27,8 +27,8 @@ export const TERRAIN_COLORS: Record<SurfaceClass, string> = {
  */
 export function terrainMaterial(u: SceneUniforms, low = false): MeshLambertMaterial {
   const m = new MeshLambertMaterial({ vertexColors: true });
-  // Low quality keeps the seams and drops the fine grain and the glitter: less noise per pixel.
-  if (low) m.defines = { TERRAIN_LOW: '' };
+  // Low quality is plain class colour: per-pixel noise costs whole seconds in software rendering.
+  if (low) return m;
   const ore = new Color(MINERALS[LUNA_ORE].color);
   m.onBeforeCompile = (sh) => {
     Object.assign(sh.uniforms, {
@@ -58,11 +58,9 @@ float px_ = max(length(dFdx(pm_)), length(dFdy(pm_)));
 vec3 n_ = normalize(vWorld);
 float mid_ = fbm(n_ * 11. + uSeed * 1.7);
 float g_ = .82 + .36 * mid_;
-#ifndef TERRAIN_LOW
 g_ *= mix(1., .8 + .4 * vnoise(pm_ * .02), 1. - smoothstep(12., 50., px_));
 g_ *= mix(1., .86 + .28 * vnoise(pm_ * .23), 1. - smoothstep(1., 4.5, px_));
 g_ *= mix(1., .9 + .2 * vnoise(pm_ * 1.9), 1. - smoothstep(.12, .6, px_));
-#endif
 diffuseColor.rgb *= g_;
 // Seams: thin lines from orbit. Close to the ground they give way to glints only, so the
 // plain under the buildings stays readable.
@@ -74,7 +72,6 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uOre * (.45 + .6 * mid_), vein_ * .55 *
       .replace(
         '#include <emissivemap_fragment>',
         `#include <emissivemap_fragment>
-#ifndef TERRAIN_LOW
 vec3 nw_ = normalize(cross(dFdx(vWorld), dFdy(vWorld)));
 if (dot(nw_, n_) < 0.) nw_ = -nw_;
 float cell_ = exp2(ceil(log2(max(px_ * 5., 2.))));
@@ -82,9 +79,7 @@ vec3 gp_ = pm_ / cell_;
 float glit_ = step(.985, hash13(floor(gp_))) * smoothstep(.3, .05, length(fract(gp_) - .5))
   * pow(max(dot(nw_, normalize(normalize(cameraPosition - vWorld) + uSunDir)), 0.), 18.)
   * smoothstep(0., .15, dot(n_, uSunDir));
-totalEmissiveRadiance += mix(vec3(1.), uOre, .6) * glit_ * (.6 + 5. * vein_);
-#endif
-totalEmissiveRadiance += uOre * vein_ * far_ * .015;`,
+totalEmissiveRadiance += mix(vec3(1.), uOre, .6) * glit_ * (.6 + 5. * vein_) + uOre * vein_ * far_ * .015;`,
       );
   };
   return m;

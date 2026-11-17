@@ -61,6 +61,7 @@ export class PlotLayer {
   private crystalGeometry: BufferGeometry | null = null;
   private marks: InstancedMesh | null = null;
   private seams: InstancedMesh | null = null;
+  private key = '';
 
   constructor(
     private readonly parent: Object3D,
@@ -90,6 +91,10 @@ totalEmissiveRadiance += vColor * vGem * (.2 + 2.4 * g_);`,
       ...w.clientAssets.map((a) => a.plotId),
       ...w.contractSites.map((c) => c.plotId),
     ]);
+    // The world view is resent on any change; the marks rebuild only when plots fill or free up.
+    const key = `${w.plots.length}:${[...taken].sort((a, b) => a - b).join(',')}`;
+    if (key === this.key) return;
+    this.key = key;
     const free = w.plots.filter((p) => p.kind !== 'hub' && !taken.has(p.id));
     const marked = free.filter((p) => p.kind === 'build' || p.kind === 'public');
     const deposits = free.filter((p) => p.deposit);

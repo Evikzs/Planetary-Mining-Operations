@@ -23,6 +23,7 @@ import { createCameraController } from './camera/controller';
 import {
   cameraPose,
   createCameraState,
+  MAX_ALTITUDE,
   flyBetween,
   spinAboutPole,
   type GlobeCameraState,
@@ -34,6 +35,8 @@ import type { MapFilter } from './overlays/filters';
 import { SectionOverlay } from './overlays/sectionOverlay';
 import { createComposer, type Quality } from './post/composer';
 import { createSky } from './sky';
+import { SOL } from './system/sol';
+import { SystemView, type BodyMark } from './system/systemView';
 import { localHour, sunDirection, windowsLit } from './sun';
 import { BeltLayer } from './world/beltLayer';
 import { BuildingLayer } from './world/buildingLayer';
@@ -60,9 +63,12 @@ export interface RenderStats {
 
 /** What a tap on the map hit. Not named Pick: that would shadow TypeScript's Pick<T, K>. */
 export interface MapPick {
-  kind: 'plot' | 'building' | 'rover' | 'section';
+  /** 'body': a world of Sol in the system view, by its index in SOL. */
+  kind: 'plot' | 'building' | 'rover' | 'section' | 'body';
   id: number;
 }
+
+export type ViewMode = 'moon' | 'system';
 
 export interface GameRenderer {
   setWorld(w: WorldView): void;
@@ -79,6 +85,14 @@ export interface GameRenderer {
   flyTo(dir: Vec3, altitude: number, ms: number): void;
   /** Turns the Moon slowly under the camera, as behind the founding screen. */
   setSpin(on: boolean): void;
+  /** The Moon view or the view of all Sol. */
+  mode(): ViewMode;
+  /** Up to the view of Sol: from high orbit, after flying up there if lower. */
+  rise(): void;
+  /** Down from the view of Sol to Luna, where the Moon view takes over. */
+  dive(): void;
+  /** Names of Sol's worlds in sight, in the system view; empty in the Moon view. */
+  bodyMarks(): BodyMark[];
   setFilter(f: MapFilter): void;
   /** Live building status, progress, power and morale, which the world view leaves out. */
   setUi(ui: UiSnapshot): void;
@@ -99,6 +113,10 @@ export interface RendererOptions {
   /** The camera moved, turned, zoomed or changed lock north. */
   onCamera?(s: GlobeCameraState): void;
   onGesture?(kind: 'panned' | 'zoomed'): void;
+  /** The view changed between the Moon and Sol. */
+  onMode?(mode: ViewMode): void;
+  /** In the system view: the depth gauge (0 far to 1 near) and the distance from the Sun in AU. */
+  onSystem?(gauge: number, au: number): void;
 }
 
 /** Something drawn that moves with game time or the camera; the globe and world layers are layers. */
@@ -274,6 +292,7 @@ export function createRenderer(canvas: HTMLCanvasElement, opts: RendererOptions)
     gl.setSize(w, h, false);
     composer.setSize(w, h, gl.getPixelRatio());
     camera.aspect = w / Math.max(1, h);
+    system?.setSize(w, h);
   }
 
   function updateCamera(): void {
@@ -298,6 +317,147 @@ export function createRenderer(canvas: HTMLCanvasElement, opts: RendererOptions)
     frozenAt ??
     (motion ? gameTimeAt(motion.view.tick, motion.anchorRealMs, motion.timescale, Date.now()) : 0);
 
+  // The view of Sol, built on first use.
+  let mode: ViewMode = 'moon';
+  let system: SystemView | null = null;
+  /** The Moon camera when the view rose: the view comes back down to it. */
+  let saved: GlobeCameraState | null = null;
+  let riseAfterFlight = false;
+  let lastGauge = -1;
+  const LUNA = SOL.findIndex((b) => b.id === 'luna');
+  let pickedBody: number | null = null;
+  let hoverBody: number | null = null;
+
+  function hubs(): Vec3[] {
+    if (!world) return [];
+    const owned = world.sections
+      .filter((x) => x.owner !== null)
+      .sort((a, b) => a.owner! - b.owner!);
+    return owned
+      .map((x) => world!.plots.find((p) => p.sectionId === x.id && p.kind === 'hub')?.dir)
+      .filter((d): d is Vec3 => !!d)
+      .slice(0, 4);
+  }
+
+  function rise(): void {
+    if (mode === 'system') return;
+    if (controller.state.altitude < MAX_ALTITUDE * 0.98) {
+      // Up to high orbit first; the system view starts from there.
+      flight = {
+        from: controller.state,
+        to: { ...controller.state, altitude: MAX_ALTITUDE },
+        start: performance.now(),
+        ms: opts.reducedMotion ? 1 : 1400,
+      };
+      riseAfterFlight = true;
+      return;
+    }
+    system ??= new SystemView({
+      reducedMotion: opts.reducedMotion,
+      glow,
+      onPick: () => undefined,
+      onLanded: land,
+    });
+    system.setSize(width, height);
+    saved = controller.state;
+    mode = 'system';
+    scene.remove(sky.group);
+    system.scene.add(sky.group);
+    composer.setView(system.scene, system.camera);
+    system.setLunaSites(hubs());
+    const s = sunDirection(gameTime(), refLon);
+    system.rise(
+      camera.position.clone(),
+      camera.quaternion.clone(),
+      radius,
+      gameTime() / 1440,
+      new Vector3(...s),
+    );
+    opts.onMode?.('system');
+  }
+
+  function land(): void {
+    mode = 'moon';
+    system?.scene.remove(sky.group);
+    scene.add(sky.group);
+    composer.setView(scene, camera);
+    if (saved) controller.set(saved);
+    canvas.style.cursor = '';
+    opts.onMode?.('moon');
+  }
+
+  // In the system view the pointer and the wheel drive Sol, not the globe: these listeners run
+  // before the camera controller's (capture on the target runs first) and stop them.
+  let sysDrag: { id: number; x: number; y: number; moved: number } | null = null;
+  let lastTap = 0;
+  let edgeSince = 0;
+  const local = (e: { clientX: number; clientY: number }) => {
+    const r = canvas.getBoundingClientRect();
+    return { x: e.clientX - r.left, y: e.clientY - r.top };
+  };
+  const onDownCapture = (e: PointerEvent): void => {
+    if (mode !== 'system') return;
+    e.stopImmediatePropagation();
+    if (e.button !== 0) return;
+    try {
+      canvas.setPointerCapture(e.pointerId);
+    } catch {
+      // Synthetic pointers cannot be captured.
+    }
+    sysDrag = { id: e.pointerId, ...local(e), moved: 0 };
+  };
+  const onMoveCapture = (e: PointerEvent): void => {
+    if (mode !== 'system' || !system) return;
+    e.stopImmediatePropagation();
+    const p = local(e);
+    if (sysDrag && sysDrag.id === e.pointerId) {
+      const [dx, dy] = [p.x - sysDrag.x, p.y - sysDrag.y];
+      sysDrag.moved += Math.abs(dx) + Math.abs(dy);
+      sysDrag.x = p.x;
+      sysDrag.y = p.y;
+      if (sysDrag.moved > 4) system.drag(dx, dy);
+      return;
+    }
+    hoverBody = system.pick(p.x, p.y);
+    canvas.style.cursor = hoverBody === null ? 'grab' : 'pointer';
+  };
+  const onUpCapture = (e: PointerEvent): void => {
+    if (mode !== 'system' || !system) return;
+    e.stopImmediatePropagation();
+    const drag = sysDrag;
+    sysDrag = null;
+    if (!drag || drag.id !== e.pointerId || drag.moved > 4 || e.type !== 'pointerup') return;
+    const p = local(e);
+    pickedBody = system.pick(p.x, p.y);
+    opts.onPick?.(pickedBody === null ? null : { kind: 'body', id: pickedBody });
+    const now = performance.now();
+    if (pickedBody === LUNA && now - lastTap < 320) system.dive();
+    lastTap = now;
+  };
+  const onWheelCapture = (e: WheelEvent): void => {
+    if (mode === 'system' && system) {
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      const d = Math.max(-240, Math.min(240, e.deltaY * (e.deltaMode ? 30 : 1)));
+      system.zoom(Math.exp(d * 0.002), hoverBody === LUNA || pickedBody === LUNA);
+      return;
+    }
+    // A push past the top of orbit, held for a moment, rises to the view of Sol.
+    if (e.deltaY > 0 && controller.state.altitude >= MAX_ALTITUDE * 0.999 && !flight) {
+      const now = performance.now();
+      if (!edgeSince) edgeSince = now;
+      else if (now - edgeSince > 350) {
+        edgeSince = 0;
+        rise();
+      }
+    } else edgeSince = 0;
+  };
+  canvas.addEventListener('pointerdown', onDownCapture, { capture: true });
+  canvas.addEventListener('pointermove', onMoveCapture, { capture: true });
+  canvas.addEventListener('pointerup', onUpCapture, { capture: true });
+  canvas.addEventListener('pointercancel', onUpCapture, { capture: true });
+  canvas.addEventListener('wheel', onWheelCapture, { capture: true, passive: false });
+
   let raf = 0;
   let last = 0;
   function frame(t: number): void {
@@ -309,10 +469,34 @@ export function createRenderer(canvas: HTMLCanvasElement, opts: RendererOptions)
         composer.setSize(width, height, ratio);
       }
     }
+    if (mode === 'system' && system) {
+      const dt = last > 0 ? t - last : 0;
+      last = t;
+      resize();
+      const time = gameTime();
+      system.update(dt, time / 1440, new Vector3(...sunDirection(time, refLon)));
+      sky.update(t / 1000, gl.getPixelRatio());
+      gl.toneMappingExposure = 1;
+      composer.setBloom(0.3);
+      gl.info.reset();
+      composer.render();
+      const g = system.gauge();
+      if (Math.abs(g - lastGauge) > 0.004) {
+        lastGauge = g;
+        opts.onSystem?.(g, system.au());
+      }
+      return;
+    }
     if (flight) {
       const u = Math.min(1, (t - flight.start) / flight.ms);
       controller.set(flyBetween(flight.from, flight.to, industrialEase(u)));
-      if (u >= 1) flight = null;
+      if (u >= 1) {
+        flight = null;
+        if (riseAfterFlight) {
+          riseAfterFlight = false;
+          rise();
+        }
+      }
     } else if (spinning && last > 0) {
       controller.set(spinAboutPole(controller.state, (t - last) * SPIN_RADIANS_PER_MS));
     }
@@ -422,7 +606,7 @@ export function createRenderer(canvas: HTMLCanvasElement, opts: RendererOptions)
     },
     pick,
     screenBox(p) {
-      if (!world || p.kind === 'section') return null;
+      if (!world || p.kind === 'section' || p.kind === 'body') return null;
       let base: Vector3;
       let lift: number;
       if (p.kind === 'rover') {
@@ -476,6 +660,12 @@ export function createRenderer(canvas: HTMLCanvasElement, opts: RendererOptions)
     setSpin(on) {
       spinning = on;
     },
+    mode: () => mode,
+    rise,
+    dive() {
+      if (mode === 'system') system?.dive();
+    },
+    bodyMarks: () => (mode === 'system' && system ? system.marks() : []),
     setFilter(f) {
       overlay.setFilter(f);
       buildings.setFilter(f);
@@ -484,6 +674,13 @@ export function createRenderer(canvas: HTMLCanvasElement, opts: RendererOptions)
     dispose() {
       cancelAnimationFrame(raf);
       controller.dispose();
+      canvas.removeEventListener('pointerdown', onDownCapture, { capture: true });
+      canvas.removeEventListener('pointermove', onMoveCapture, { capture: true });
+      canvas.removeEventListener('pointerup', onUpCapture, { capture: true });
+      canvas.removeEventListener('pointercancel', onUpCapture, { capture: true });
+      canvas.removeEventListener('wheel', onWheelCapture, { capture: true });
+      if (mode === 'system') land();
+      system?.dispose();
       document.removeEventListener('visibilitychange', onVisibility);
       for (const layer of layers) layer.dispose();
       sky.dispose();

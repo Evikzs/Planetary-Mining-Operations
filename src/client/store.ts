@@ -1,7 +1,7 @@
 import { computed, signal } from '@preact/signals';
 import type { GoodId } from '../data/goods';
 import { DEFAULT_FILTER, type MapFilter } from '../render/overlays/filters';
-import type { GameRenderer, MapPick } from '../render/renderer';
+import type { GameRenderer, MapPick, ViewMode } from '../render/renderer';
 import type { SimEvent } from '../sim/events';
 import type { AwaySummary } from '../sim/offline';
 import type { ClockState } from '../worker/protocol';
@@ -32,6 +32,10 @@ export const mapFilter = signal<MapFilter>(DEFAULT_FILTER);
 export const mapLevel = signal<'planetary' | 'local'>('planetary');
 /** The camera's altitude in world units, for the depth gauge and the scene labels. */
 export const cameraAltitude = signal(200);
+/** The Moon view or the view of all Sol. */
+export const viewMode = signal<ViewMode>('moon');
+/** In the system view: the gauge (0 far to 1 near) and the distance from the Sun in AU. */
+export const systemReading = signal({ gauge: 0.5, au: 6 });
 /** What the player last tapped on the map. */
 export const selection = signal<MapPick | null>(null);
 /** Goods whose stock the top bar shows, for the selected section or else the founding one. */

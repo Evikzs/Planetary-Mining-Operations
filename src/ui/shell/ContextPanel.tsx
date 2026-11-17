@@ -1,5 +1,5 @@
 import type { ComponentChildren } from 'preact';
-import { motion, selection, ui, world } from '../../client/store';
+import { gameRenderer, motion, selection, ui, world } from '../../client/store';
 import { BUILDINGS, RECIPES, SKILLS } from '../../data/buildings';
 import {
   BUILDING_ROLE,
@@ -12,6 +12,7 @@ import {
 import { GOOD_IDS, GOODS } from '../../data/goods';
 import { MINERALS, type Mineral } from '../../data/minerals';
 import type { MapPick } from '../../render/renderer';
+import { airWord, SOL, starsByDay } from '../../render/system/sol';
 import { busLoad, type Trip } from '../../shared/trips';
 import { PLAYER } from '../../sim/companies';
 import type { Inventory } from '../../sim/inventory';
@@ -198,6 +199,36 @@ function sectionView(id: number, w: WorldView, snap: UiSnapshot | null): View | 
   };
 }
 
+/** '24 h', '58.6 d'; a world that turns backwards says so. */
+function dayLength(days: number): string {
+  const abs = Math.abs(days);
+  const text = abs < 2 ? `${(abs * 24).toFixed(1)} h` : `${abs} d`;
+  return days < 0 ? `${text}, backwards` : text;
+}
+
+/** A world of Sol, read from the system view. */
+function bodyView(index: number): View | null {
+  const b = SOL[index];
+  if (!b) return null;
+  return {
+    title: b.name,
+    role: b.blurb,
+    specimen: b.ore ? MINERALS[b.ore] : undefined,
+    facts: [
+      // Luna keeps one face to Earth; its sun day is one game day.
+      { label: 'Day', value: b.day === null ? '24.0 h' : dayLength(b.day) },
+      { label: 'Air', value: airWord(b) },
+      { label: 'Stars by day', value: starsByDay(b) ? 'Yes' : 'No' },
+      { label: 'Status', value: b.status },
+    ],
+    extra: b.landable && (
+      <button type="button" class="action" onClick={() => gameRenderer.value?.dive()}>
+        Go down to {b.name}
+      </button>
+    ),
+  };
+}
+
 function describe(
   pick: MapPick,
   w: WorldView,
@@ -216,6 +247,8 @@ function describe(
       return roverView(pick.id, w, snap, trips);
     case 'section':
       return sectionView(pick.id, w, snap);
+    case 'body':
+      return bodyView(pick.id);
   }
 }
 

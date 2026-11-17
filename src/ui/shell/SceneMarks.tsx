@@ -4,6 +4,7 @@ import { BUILDINGS } from '../../data/buildings';
 import { ASSET_NAMES, PLOT_KIND_NAMES } from '../../data/copy';
 import { GOODS } from '../../data/goods';
 import type { MapPick } from '../../render/renderer';
+import { SOL } from '../../render/system/sol';
 import type { Asset } from '../../sim/contracts/contracts';
 import { PLAYER } from '../../sim/companies';
 import type { WorldView } from '../../sim/views';
@@ -72,6 +73,7 @@ export function SceneMarks() {
   const w = world.value;
   const sites = useMemo(() => (w ? sitesOf(w) : []), [w]);
   const nodes = useRef(new Map<string, HTMLButtonElement>());
+  const worlds = useRef(new Map<number, HTMLButtonElement>());
   const reticle = useRef<HTMLDivElement>(null);
   const tag = useRef<HTMLDivElement>(null);
 
@@ -96,7 +98,19 @@ export function SceneMarks() {
       raf = requestAnimationFrame(tick);
       const r = gameRenderer.value;
       const scale = uiScale.value;
-      const alt = r?.camera().altitude ?? Infinity;
+      const sol = r?.mode() === 'system';
+      // In the view of Sol: a name beside each world, and nothing of the Moon's.
+      const marks = sol && r ? r.bodyMarks() : [];
+      for (const [index, el] of worlds.current) {
+        const m = marks.find((x) => x.index === index);
+        if (!m) {
+          hide(el);
+          continue;
+        }
+        el.hidden = false;
+        el.style.transform = `translate(${((m.x + m.r) / scale + 6).toFixed(1)}px, ${(m.y / scale).toFixed(1)}px) translateY(-50%)`;
+      }
+      const alt = sol ? -Infinity : (r?.camera().altitude ?? Infinity);
       for (const s of sites) {
         const el = nodes.current.get(s.key);
         const p =
@@ -110,7 +124,7 @@ export function SceneMarks() {
         el.style.transform = `translate(${(p.x / scale + 4).toFixed(1)}px, ${(p.y / scale).toFixed(1)}px) translateY(-50%)`;
       }
       const sel = selection.value;
-      const box = r && sel ? r.screenBox(sel) : null;
+      const box = r && sel && !sol ? r.screenBox(sel) : null;
       const ret = reticle.current;
       if (ret) {
         if (!box) hide(ret);
@@ -128,7 +142,7 @@ export function SceneMarks() {
         hit = r && pointer.over ? r.pick(pointer.x, pointer.y) : null;
       }
       const t = tag.current;
-      const name = hit && world.value && pointer.over ? nameOf(hit, world.value) : null;
+      const name = hit && world.value && pointer.over && !sol ? nameOf(hit, world.value) : null;
       if (!t || !name || (sel && hit && sel.kind === hit.kind && sel.id === hit.id)) hide(t);
       else {
         t.hidden = false;
@@ -168,6 +182,29 @@ export function SceneMarks() {
         >
           <b>{s.title}</b>
           <span>{s.sub}</span>
+        </button>
+      ))}
+      {SOL.map((b, i) => (
+        <button
+          key={b.id}
+          type="button"
+          class="label"
+          data-kind="world"
+          tabIndex={-1}
+          hidden
+          ref={(el) => {
+            if (el) worlds.current.set(i, el);
+            else worlds.current.delete(i);
+          }}
+          onClick={() => {
+            const again = selection.value?.kind === 'body' && selection.value.id === i;
+            selection.value = { kind: 'body', id: i };
+            // A second click on Luna goes down to it.
+            if (again && b.landable) gameRenderer.value?.dive();
+          }}
+        >
+          <b>{b.name}</b>
+          <span>{b.status}</span>
         </button>
       ))}
       <div class="reticle" ref={reticle} hidden />

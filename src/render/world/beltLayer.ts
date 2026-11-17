@@ -121,10 +121,17 @@ totalEmissiveRadiance += vColor * .55;
 
   setWorld(w: WorldView): void {
     const ids = new Set(w.belts.map((b) => b.id));
-    for (const id of [...this.belts.keys()]) if (!ids.has(id)) this.belts.delete(id);
-    for (const b of w.belts)
-      if (!this.belts.has(b.id)) this.belts.set(b.id, this.shape(b.points, b.length));
-    this.rebuild();
+    let changed = false;
+    for (const id of [...this.belts.keys()]) {
+      if (!ids.has(id)) changed = this.belts.delete(id);
+    }
+    for (const b of w.belts) {
+      if (this.belts.has(b.id)) continue;
+      this.belts.set(b.id, this.shape(b.points, b.length));
+      changed = true;
+    }
+    // The world view is resent on any change; the belts rebuild only when one comes or goes.
+    if (changed || !this.segments) this.rebuild();
   }
 
   setMotion(m: MotionView): void {
