@@ -18,7 +18,7 @@ function topGoods(kg: Partial<Record<GoodId, number>>): string {
     : 'Nothing';
 }
 
-/** 'While you were away': a one-page newspaper poster of what happened during catch-up. */
+/** 'While you were away': the shift report of what happened during catch-up. */
 export function AwayScreen() {
   const s = away.value;
   const snap = ui.value;

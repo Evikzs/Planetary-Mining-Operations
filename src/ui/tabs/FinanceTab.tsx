@@ -399,7 +399,7 @@ function Stocks({ snap }: { snap: UiSnapshot }) {
   );
 }
 
-/** The latest news, beside the ticker's one item at a time. */
+/** The latest news, beside the shift log's three lines. */
 function News({ snap }: { snap: UiSnapshot }) {
   const name = nameOf(snap);
   return (

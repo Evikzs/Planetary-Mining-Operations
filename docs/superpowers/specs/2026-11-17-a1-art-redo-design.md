@@ -91,11 +91,18 @@ The game plays well and looks like a placeholder. Fable's shell shows the look t
 - **Labels and reticle:** settlement names from orbit, a tag on hover, corner marks around the selection.
 - The style rule against `backdrop-filter` goes: Fable's sheet and gauge use a light blur. The tab panel stays opaque.
 
-### 3.8 Camera tiers (later phase)
+### 3.8 Camera tiers
 
 - Tiers: System, Orbit, Region, Town, Street, as in Fable's gauge. Orbit is altitude 60 and up, Region 15 to 60, Town 1.5 to 15, Street below 1.5.
-- Street level: the lowest altitude goes down to about 10 m, and the camera tilts toward the horizon near the ground.
-- System: a view of Sol with Fable's bodies (the Sun, the planets, Earth with Luna). Presentation only, before M3's Solar map. It is the last phase and is built only if the others are done.
+- Street level: the lowest altitude is 0.25 (10 m). Below bird's-eye altitude (1.5) the camera tilts on from 55° to 80°, towards the horizon, and keeps 2 m over the ground.
+- System: a view of Sol with Fable's bodies (the Sun, eight planets with air and rings, Earth with Luna). Presentation only, before M3's Solar map. A push past high orbit (held for a moment), the Sol crumb or the gauge's System tier rises to it along Fable's log-distance flight; a click reads a world on the specimen sheet; Luna leads back down. Luna turns so the side lit in the Moon view faces the Sun.
+
+### 3.9 As built (notes from the build)
+
+- **Low graphics** draws plain class colours on the ground, no bloom, no shadows and no blur behind the sheets: in software rendering the ground's per-pixel noise cost whole seconds a frame. With that, Low runs about as fast as the poster renderer did.
+- The light, belt and plot layers rebuild only when their inputs change: the world view is resent on every structural change.
+- The clock stays in the top bar (section 3.7). Below 1680 px of bar the sun dial hides; below 1100 px the goods and rates hide. The crumbs always show: they sit above the company name and take no width of their own.
+- Ownership washes are faint (12%): at night a strong wash drowned the lamps.
 
 ## 4. Constraints
 
@@ -112,10 +119,10 @@ The game plays well and looks like a placeholder. Fable's shell shows the look t
 
 ## 6. Order of work
 
-1. Tokens, fonts, minerals, copy.
-2. The HUD: stylesheet and components.
-3. The renderer: sun, sky, post-processing and quality, terrain.
-4. The kit: models, layers, night lights, overlays.
-5. Gauge, street level, labels, reticle.
-6. The Sol view (if time allows).
-7. Docs (parent spec 9.6, README), checks, push.
+1. Tokens, fonts, minerals, copy. (Done.)
+2. The HUD: stylesheet and components. (Done.)
+3. The renderer: sun, sky, post-processing and quality, terrain. (Done.)
+4. The kit: models, layers, night lights, overlays. (Done.)
+5. Gauge, street level, labels, reticle. (Done.)
+6. The Sol view. (Done.)
+7. Docs (parent spec 9.6, README), checks, push. (Done.)

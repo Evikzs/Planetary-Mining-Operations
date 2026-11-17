@@ -474,12 +474,6 @@ h3 {
   }
 }
 
-@container topbar (max-width: 1500px) {
-  .crumbs {
-    display: none;
-  }
-}
-
 @container topbar (max-width: 1100px) {
   .ledger .goods,
   .slot-rate {
