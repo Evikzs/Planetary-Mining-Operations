@@ -2,6 +2,7 @@ import type { ComponentChildren } from 'preact';
 import { motion, selection, ui, world } from '../../client/store';
 import { BUILDINGS, RECIPES, SKILLS } from '../../data/buildings';
 import {
+  BUILDING_ROLE,
   BUILDING_STATUS,
   ERROR_COPY,
   PLOT_KIND_NAMES,
@@ -9,6 +10,7 @@ import {
   SKILL_NAMES,
 } from '../../data/copy';
 import { GOOD_IDS, GOODS } from '../../data/goods';
+import { MINERALS, type Mineral } from '../../data/minerals';
 import type { MapPick } from '../../render/renderer';
 import { busLoad, type Trip } from '../../shared/trips';
 import { PLAYER } from '../../sim/companies';
@@ -27,9 +29,20 @@ interface Fact {
 
 interface View {
   title: string;
+  /** One line on what it is for, under the title. */
+  role?: string;
+  /** The mineral of a deposit, as a specimen label. */
+  specimen?: Mineral;
   facts: Fact[];
   extra?: ComponentChildren;
 }
+
+const PLOT_ROLE: Record<string, string> = {
+  hub: 'The ground the depot stands on.',
+  build: 'Level ground for one building.',
+  deposit: 'A seam close to the surface. A mine, a drill or a scoop can work it.',
+  public: 'Ground the Lunar Authority keeps for public works.',
+};
 
 /** 'Ilmenite 2.40 t, Steel 800 kg'; null when empty. */
 function contents(inv: Inventory): string | null {
@@ -52,6 +65,8 @@ function plotView(id: number, w: WorldView, snap: UiSnapshot | null): View | nul
   const buildable = p.kind === 'build' || p.kind === 'deposit';
   return {
     title: PLOT_KIND_NAMES[p.kind],
+    role: PLOT_ROLE[p.kind],
+    specimen: p.deposit ? MINERALS[p.deposit.goodId] : undefined,
     facts,
     extra:
       buildable &&
@@ -101,7 +116,13 @@ function buildingView(id: number, w: WorldView, snap: UiSnapshot | null): View |
     if (output) facts.push({ label: 'Output', value: output });
     facts.push({ label: 'Priority', value: PRIORITY_NAMES[live.priority] });
   }
-  return { title: BUILDINGS[b.type].name, facts };
+  const deposit = w.plots.find((p) => p.id === b.plotId)?.deposit;
+  return {
+    title: BUILDINGS[b.type].name,
+    role: BUILDING_ROLE[b.type],
+    specimen: deposit ? MINERALS[deposit.goodId] : undefined,
+    facts,
+  };
 }
 
 function roverView(
@@ -128,7 +149,14 @@ function roverView(
   } else {
     facts.push({ label: 'Next stop', value: 'Back to the garage' });
   }
-  return { title: trip.kind === 'toWork' ? 'Bus to work' : 'Bus home', facts };
+  return {
+    title: trip.kind === 'toWork' ? 'Bus to work' : 'Bus home',
+    role:
+      trip.kind === 'toWork'
+        ? 'Takes the next shift from the homes to the work.'
+        : 'Takes a shift home from the work.',
+    facts,
+  };
 }
 
 function sectionView(id: number, w: WorldView, snap: UiSnapshot | null): View | null {
@@ -211,6 +239,18 @@ export function ContextPanel() {
         </button>
       </header>
       <div class="body">
+        {view.role && <p class="role">{view.role}</p>}
+        {view.specimen && (
+          <div class="specimen" style={{ '--ore': view.specimen.color }}>
+            <i aria-hidden="true" />
+            <div>
+              <b>
+                {view.specimen.name}, {view.specimen.formula}
+              </b>
+              <span>{view.specimen.note}</span>
+            </div>
+          </div>
+        )}
         <dl class="facts">
           {view.facts.map((f) => (
             <div key={f.label}>

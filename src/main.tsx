@@ -1,9 +1,9 @@
-import '@fontsource-variable/jost';
-import '@fontsource/ibm-plex-sans/400.css';
-import '@fontsource/ibm-plex-sans/500.css';
-import '@fontsource/ibm-plex-sans/600.css';
-import '@fontsource/ibm-plex-mono/400.css';
-import '@fontsource/ibm-plex-mono/500.css';
+import '@fontsource/besley/500.css';
+import '@fontsource/besley/600.css';
+import '@fontsource/besley/500-italic.css';
+import '@fontsource/barlow/400.css';
+import '@fontsource/barlow/500.css';
+import '@fontsource/barlow/600.css';
 import './ui/global.css';
 import { effect } from '@preact/signals';
 import { render } from 'preact';

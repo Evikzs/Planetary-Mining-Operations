@@ -1,17 +1,30 @@
-/* Printed matter over a live map: cream paper cards with an offset ink shadow on navy chrome. */
+/* Notes in the margins of a survey sheet. The map is the sheet, and type sits on it without
+   boxes. A frame goes only around what you work in: the tab panel, the specimen sheet (the
+   selection), the depth gauge, alerts and the companion's note. */
 *,
 *::before,
 *::after {
   box-sizing: border-box;
 }
 
+:root {
+  color-scheme: dark;
+  /* Hairlines: brass at three strengths. */
+  --rule: color-mix(in srgb, var(--brass) 45%, transparent);
+  --hair: color-mix(in srgb, var(--brass) 28%, transparent);
+  --faint: color-mix(in srgb, var(--brass) 14%, transparent);
+  --sheet: color-mix(in srgb, var(--pit) 94%, transparent);
+  --ore: #e4688e;
+}
+
 html,
 body {
   margin: 0;
   height: 100%;
-  background: var(--c-navy);
-  color: var(--c-offBlack);
-  font: 15px/1.45 var(--font-text);
+  background: var(--night);
+  color: var(--chalk);
+  font: 400 14px/1.4 var(--font-text);
+  font-variant-numeric: tabular-nums;
   -webkit-font-smoothing: antialiased;
   overscroll-behavior: none;
 }
@@ -23,8 +36,13 @@ button {
 }
 
 :focus-visible {
-  outline: 2px solid var(--c-mustard);
-  outline-offset: 2px;
+  outline: 2px solid var(--lamp);
+  outline-offset: 3px;
+  border-radius: 2px;
+}
+
+::selection {
+  background: color-mix(in srgb, var(--lamp) 35%, transparent);
 }
 
 h1,
@@ -32,12 +50,12 @@ h2,
 h3 {
   font-family: var(--font-display);
   font-weight: 600;
-  letter-spacing: 0.01em;
+  letter-spacing: -0.01em;
   margin: 0;
+  text-wrap: balance;
 }
 
 .num {
-  font-family: var(--font-mono);
   font-variant-numeric: tabular-nums;
 }
 
@@ -78,108 +96,401 @@ h3 {
   touch-action: none;
 }
 
+/* Every panel and control, scaled by the interface size; the map stays outside it. */
+.hud {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  zoom: var(--ui-scale, 1);
+  text-shadow:
+    0 1px 2px rgba(6, 7, 10, 0.9),
+    0 0 14px rgba(6, 7, 10, 0.55);
+}
+
+.hud > * {
+  pointer-events: auto;
+}
+
+/* Shade at the top and the foot, so type holds over a sunlit plain. */
+.hud::before,
+.hud::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  pointer-events: none;
+}
+
+.hud::before {
+  top: 0;
+  height: 150px;
+  background: linear-gradient(rgba(6, 7, 10, 0.78), rgba(6, 7, 10, 0.38) 50%, transparent);
+}
+
+.hud::after {
+  bottom: 0;
+  height: 160px;
+  background: linear-gradient(transparent, rgba(6, 7, 10, 0.5) 55%, rgba(6, 7, 10, 0.82));
+}
+
+.card {
+  background: var(--sheet);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-card);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.38);
+  text-shadow: none;
+}
+
+/* The top bar: where you are on the left, the ledger, then the clock. */
 .topbar {
   position: absolute;
   top: 0;
   left: 0;
   right: 0;
-  height: 48px;
+  height: 72px;
   display: flex;
   align-items: center;
-  gap: var(--space-4);
-  padding: 0 var(--space-4);
-  background: var(--c-navy);
-  color: var(--c-cream);
-  border-bottom: 2px solid var(--c-offBlack);
+  gap: 22px;
+  padding: 0 18px 0 20px;
   z-index: 3;
-}
-
-.topbar {
   container: topbar / inline-size;
 }
 
-.topbar h1 {
+.place {
   flex: 0 1 auto;
-  min-width: 0;
+  min-width: 120px;
+  max-width: 320px;
+  display: grid;
+  gap: 1px;
+}
+
+.crumbs {
+  display: flex;
+  gap: 0 8px;
   overflow: hidden;
-  font-size: 17px;
+  color: var(--dust);
+  font-size: 12.5px;
+  white-space: nowrap;
+}
+
+.crumbs button {
+  padding: 0;
+  border: 0;
+  background: none;
+}
+
+.crumbs button:hover {
+  color: var(--lamp);
+}
+
+.crumbs > * + *::before {
+  content: '/';
+  margin-right: 8px;
+  color: var(--brass);
+}
+
+.crumbs > :last-child {
+  color: var(--chalk);
+}
+
+.topbar h1 {
+  overflow: hidden;
+  font: 600 26px/1.08 var(--font-display);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-/* A narrow bar (a small window at a large interface size) keeps the figures and the clock. */
-@container topbar (max-width: 1000px) {
-  .topbar .goods,
-  .topbar .slot-label {
-    display: none;
-  }
-
-  .topbar h1 {
-    max-width: 140px;
-  }
-}
-
-.topbar .slot {
-  display: flex;
-  align-items: baseline;
-  gap: var(--space-2);
-  white-space: nowrap;
-}
-
-.topbar .num {
-  font-size: 14px;
-}
-
-.topbar .slot-label {
-  color: var(--c-mustard);
-  font-family: var(--font-display);
-  font-size: 13px;
-}
-
-/* Live readouts: the goods strip takes the room left over and scrolls when short of it. */
-.topbar .goods {
+/* The ledger: a key, a figure and its rate for each thing you hold. */
+.ledger {
   flex: 1 1 auto;
   min-width: 0;
   display: flex;
-  gap: var(--space-3);
+  justify-content: flex-end;
+  align-items: flex-start;
+  gap: 20px;
+}
+
+.ledger .goods {
+  flex: 0 1 auto;
+  min-width: 0;
+  display: flex;
+  gap: 20px;
   margin: 0;
   padding: 0;
   list-style: none;
-  overflow-x: auto;
-  scrollbar-width: none;
+  overflow: hidden;
+  mask-image: linear-gradient(90deg, #000 calc(100% - 24px), transparent);
 }
 
-.topbar .date {
-  margin-left: auto;
-  gap: var(--space-3);
+.slot {
+  flex: none;
+  display: grid;
+  gap: 1px;
+  white-space: nowrap;
+}
+
+.slot-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--dust);
+  font-size: 12.5px;
+}
+
+.slot-value {
+  font-size: 19px;
+  font-weight: 600;
+  line-height: 1.1;
+}
+
+.slot-value small {
+  margin-left: 3px;
+  color: var(--dust);
+  font-size: 12.5px;
+  font-weight: 400;
+}
+
+.slot-rate {
+  min-height: 1em;
+  color: var(--dust);
+  font-size: 12.5px;
+}
+
+.slot-rate.up,
+.slot-rate.spare {
+  color: var(--verdant);
+}
+
+.slot-rate.down,
+.slot-rate.short {
+  color: var(--hazard);
+}
+
+/* The gem of a raw good: its ore colour, catching the light now and then. */
+.gem {
+  flex: none;
+  width: 9px;
+  height: 9px;
+  transform: rotate(45deg);
+  background: linear-gradient(135deg, #fff 0 18%, var(--ore) 38% 62%, #1a0d13 100%);
+  background-size: 300% 300%;
+  animation: glint 5s ease-in-out infinite;
+}
+
+@keyframes glint {
+  0%,
+  70%,
+  100% {
+    background-position: 100% 100%;
+  }
+  82% {
+    background-position: 0 0;
+  }
+}
+
+/* Time: the sun dial, the date and the speeds. */
+.clock {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.dial {
+  flex: none;
+  width: 104px;
+  height: 42px;
+}
+
+.dial path,
+.dial line {
+  fill: none;
+  stroke: var(--brass);
+  stroke-width: 1;
+}
+
+.dial .night {
+  stroke-dasharray: 2 4;
+  opacity: 0.7;
+}
+
+.dial circle {
+  fill: var(--lamp);
+  filter: drop-shadow(0 0 4px var(--lamp));
+}
+
+.dial circle[data-night] {
+  fill: var(--chalk);
+  filter: none;
+}
+
+.time {
+  display: grid;
+  min-width: 13ch;
+}
+
+.time .when {
+  display: grid;
+}
+
+/* The date comes first in the text (it reads as one date), the hour sits on top. */
+.time .day {
+  order: 2;
+  color: var(--dust);
+  font-size: 12.5px;
+}
+
+.time .hour {
+  order: 1;
+  font-size: 21px;
+  font-weight: 600;
+  line-height: 1.1;
+}
+
+.time .state {
+  min-height: 1em;
+  font-size: 12.5px;
 }
 
 .clock-controls {
   display: inline-flex;
   align-items: center;
-  gap: var(--space-1);
+  gap: 4px;
 }
 
-.clock-controls .speed {
-  min-height: 28px;
-  padding: 0 var(--space-2);
-  border: 2px solid var(--c-offBlack);
-  border-radius: 999px;
-  background: var(--c-cream);
-  font-family: var(--font-display);
-  font-size: 13px;
+.speed,
+.action.quiet,
+.action.small.quiet {
+  padding: 6px 10px;
+  border: 1px solid color-mix(in srgb, var(--brass) 60%, transparent);
+  border-radius: var(--radius-control);
+  background: color-mix(in srgb, var(--pit) 55%, transparent);
+  color: var(--chalk);
+  font: 500 13.5px/1.2 var(--font-text);
+  text-align: center;
+  text-shadow: none;
+  transition:
+    background var(--motion-fast),
+    color var(--motion-fast),
+    border-color var(--motion-fast),
+    transform 80ms;
 }
 
-.clock-controls .speed[aria-pressed='true'] {
-  background: var(--c-mustard);
+.speed {
+  min-width: 36px;
+  padding: 6px 9px;
 }
 
-.topbar .slot svg {
+.speed:hover,
+.action.quiet:hover {
+  border-color: var(--lamp);
+  color: var(--lamp);
+}
+
+.speed:active,
+.action:active {
+  transform: scale(0.96);
+}
+
+.speed[aria-pressed='true'] {
+  border-color: var(--lamp);
+  background: var(--lamp);
+  color: var(--pit);
+  font-weight: 600;
+}
+
+.stamp {
+  display: inline-block;
+  padding: 0 6px;
+  border: 1px solid currentColor;
+  border-radius: var(--radius-control);
+  color: var(--lamp);
+  font: 600 11px/1.5 var(--font-text);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  text-shadow: none;
+}
+
+.stamp.infrastructure {
+  color: var(--brass);
+}
+
+.stamp.status {
+  color: var(--chalk);
+}
+
+.topbar .meta {
+  color: var(--hazard);
+}
+
+.bell {
+  position: relative;
   flex: none;
-  align-self: center;
+  color: var(--dust);
 }
 
-/* Price trends: on cream by default; the navy top bar recolours them. */
+.bell:hover,
+.bell[aria-expanded='true'] {
+  color: var(--lamp);
+}
+
+.bell .badge {
+  position: absolute;
+  top: 3px;
+  right: 1px;
+  min-width: 17px;
+  height: 17px;
+  padding: 0 4px;
+  border-radius: var(--radius-pill);
+  background: var(--lamp);
+  color: var(--pit);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 17px;
+  text-align: center;
+  text-shadow: none;
+}
+
+/* A narrow bar (a small window at a large interface size) keeps the figures and the clock. */
+@container topbar (max-width: 1760px) {
+  .topbar,
+  .ledger,
+  .ledger .goods {
+    gap: 14px;
+  }
+
+  .slot-value {
+    font-size: 17px;
+  }
+
+  .topbar h1 {
+    font-size: 23px;
+  }
+}
+
+@container topbar (max-width: 1500px) {
+  .crumbs,
+  .dial {
+    display: none;
+  }
+}
+
+@container topbar (max-width: 1100px) {
+  .ledger .goods,
+  .slot-rate {
+    display: none;
+  }
+
+  .place {
+    max-width: 180px;
+  }
+
+  .topbar h1 {
+    font-size: 21px;
+  }
+}
+
+/* Trends, as a word in the ledger and an icon in tables. */
 .trend {
   display: inline-flex;
   align-self: center;
@@ -187,102 +498,70 @@ h3 {
 }
 
 .trend.up {
-  color: var(--c-teal);
+  color: var(--verdant);
 }
 
 .trend.down {
-  color: var(--c-rust);
+  color: var(--hazard);
 }
 
 .trend.flat {
-  opacity: 0.55;
+  color: var(--dust);
 }
 
-.topbar .trend.up {
-  color: var(--c-cream);
-}
-
-.topbar .trend.down,
-.topbar .slot[data-short] {
-  color: var(--c-dustyPink);
-}
-
-.topbar .trend.flat {
-  color: var(--c-cream);
-  opacity: 0.55;
-}
-
-.topbar .bell {
-  position: relative;
-  flex: none;
-  color: var(--c-cream);
-}
-
-.topbar .bell .badge {
-  position: absolute;
-  top: 4px;
-  right: 2px;
-  min-width: 18px;
-  height: 18px;
-  padding: 0 4px;
-  border-radius: var(--radius-pill);
-  background: var(--c-mustard);
-  color: var(--c-offBlack);
-  font-size: 11px;
-  line-height: 18px;
-  text-align: center;
-}
-
+/* The tab rail: margin notes down the left edge. */
 .rail {
   position: absolute;
-  top: 48px;
+  top: 72px;
   left: 0;
-  bottom: 28px;
+  bottom: 0;
   width: 72px;
   display: flex;
   flex-direction: column;
-  background: var(--c-navy);
-  border-right: 2px solid var(--c-offBlack);
+  padding-top: 4px;
+  background: linear-gradient(90deg, rgba(6, 7, 10, 0.8), rgba(6, 7, 10, 0.45) 75%, transparent);
   z-index: 3;
 }
 
 .rail button {
+  position: relative;
+  height: 60px;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 2px;
+  gap: 3px;
   border: 0;
   background: transparent;
-  color: var(--c-cream);
-  font-family: var(--font-display);
-  font-size: 12px;
-  font-weight: 500;
+  color: var(--dust);
+  font: 500 12px/1.1 var(--font-text);
 }
 
-.rail button {
-  height: 64px;
-  border-left: 4px solid transparent;
+.rail button:hover {
+  color: var(--chalk);
 }
 
 .rail button[aria-pressed='true'] {
-  border-left-color: var(--c-mustard);
-  color: var(--c-mustard);
+  color: var(--lamp);
 }
 
-/* Paper card: cream stock, ink border, misregistered orange offset. */
-.card {
-  background: var(--c-cream);
-  border: 2px solid var(--c-offBlack);
-  border-radius: var(--radius-card);
-  box-shadow: 4px 4px 0 var(--c-burntOrange);
+.rail button[aria-pressed='true']::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 14px;
+  bottom: 14px;
+  width: 2px;
+  background: var(--lamp);
+  box-shadow: 0 0 10px var(--lamp);
 }
 
+/* Panels */
 .panel {
   position: absolute;
-  top: 60px;
+  top: 84px;
   left: 84px;
-  bottom: 40px;
+  bottom: 16px;
   width: 380px;
   display: flex;
   flex-direction: column;
@@ -297,274 +576,170 @@ h3 {
   align-items: center;
   justify-content: space-between;
   gap: var(--space-3);
-  padding: var(--space-3) var(--space-4);
-  border-bottom: 2px solid var(--c-offBlack);
+  padding: 12px 6px 10px 18px;
 }
 
 .panel h2,
-.context-panel h2,
 .alerts h2 {
-  font-size: 22px;
+  font-size: 21px;
 }
 
-.panel .body,
-.context-panel .body {
+.panel .body {
   flex: 1;
   overflow: auto;
-  padding: var(--space-4);
+  padding: var(--space-3) 18px 18px;
+  border-top: 1px solid var(--hair);
+  scrollbar-width: thin;
+  scrollbar-color: var(--hair) transparent;
 }
 
 .icon-button {
-  width: 44px;
-  height: 44px;
+  width: 40px;
+  height: 40px;
   display: grid;
   place-items: center;
   border: 0;
   background: transparent;
+  color: var(--dust);
 }
 
-/* The body scrolls, never the card: a scrolling card over the WebGL canvas blanks the map above it. */
+.icon-button:hover {
+  color: var(--chalk);
+}
+
+/* The specimen sheet: what you selected. The body scrolls, never the sheet: a scrolling box
+   over the WebGL canvas blanks the map above it. */
 .context-panel {
   position: absolute;
-  top: 60px;
+  top: 84px;
   right: 16px;
-  width: 340px;
-  max-height: calc(100% - 164px);
+  width: 316px;
+  max-height: calc(100% - 200px);
   display: flex;
   flex-direction: column;
   z-index: 2;
+  background: color-mix(in srgb, var(--pit) 86%, transparent);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
 }
 
-.ticker {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  height: 28px;
-  display: flex;
-  align-items: center;
-  padding: 0 var(--space-4);
-  background: var(--c-navy);
-  color: var(--c-mustard);
-  border-top: 2px solid var(--c-offBlack);
-  font-size: 13px;
-  white-space: nowrap;
-  overflow: hidden;
-  z-index: 3;
+.context-panel header {
+  align-items: flex-start;
+  padding: 14px 4px 2px 16px;
 }
 
-.ticker ul {
-  display: flex;
-  flex: none;
-  gap: var(--space-6);
-  margin: 0;
-  padding: 0;
-  list-style: none;
+.context-panel h2 {
+  padding-top: 2px;
+  font-size: 21px;
+  line-height: 1.15;
 }
 
-/* Starts one ticker width to the right; its duration is set from its width, for 60 px/s. */
-.ticker ul.crawl {
-  padding-left: 100%;
-  animation: ticker-crawl 60s linear infinite;
-}
-
-.ticker:hover ul.crawl,
-.ticker:focus-within ul.crawl {
-  animation-play-state: paused;
-}
-
-@keyframes ticker-crawl {
-  from {
-    transform: translateX(0);
-  }
-  to {
-    transform: translateX(-100%);
-  }
-}
-
-/* Phones keep the strip for live numbers; the title stays for screen readers only. */
-
-/* Shown instead of the game when the browser has no WebGL 2. */
-.no-webgl {
-  min-height: 100dvh;
+.context-panel .body {
+  flex: 1;
+  min-height: 0;
   display: grid;
-  align-content: center;
-  justify-items: start;
-  gap: var(--space-4);
-  padding: var(--space-6);
-  max-width: 40rem;
-  margin: 0 auto;
-  color: var(--c-cream);
-}
-
-.no-webgl h1 {
-  margin: 0;
-  max-width: 12ch;
-  font: 600 clamp(2rem, 9vw, 3.5rem) / 1.05 var(--font-display);
-}
-
-.no-webgl p {
-  margin: 0;
-  max-width: 36ch;
-  font-size: 1.125rem;
-  line-height: 1.5;
-}
-
-/* Map compass: the rust half of the needle points north. Pressed means north is locked. */
-.compass {
-  position: absolute;
-  right: 16px;
-  bottom: 44px;
-  width: 44px;
-  height: 44px;
-  padding: 6px;
-  border: 2px solid var(--c-offBlack);
-  border-radius: 50%;
-  background: var(--c-cream);
-  box-shadow: 2px 2px 0 var(--c-burntOrange);
-  z-index: 1;
-}
-
-.compass[aria-pressed='true'] {
-  background: var(--c-mustard);
-}
-
-.compass svg {
-  display: block;
-  width: 100%;
-  height: 100%;
-}
-
-.compass .north {
-  fill: var(--c-rust);
-}
-
-.compass .south {
-  fill: var(--c-offBlack);
-}
-
-/* Map filter chips: a scrolling row along the top of the map. */
-.map-filters {
-  position: absolute;
-  top: 60px;
-  left: 84px;
-  right: 372px;
-  display: flex;
-  gap: var(--space-2);
-  overflow-x: auto;
-  scrollbar-width: none;
-  padding: 2px 4px 6px 2px;
-  z-index: 1;
-}
-
-.map-filters button {
-  flex: none;
-  min-height: 36px;
-  padding: 0 var(--space-3);
-  border: 2px solid var(--c-offBlack);
-  border-radius: 999px;
-  background: var(--c-cream);
-  box-shadow: 2px 2px 0 var(--c-offBlack);
-  font-family: var(--font-display);
-  font-size: 14px;
-}
-
-.map-filters button[aria-pressed='true'] {
-  background: var(--c-mustard);
-}
-
-/* The ownership legend: a swatch and a name per company, under the chips. */
-.map-legend {
-  position: absolute;
-  top: 106px;
-  left: 84px;
-  right: 372px;
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-1) var(--space-3);
-  margin: 0;
-  padding: 0;
-  list-style: none;
-  z-index: 1;
-  font-family: var(--font-text);
-  font-size: 13px;
-  color: var(--c-cream);
-  text-shadow: 0 1px 2px var(--c-offBlack);
-}
-
-.map-legend li {
-  display: flex;
-  align-items: center;
-  gap: var(--space-1);
-}
-
-.map-legend .swatch {
-  width: 12px;
-  height: 12px;
-  /* Cream keeps the navy swatch visible against the night sky. */
-  border: 1px solid var(--c-cream);
-}
-
-.map-legend .swatch[data-colour='burntOrange'] {
-  background: var(--c-burntOrange);
-}
-.map-legend .swatch[data-colour='teal'] {
-  background: var(--c-teal);
-}
-.map-legend .swatch[data-colour='mustard'] {
-  background: var(--c-mustard);
-}
-.map-legend .swatch[data-colour='dustyPink'] {
-  background: var(--c-dustyPink);
-}
-.map-legend .swatch[data-colour='rust'] {
-  background: var(--c-rust);
-}
-.map-legend .swatch[data-colour='navy'] {
-  background: var(--c-navy);
-}
-
-/* A tab panel open on the left: chips and legend start beside it, not under it. */
-.shell[data-panel='open'] .map-filters,
-.shell[data-panel='open'] .map-legend {
-  left: 480px;
+  align-content: start;
+  gap: 10px;
+  overflow: auto;
+  padding: 2px 16px 16px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--hair) transparent;
 }
 
 .context-panel .body p {
-  margin: 0 0 var(--space-2);
+  margin: 0;
 }
 
-.context-panel .facts,
-.codex-entry .facts {
-  margin: 0 0 var(--space-3);
+.role {
+  color: var(--dust);
 }
 
-.context-panel .facts div,
-.codex-entry .facts div {
+/* A mineral on the sheet: a cut stone in its ore colour, its name and formula, a line on it. */
+.specimen {
+  display: grid;
+  grid-template-columns: 54px 1fr;
+  gap: 12px;
+  align-items: center;
+}
+
+.specimen i {
+  width: 54px;
+  height: 54px;
+  clip-path: polygon(50% 0, 100% 32%, 82% 100%, 18% 100%, 0 32%);
+  background:
+    linear-gradient(118deg, rgba(255, 255, 255, 0.9) 0 8%, transparent 22%),
+    linear-gradient(200deg, var(--ore) 0 40%, #17090f 100%), var(--ore);
+  background-size:
+    260% 260%,
+    100% 100%,
+    100% 100%;
+  animation: glint 4s ease-in-out infinite;
+}
+
+.specimen b {
+  display: block;
+  font-weight: 600;
+}
+
+.specimen span {
+  color: var(--dust);
+  font-size: 13px;
+}
+
+.facts {
+  margin: 0;
+}
+
+.context-panel .facts {
+  display: grid;
+  gap: 5px;
+  padding-top: 10px;
+  border-top: 1px solid var(--hair);
+}
+
+.facts div {
   display: flex;
   justify-content: space-between;
   align-items: baseline;
   gap: var(--space-3);
-  padding: var(--space-1) 0;
-  border-bottom: 1px solid color-mix(in srgb, var(--c-offBlack) 18%, transparent);
 }
 
-.context-panel .facts dt,
-.codex-entry .facts dt {
-  font-family: var(--font-display);
-  font-weight: 500;
+.facts dt {
+  color: var(--dust);
 }
 
-.context-panel .facts dd,
-.codex-entry .facts dd {
+.facts dd {
   margin: 0;
+  font-weight: 500;
   text-align: right;
+}
+
+.codex-entry .facts,
+.finance-tab .facts,
+.auction .facts {
+  margin: var(--space-2) 0 var(--space-3);
+}
+
+.codex-entry .facts div,
+.finance-tab .facts div,
+.auction .facts div {
+  padding: 4px 0;
+  border-bottom: 1px solid var(--faint);
+}
+
+/* A note in the margin: the voice of a person, not of the machine. */
+.note {
+  margin: 0;
+  padding-left: 12px;
+  border-left: 2px solid var(--brass);
+  color: var(--chalk);
+  font: italic 500 14.5px/1.4 var(--font-display);
 }
 
 /* Command errors; the line stays in the page, empty, so screen readers hear new text. */
 .error {
   margin: 0;
-  color: var(--c-rust);
+  color: var(--hazard);
   font-weight: 600;
 }
 
@@ -572,37 +747,70 @@ h3 {
   margin-top: var(--space-2);
 }
 
-/* The one thing to do here: a printed stamp of a button. */
+/* The one thing to do here: a lamp-lit button. */
 .action {
   width: 100%;
-  min-height: 44px;
-  border: 2px solid var(--c-offBlack);
-  background: var(--c-mustard);
-  font-family: var(--font-display);
-  font-weight: 600;
-  box-shadow: 3px 3px 0 var(--c-offBlack);
+  min-height: 38px;
+  padding: 7px 14px;
+  border: 1px solid var(--lamp);
+  border-radius: var(--radius-control);
+  background: var(--lamp);
+  color: var(--pit);
+  font: 600 14px/1.2 var(--font-text);
+  text-shadow: none;
+  transition:
+    background var(--motion-fast),
+    color var(--motion-fast),
+    transform 80ms;
+}
+
+.action:not(.quiet, .danger, :disabled):hover {
+  background: color-mix(in srgb, var(--lamp) 88%, #fff);
 }
 
 .action:disabled {
-  opacity: 0.5;
+  opacity: 0.45;
   cursor: not-allowed;
-  box-shadow: none;
+  transform: none;
 }
 
-.action:active {
-  transform: translate(2px, 2px);
-  box-shadow: 1px 1px 0 var(--c-offBlack);
+.action.small {
+  width: auto;
 }
 
+.action.quiet {
+  margin-top: var(--space-3);
+}
+
+.action.danger {
+  margin-top: var(--space-2);
+  border-color: var(--hazard);
+  background: transparent;
+  color: var(--hazard);
+}
+
+.action.danger:hover {
+  background: var(--hazard);
+  color: var(--pit);
+}
+
+.confirm {
+  margin-top: var(--space-3);
+}
+
+/* Alerts: a sheet under the bell. */
 .alerts {
   position: absolute;
-  top: 60px;
+  top: 84px;
   right: 16px;
   width: 340px;
-  max-height: calc(100% - 164px);
+  max-height: calc(100% - 200px);
   display: flex;
   flex-direction: column;
   z-index: 4;
+  background: color-mix(in srgb, var(--pit) 86%, transparent);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
 }
 
 .alerts .body {
@@ -610,11 +818,12 @@ h3 {
   padding: var(--space-2) var(--space-4) var(--space-3);
   overflow: auto;
   list-style: none;
+  border-top: 1px solid var(--hair);
 }
 
 .alerts li {
   padding: var(--space-2) 0;
-  border-bottom: 1px solid color-mix(in srgb, var(--c-offBlack) 18%, transparent);
+  border-bottom: 1px solid var(--faint);
 }
 
 .alerts li:last-child {
@@ -626,20 +835,433 @@ h3 {
 }
 
 .alerts .when {
+  color: var(--dust);
   font-size: 12px;
 }
 
+/* The shift log: the newest news, bottom right, the latest line brightest. */
+.ticker {
+  position: absolute;
+  right: 76px;
+  bottom: 16px;
+  width: min(44ch, 34vw);
+  z-index: 1;
+  font-size: 13px;
+  text-align: right;
+  pointer-events: none;
+}
+
+.ticker ul {
+  display: grid;
+  gap: 3px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ticker li {
+  color: var(--dust);
+}
+
+.ticker li:last-child {
+  color: var(--chalk);
+}
+
+.ticker li[data-tone='find'] {
+  color: var(--ore);
+}
+
+.ticker li.fresh {
+  animation: log-in var(--motion-slow) var(--ease-industrial);
+}
+
+@keyframes log-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+
+/* Shown instead of the game when the browser has no WebGL 2. */
+.no-webgl {
+  min-height: 100dvh;
+  display: grid;
+  align-content: center;
+  justify-items: start;
+  gap: var(--space-4);
+  padding: var(--space-6);
+  max-width: 40rem;
+  margin: 0 auto;
+  color: var(--chalk);
+}
+
+.no-webgl h1 {
+  margin: 0;
+  max-width: 14ch;
+  font: 600 clamp(2rem, 6vw, 3.25rem) / 1.05 var(--font-display);
+}
+
+.no-webgl p {
+  margin: 0;
+  max-width: 40ch;
+  color: var(--dust);
+  font-size: 1.0625rem;
+  line-height: 1.5;
+}
+
+/* Map compass: the lamp half of the needle points north. Pressed means north is locked. */
+.compass {
+  position: absolute;
+  right: 16px;
+  bottom: 16px;
+  width: 44px;
+  height: 44px;
+  padding: 7px;
+  border: 1px solid color-mix(in srgb, var(--brass) 60%, transparent);
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--pit) 70%, transparent);
+  z-index: 1;
+}
+
+.compass:hover,
+.compass[aria-pressed='true'] {
+  border-color: var(--lamp);
+}
+
+.compass svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.compass .north {
+  fill: var(--lamp);
+}
+
+.compass .south {
+  fill: var(--dust);
+}
+
+/* Map filters: words along the top of the map, the one in use lit. */
+.map-filters {
+  position: absolute;
+  top: 84px;
+  left: 84px;
+  right: 372px;
+  display: flex;
+  gap: 18px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  z-index: 1;
+}
+
+.map-filters button {
+  flex: none;
+  padding: 4px 0 5px;
+  border: 0;
+  background: none;
+  color: var(--dust);
+  font-size: 13.5px;
+}
+
+.map-filters button:hover {
+  color: var(--chalk);
+}
+
+.map-filters button[aria-pressed='true'] {
+  color: var(--lamp);
+  box-shadow: inset 0 -2px 0 var(--lamp);
+}
+
+/* The ownership legend: a diamond in each company's livery and its name. */
+.map-legend {
+  position: absolute;
+  top: 120px;
+  left: 84px;
+  right: 372px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 18px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  z-index: 1;
+  font: 500 15px/1.6 var(--font-display);
+}
+
+.map-legend li {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.swatch {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  transform: rotate(45deg) translateY(-1px);
+  background: var(--c, var(--dust));
+}
+
+.swatch[data-colour='burntOrange'] {
+  --c: var(--co-burntOrange);
+}
+.swatch[data-colour='teal'] {
+  --c: var(--co-teal);
+}
+.swatch[data-colour='mustard'] {
+  --c: var(--co-mustard);
+}
+.swatch[data-colour='dustyPink'] {
+  --c: var(--co-dustyPink);
+}
+.swatch[data-colour='rust'] {
+  --c: var(--co-rust);
+}
+.swatch[data-colour='navy'] {
+  --c: var(--co-navy);
+}
+
+/* A tab panel open on the left: everything that sat beside the rail moves beside the panel. */
+.shell[data-panel='open'] .map-filters,
+.shell[data-panel='open'] .map-legend {
+  left: 480px;
+}
+
+/* The depth gauge: a borehole log. Each rock layer is one scale of the view. */
+.gauge {
+  position: absolute;
+  left: 82px;
+  top: 52%;
+  transform: translateY(-50%);
+  display: grid;
+  grid-template-columns: 26px auto;
+  gap: 0 10px;
+  padding: 10px 12px 9px 10px;
+  border-radius: var(--radius-card);
+  background: color-mix(in srgb, var(--pit) 50%, transparent);
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+  z-index: 1;
+  transition: left var(--motion-base) var(--ease-industrial);
+}
+
+.shell[data-panel='open'] .gauge {
+  left: 478px;
+}
+
+.gauge .core {
+  position: relative;
+  width: 26px;
+  height: 200px;
+  border: 1px solid var(--brass);
+  background: color-mix(in srgb, var(--pit) 60%, transparent);
+}
+
+.gauge .core svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.gauge .core line,
+.gauge .core path {
+  fill: none;
+  stroke: var(--brass);
+  stroke-width: 1;
+  opacity: 0.7;
+}
+
+.gauge .core circle {
+  fill: var(--brass);
+  opacity: 0.7;
+}
+
+.gauge .core .band-on {
+  fill: var(--lamp);
+  opacity: 0.16;
+}
+
+.gauge .cage {
+  position: absolute;
+  left: -7px;
+  right: -7px;
+  height: 9px;
+  margin-top: -5px;
+  border: 2px solid var(--lamp);
+  border-radius: 1px;
+  box-shadow: 0 0 12px rgba(242, 169, 59, 0.55);
+  transition: top 0.12s linear;
+}
+
+.gauge .tiers {
+  display: grid;
+  grid-template-rows: repeat(5, 40px);
+}
+
+.gauge .tiers button {
+  align-self: center;
+  padding: 4px 6px 4px 0;
+  border: 0;
+  background: none;
+  color: var(--dust);
+  font-size: 13px;
+  text-align: left;
+}
+
+.gauge .tiers button:hover:not(:disabled) {
+  color: var(--chalk);
+}
+
+.gauge .tiers button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.gauge .tiers button[aria-current='true'] {
+  color: var(--lamp);
+  font-weight: 600;
+}
+
+.gauge .alt {
+  grid-column: 1 / -1;
+  margin-top: 8px;
+  color: var(--dust);
+  font-size: 12.5px;
+}
+
+.gauge .alt b {
+  color: var(--chalk);
+  font-weight: 600;
+}
+
+/* Names in the scene, the tag under the pointer, and the corner marks around the selection. */
+.labels {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.label {
+  position: absolute;
+  left: 0;
+  top: 0;
+  display: grid;
+  grid-template-columns: 18px auto;
+  align-items: center;
+  column-gap: 6px;
+  padding: 0;
+  border: 0;
+  background: none;
+  white-space: nowrap;
+  text-align: left;
+  will-change: transform;
+}
+
+.label::before {
+  content: '';
+  grid-row: 1 / span 2;
+  height: 1px;
+  background: var(--brass);
+}
+
+.label b {
+  font: 500 15px/1.15 var(--font-display);
+}
+
+.label span {
+  grid-column: 2;
+  color: var(--dust);
+  font-size: 12.5px;
+}
+
+button.label {
+  pointer-events: auto;
+}
+
+button.label:hover b {
+  color: var(--lamp);
+}
+
+.label[data-kind='site']::before {
+  justify-self: center;
+  width: 8px;
+  height: 8px;
+  transform: rotate(45deg);
+  background: var(--c, var(--lamp));
+  box-shadow: 0 0 10px var(--c, var(--lamp));
+}
+
+.label[data-kind='tag'] {
+  grid-template-columns: auto;
+  padding: 4px 8px;
+  border: 1px solid color-mix(in srgb, var(--brass) 40%, transparent);
+  border-radius: var(--radius-control);
+  background: color-mix(in srgb, var(--pit) 86%, transparent);
+  text-shadow: none;
+}
+
+.label[data-kind='tag']::before {
+  display: none;
+}
+
+.label[data-kind='tag'] b {
+  font: 500 13px var(--font-text);
+}
+
+.label[data-kind='tag'] span {
+  grid-column: 1;
+}
+
+.reticle {
+  position: absolute;
+  left: 0;
+  top: 0;
+  pointer-events: none;
+  will-change: transform;
+  background:
+    linear-gradient(var(--lamp) 0 0) 0 0 / 9px 2px,
+    linear-gradient(var(--lamp) 0 0) 0 0 / 2px 9px,
+    linear-gradient(var(--lamp) 0 0) 100% 0 / 9px 2px,
+    linear-gradient(var(--lamp) 0 0) 100% 0 / 2px 9px,
+    linear-gradient(var(--lamp) 0 0) 0 100% / 9px 2px,
+    linear-gradient(var(--lamp) 0 0) 0 100% / 2px 9px,
+    linear-gradient(var(--lamp) 0 0) 100% 100% / 9px 2px,
+    linear-gradient(var(--lamp) 0 0) 100% 100% / 2px 9px;
+  background-repeat: no-repeat;
+  filter: drop-shadow(0 0 4px rgba(242, 169, 59, 0.6));
+}
+
+.reticle[data-kind='deposit'] {
+  --lamp: var(--ore);
+  filter: drop-shadow(0 0 5px var(--ore));
+}
+
+.hint {
+  position: absolute;
+  left: 84px;
+  bottom: 16px;
+  max-width: 30ch;
+  margin: 0;
+  color: var(--dust);
+  font-size: 13px;
+  pointer-events: none;
+  z-index: 1;
+}
+
 /* Build tab */
-.build-tab h3 {
+.build-tab h3,
+.trade-tab h3,
+.contracts-tab h3 {
   margin: var(--space-4) 0 var(--space-2);
   font-size: 17px;
 }
 
 .build-tab h4 {
   margin: 0;
-  font-family: var(--font-display);
-  font-size: 16px;
-  font-weight: 600;
+  font: 600 15px/1.3 var(--font-display);
 }
 
 .build-tab p {
@@ -648,8 +1270,7 @@ h3 {
 
 .build-tab .where {
   margin: 0;
-  font-family: var(--font-display);
-  font-weight: 500;
+  color: var(--dust);
 }
 
 .build-tab .focus {
@@ -659,7 +1280,7 @@ h3 {
 .plot-list {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: var(--space-2);
+  gap: 6px;
   margin: 0;
   padding: 0;
   list-style: none;
@@ -667,15 +1288,22 @@ h3 {
 
 .plot-list button {
   width: 100%;
-  min-height: 44px;
-  padding: var(--space-1) var(--space-3);
-  border: 2px solid var(--c-offBlack);
-  background: var(--c-cream);
+  min-height: 40px;
+  padding: 4px 10px;
+  border: 1px solid var(--hair);
+  border-radius: var(--radius-control);
+  background: color-mix(in srgb, var(--slate) 55%, transparent);
   text-align: left;
 }
 
+.plot-list button:hover {
+  border-color: var(--lamp);
+}
+
 .plot-list button[aria-pressed='true'] {
-  background: var(--c-mustard);
+  border-color: var(--lamp);
+  background: color-mix(in srgb, var(--lamp) 14%, transparent);
+  color: var(--lamp);
 }
 
 .options {
@@ -689,7 +1317,9 @@ h3 {
 .option {
   margin-top: var(--space-2);
   padding: var(--space-3);
-  border: 2px solid var(--c-offBlack);
+  border: 1px solid var(--hair);
+  border-radius: var(--radius-control);
+  background: color-mix(in srgb, var(--slate) 40%, transparent);
 }
 
 .options .option {
@@ -710,32 +1340,18 @@ h3 {
 }
 
 .short {
-  color: var(--c-rust);
+  color: var(--hazard);
   font-weight: 600;
 }
 
+.meta,
+.empty,
+.lede {
+  color: var(--dust);
+}
+
 .meta {
-  font-size: 13px;
-}
-
-.action.small {
-  width: auto;
-  padding: 0 var(--space-4);
-}
-
-.action.quiet {
-  margin-top: var(--space-3);
-  background: var(--c-cream);
-}
-
-.action.danger {
-  margin-top: var(--space-2);
-  background: var(--c-rust);
-  color: var(--c-cream);
-}
-
-.confirm {
-  margin-top: var(--space-3);
+  font-size: 12.5px;
 }
 
 .field {
@@ -744,16 +1360,53 @@ h3 {
   justify-content: space-between;
   gap: var(--space-3);
   margin-top: var(--space-3);
-  font-family: var(--font-display);
-  font-weight: 500;
+  color: var(--dust);
 }
 
-.field select {
-  min-height: 44px;
-  padding: 0 var(--space-2);
-  border: 2px solid var(--c-offBlack);
-  background: var(--c-cream);
+/* Text fields, selects and numbers: dark wells with a brass edge. */
+.field select,
+.people-tab select,
+.worker select,
+.order-form input,
+.order-form select,
+.text-input,
+.export-save textarea,
+.import-save textarea {
+  min-height: 38px;
+  padding: 0 10px;
+  border: 1px solid color-mix(in srgb, var(--brass) 55%, transparent);
+  border-radius: var(--radius-control);
+  background: color-mix(in srgb, var(--night) 70%, transparent);
+  color: var(--chalk);
   font: inherit;
+}
+
+.text-input,
+.export-save textarea,
+.import-save textarea {
+  width: 100%;
+}
+
+.export-save textarea,
+.import-save textarea {
+  padding: var(--space-2);
+  font: 13px/1.4 var(--font-mono);
+  resize: vertical;
+}
+
+select option {
+  background: var(--pit);
+  color: var(--chalk);
+}
+
+.text-input[aria-invalid='true'] {
+  border-color: var(--hazard);
+}
+
+.field-label {
+  display: block;
+  margin: var(--space-4) 0 var(--space-1);
+  color: var(--dust);
 }
 
 /* A tab's error stays in sight at the foot of the scrolling panel. */
@@ -761,9 +1414,9 @@ h3 {
 .trade-tab .error:not(:empty),
 .contracts-tab .error:not(:empty) {
   position: sticky;
-  bottom: calc(-1 * var(--space-4));
+  bottom: -18px;
   padding: var(--space-2) 0 var(--space-4);
-  background: var(--c-cream);
+  background: var(--pit);
 }
 
 /* People tab: the list fills what the wages and filters leave of the panel. */
@@ -779,17 +1432,7 @@ h3 {
   grid-template-columns: auto 1fr;
   align-items: center;
   gap: var(--space-2) var(--space-3);
-  font-family: var(--font-display);
-  font-weight: 500;
-}
-
-.people-tab select,
-.worker select {
-  min-height: 44px;
-  padding: 0 var(--space-2);
-  border: 2px solid var(--c-offBlack);
-  background: var(--c-cream);
-  font: inherit;
+  color: var(--dust);
 }
 
 .people-list {
@@ -801,6 +1444,7 @@ h3 {
 
 .people-list .count {
   margin: 0 0 var(--space-2);
+  color: var(--dust);
 }
 
 .vlist {
@@ -811,7 +1455,9 @@ h3 {
   padding: 0;
   overflow-y: auto;
   list-style: none;
-  border-top: 2px solid var(--c-offBlack);
+  border-top: 1px solid var(--hair);
+  scrollbar-width: thin;
+  scrollbar-color: var(--hair) transparent;
 }
 
 .vlist li {
@@ -834,13 +1480,13 @@ h3 {
   gap: 2px;
   padding: 0 var(--space-2);
   border: 0;
-  border-bottom: 1px solid color-mix(in srgb, var(--c-offBlack) 18%, transparent);
+  border-bottom: 1px solid var(--faint);
   background: transparent;
   text-align: left;
 }
 
 .worker-row:hover {
-  background: color-mix(in srgb, var(--c-mustard) 25%, transparent);
+  background: color-mix(in srgb, var(--lamp) 8%, transparent);
 }
 
 .worker-row .line {
@@ -852,15 +1498,15 @@ h3 {
 }
 
 .worker-row .small {
-  font-size: 13px;
+  color: var(--dust);
+  font-size: 12.5px;
 }
 
 .worker-row .name {
   flex: 1;
   overflow: hidden;
   text-overflow: ellipsis;
-  font-family: var(--font-display);
-  font-weight: 600;
+  font: 600 14.5px/1.3 var(--font-display);
 }
 
 .worker-row .job,
@@ -879,32 +1525,35 @@ h3 {
 
 .worker-row .locked {
   display: inline-flex;
+  color: var(--lamp);
 }
 
 .morale {
   flex: none;
   display: inline-block;
   width: 48px;
-  height: 8px;
-  border: 1px solid var(--c-offBlack);
+  height: 6px;
+  border-radius: 1px;
+  background: var(--faint);
   vertical-align: middle;
 }
 
 .morale span {
   display: block;
   height: 100%;
+  border-radius: 1px;
 }
 
 .morale.good span {
-  background: var(--c-teal);
+  background: var(--verdant);
 }
 
 .morale.mid span {
-  background: var(--c-mustard);
+  background: var(--lamp);
 }
 
 .morale.low span {
-  background: var(--c-rust);
+  background: var(--hazard);
 }
 
 .worker {
@@ -934,20 +1583,28 @@ h3 {
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  min-height: 44px;
+  min-height: 40px;
 }
 
 .check input {
-  width: 20px;
-  height: 20px;
-  accent-color: var(--c-teal);
+  width: 18px;
+  height: 18px;
+  accent-color: var(--lamp);
 }
 
-.wages summary {
-  padding: var(--space-3) 0;
-  font-family: var(--font-display);
-  font-weight: 600;
+.wages summary,
+.disclosure summary {
+  min-height: 40px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font: 600 15px/1.3 var(--font-display);
   cursor: pointer;
+}
+
+.wages summary::marker,
+.disclosure summary::marker {
+  color: var(--brass);
 }
 
 .wages fieldset {
@@ -956,29 +1613,45 @@ h3 {
   border: 0;
 }
 
-.wages legend {
+.wages legend,
+.field-set legend,
+.companions legend {
   padding: 0;
-  font-family: var(--font-display);
-  font-weight: 500;
+  margin-bottom: var(--space-1);
+  color: var(--dust);
 }
 
+.disclosure {
+  margin-top: var(--space-4);
+  border-top: 1px solid var(--hair);
+}
+
+/* Choices: one control, its parts side by side, the chosen one lit. */
 .choices {
   display: grid;
   grid-auto-columns: 1fr;
   grid-auto-flow: column;
-  border: 2px solid var(--c-offBlack);
+  border: 1px solid color-mix(in srgb, var(--brass) 55%, transparent);
+  border-radius: var(--radius-control);
+  overflow: hidden;
 }
 
 .choice {
   position: relative;
-  min-height: 40px;
+  min-height: 36px;
   display: grid;
   place-items: center;
+  padding: 0 6px;
   cursor: pointer;
+  color: var(--dust);
+}
+
+.choice:hover {
+  color: var(--chalk);
 }
 
 .choice + .choice {
-  border-left: 2px solid var(--c-offBlack);
+  border-left: 1px solid var(--hair);
 }
 
 .choice input {
@@ -987,21 +1660,17 @@ h3 {
 }
 
 .choice:has(input:checked) {
-  background: var(--c-mustard);
+  background: var(--lamp);
+  color: var(--pit);
   font-weight: 600;
 }
 
 .choice:has(input:focus-visible) {
-  outline: 2px solid var(--c-mustard);
+  outline: 2px solid var(--lamp);
   outline-offset: 2px;
 }
 
 /* Trade tab */
-.trade-tab h3 {
-  margin: var(--space-4) 0 var(--space-2);
-  font-size: 17px;
-}
-
 .trade-tab .good-detail h3 {
   margin-top: 0;
   font-size: 19px;
@@ -1014,7 +1683,7 @@ h3 {
 .good-detail {
   scroll-margin-top: var(--space-4);
   padding-bottom: var(--space-3);
-  border-bottom: 2px solid var(--c-offBlack);
+  border-bottom: 1px solid var(--hair);
 }
 
 .chart {
@@ -1026,18 +1695,20 @@ h3 {
   display: block;
   width: 100%;
   height: 120px;
-  border: 2px solid var(--c-offBlack);
+  border: 1px solid var(--hair);
+  border-radius: var(--radius-control);
+  background: color-mix(in srgb, var(--night) 55%, transparent);
 }
 
 .chart .grid {
-  stroke: color-mix(in srgb, var(--c-offBlack) 14%, var(--c-cream));
+  stroke: var(--faint);
   stroke-width: 1;
   vector-effect: non-scaling-stroke;
 }
 
 .chart .line {
   fill: none;
-  stroke: var(--c-navy);
+  stroke: var(--lamp);
   stroke-width: 2;
   stroke-linejoin: round;
   vector-effect: non-scaling-stroke;
@@ -1048,7 +1719,7 @@ h3 {
   position: absolute;
   left: var(--space-2);
   padding: 0 var(--space-1);
-  background: var(--c-cream);
+  color: var(--dust);
   font-size: 11px;
 }
 
@@ -1064,6 +1735,7 @@ h3 {
   display: flex;
   justify-content: space-between;
   margin-top: var(--space-1);
+  color: var(--dust);
   font-size: 11px;
 }
 
@@ -1079,34 +1751,17 @@ h3 {
   border: 0;
 }
 
-.field-set legend {
-  padding: 0;
-  margin-bottom: var(--space-1);
-  font-family: var(--font-display);
-  font-weight: 500;
-}
-
 .order-form .fields {
   display: grid;
   grid-template-columns: auto 1fr;
   align-items: center;
   gap: var(--space-2) var(--space-3);
-  font-family: var(--font-display);
-  font-weight: 500;
+  color: var(--dust);
 }
 
 .order-form input,
 .order-form select {
-  min-height: 44px;
   min-width: 0;
-  padding: 0 var(--space-2);
-  border: 2px solid var(--c-offBlack);
-  background: var(--c-cream);
-  font: inherit;
-}
-
-.order-form input {
-  font-family: var(--font-mono);
 }
 
 .order-form .quote {
@@ -1125,7 +1780,7 @@ h3 {
   justify-content: space-between;
   gap: var(--space-3);
   padding: var(--space-2) 0;
-  border-bottom: 1px solid color-mix(in srgb, var(--c-offBlack) 18%, transparent);
+  border-bottom: 1px solid var(--faint);
 }
 
 .orders .meta {
@@ -1136,6 +1791,7 @@ h3 {
   margin-top: 0;
 }
 
+/* Tables: rows on hairlines, figures to the right. */
 .goods-table {
   width: 100%;
   margin-top: var(--space-3);
@@ -1145,16 +1801,14 @@ h3 {
 
 .goods-table caption {
   margin-bottom: var(--space-2);
-  font-family: var(--font-display);
-  font-size: 17px;
-  font-weight: 600;
+  font: 600 17px/1.3 var(--font-display);
   text-align: left;
 }
 
 .goods-table th,
 .goods-table td {
-  padding: 0 var(--space-1);
-  border-bottom: 1px solid color-mix(in srgb, var(--c-offBlack) 18%, transparent);
+  padding: 3px var(--space-1);
+  border-bottom: 1px solid var(--faint);
   text-align: right;
   white-space: nowrap;
 }
@@ -1167,45 +1821,55 @@ h3 {
 
 .goods-table thead th {
   padding-bottom: var(--space-1);
-  font-family: var(--font-display);
+  color: var(--dust);
   font-weight: 500;
 }
 
 .goods-table tbody th button {
-  min-height: 40px;
+  min-height: 34px;
   padding: 0;
   border: 0;
   background: transparent;
-  font-family: var(--font-display);
   font-weight: 500;
   text-align: left;
   text-decoration: underline;
-  text-decoration-color: color-mix(in srgb, var(--c-offBlack) 30%, transparent);
+  text-decoration-color: var(--hair);
   text-underline-offset: 3px;
 }
 
+.goods-table tbody th button:hover {
+  color: var(--lamp);
+}
+
 .goods-table tbody th button[aria-pressed='true'] {
-  font-weight: 700;
-  text-decoration-color: var(--c-mustard);
-  text-decoration-thickness: 3px;
+  color: var(--lamp);
+  font-weight: 600;
+  text-decoration-color: var(--lamp);
+  text-decoration-thickness: 2px;
 }
 
 .goods-table .pin {
   margin-left: auto;
-  opacity: 0.35;
+  color: var(--dust);
+  opacity: 0.45;
 }
 
 .goods-table .pin[aria-pressed='true'] {
-  color: var(--c-burntOrange);
+  color: var(--lamp);
   opacity: 1;
 }
 
-/* Contracts tab: paper work orders with a rubber stamp. */
-.contracts-tab h3 {
-  margin: var(--space-4) 0 var(--space-2);
-  font-size: 17px;
+.statement tbody th {
+  font-weight: 400;
 }
 
+.statement tr.strong th,
+.statement tr.strong td {
+  font-weight: 600;
+  border-bottom-color: var(--rule);
+}
+
+/* Contracts tab: work orders on the board. */
 .contracts-tab section:first-child h3 {
   margin-top: 0;
 }
@@ -1217,7 +1881,9 @@ h3 {
 .contract {
   margin-bottom: var(--space-3);
   padding: var(--space-3);
-  border: 2px solid var(--c-offBlack);
+  border: 1px solid var(--hair);
+  border-radius: var(--radius-control);
+  background: color-mix(in srgb, var(--slate) 40%, transparent);
 }
 
 .contract header {
@@ -1228,35 +1894,11 @@ h3 {
 }
 
 .contract .issuer {
-  font-family: var(--font-display);
-  font-weight: 500;
+  color: var(--dust);
 }
 
 .contract .job {
-  font-family: var(--font-display);
-  font-size: 16px;
-  font-weight: 600;
-}
-
-.stamp {
-  display: inline-block;
-  padding: 1px var(--space-2);
-  border: 2px solid currentColor;
-  color: var(--c-burntOrange);
-  font-family: var(--font-display);
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  transform: rotate(-2deg);
-}
-
-.stamp.infrastructure {
-  color: var(--c-teal);
-}
-
-.stamp.status {
-  color: var(--c-offBlack);
+  font: 600 16px/1.3 var(--font-display);
 }
 
 .contract .action {
@@ -1268,15 +1910,18 @@ h3 {
 }
 
 .bar {
-  height: 10px;
+  height: 6px;
   margin-top: var(--space-2);
-  border: 2px solid var(--c-offBlack);
+  border-radius: 1px;
+  background: var(--faint);
 }
 
 .bar span {
   display: block;
   height: 100%;
-  background: var(--c-mustard);
+  border-radius: 1px;
+  background: var(--lamp);
+  box-shadow: 0 0 8px color-mix(in srgb, var(--lamp) 60%, transparent);
 }
 
 .shifts {
@@ -1285,80 +1930,25 @@ h3 {
   list-style: none;
 }
 
-/* Income on its way to the cash readout. */
+/* Income on its way to the cash figure. */
 .income-token {
   position: fixed;
   left: 0;
   top: 0;
   z-index: 10;
   pointer-events: none;
-  padding: 2px var(--space-2);
-  border: 2px solid var(--c-offBlack);
-  border-radius: var(--radius-pill);
-  background: var(--c-mustard);
-  color: var(--c-offBlack);
-  font: 500 13px/1.3 var(--font-mono);
+  padding: 1px 8px;
+  border: 1px solid color-mix(in srgb, var(--verdant) 60%, transparent);
+  border-radius: var(--radius-control);
+  background: color-mix(in srgb, var(--pit) 85%, transparent);
+  color: var(--verdant);
+  font: 600 13px/1.3 var(--font-text);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
-  box-shadow: 2px 2px 0 var(--c-offBlack);
   will-change: transform;
 }
 
-/* Phones: the whole strip scrolls, the bell stays put; selections and alerts peek from below. */
-
-/* Shared form pieces: text fields, disclosures and check rows. */
-.text-input,
-.export-save textarea,
-.import-save textarea {
-  width: 100%;
-  min-height: 44px;
-  padding: var(--space-2);
-  border: 2px solid var(--c-offBlack);
-  border-radius: 0;
-  background: var(--c-cream);
-  color: var(--c-offBlack);
-  font: inherit;
-}
-
-.export-save textarea,
-.import-save textarea {
-  font: 13px/1.4 var(--font-mono);
-  resize: vertical;
-}
-
-.text-input[aria-invalid='true'] {
-  border-color: var(--c-rust);
-}
-
-.field-label {
-  display: block;
-  margin: var(--space-4) 0 var(--space-1);
-  font-family: var(--font-display);
-  font-weight: 500;
-}
-
-.disclosure {
-  margin-top: var(--space-4);
-  border-top: 2px solid var(--c-offBlack);
-}
-
-.disclosure summary {
-  min-height: 44px;
-  display: flex;
-  align-items: center;
-  font-family: var(--font-display);
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.check {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  min-height: 44px;
-}
-
-/* Founding: a charter on cream stock, over the Moon turning behind it. */
+/* Founding: the charter, over the Moon turning behind it. */
 .founding {
   position: absolute;
   inset: 0;
@@ -1370,7 +1960,7 @@ h3 {
 }
 
 .founding-card {
-  width: min(460px, 100%);
+  width: min(440px, 100%);
   max-height: 100%;
   display: flex;
   flex-direction: column;
@@ -1379,15 +1969,17 @@ h3 {
 
 .founding-card .body {
   overflow: auto;
-  padding: var(--space-5);
+  padding: 26px 26px 22px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--hair) transparent;
 }
 
 .founding .wordmark {
   margin: 0 0 var(--space-3);
-  padding-bottom: var(--space-3);
-  border-bottom: 4px solid var(--c-burntOrange);
-  font: 700 34px/1 var(--font-display);
-  letter-spacing: -0.01em;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--rule);
+  font: 600 36px/1.02 var(--font-display);
+  letter-spacing: -0.015em;
 }
 
 .founding h1 {
@@ -1411,14 +2003,7 @@ h3 {
   padding: 0;
   border: 0;
   display: grid;
-  gap: var(--space-2);
-}
-
-.companions legend {
-  padding: 0;
-  margin-bottom: var(--space-1);
-  font-family: var(--font-display);
-  font-weight: 500;
+  gap: 6px;
 }
 
 .companion-card {
@@ -1426,9 +2011,14 @@ h3 {
   display: flex;
   align-items: center;
   gap: var(--space-3);
-  padding: var(--space-2) var(--space-3);
-  border: 2px solid var(--c-offBlack);
+  padding: 8px 12px;
+  border: 1px solid var(--hair);
+  border-radius: var(--radius-control);
   cursor: pointer;
+}
+
+.companion-card:hover {
+  border-color: var(--rule);
 }
 
 .companion-card input {
@@ -1437,29 +2027,30 @@ h3 {
 }
 
 .companion-card:has(input:checked) {
-  background: var(--c-mustard);
+  border-color: var(--lamp);
+  background: color-mix(in srgb, var(--lamp) 10%, transparent);
 }
 
 .companion-card:has(input:focus-visible) {
-  outline: 2px solid var(--c-mustard);
+  outline: 2px solid var(--lamp);
   outline-offset: 2px;
 }
 
 .companion-card:has(input:disabled) {
   border-style: dashed;
-  color: color-mix(in srgb, var(--c-offBlack) 62%, transparent);
+  color: var(--dust);
   cursor: not-allowed;
 }
 
 .companion-card img,
 .portrait-blank {
   flex: none;
-  width: 56px;
-  height: 56px;
+  width: 52px;
+  height: 52px;
 }
 
 .portrait-blank {
-  border: 2px dashed currentColor;
+  border: 1px dashed var(--rule);
   border-radius: 50%;
 }
 
@@ -1468,16 +2059,14 @@ h3 {
 }
 
 .companion-card strong {
-  font-family: var(--font-display);
-  font-weight: 600;
-  font-size: 16px;
+  font: 600 16px/1.3 var(--font-display);
 }
 
-/* The companion: a printed badge, and his line on a speech card beside it. */
+/* The companion: a portrait in a brass ring, and his line as a note beside it. */
 .companion {
   position: absolute;
   left: 84px;
-  bottom: 40px;
+  bottom: 16px;
   z-index: 2;
   display: flex;
   align-items: flex-end;
@@ -1490,43 +2079,36 @@ h3 {
   pointer-events: auto;
 }
 
-.shell[data-panel='open'] .companion {
+.shell[data-panel='open'] .companion,
+.shell[data-panel='open'] .hint {
   left: 480px;
 }
 
 .companion .portrait {
   flex: none;
-  filter: drop-shadow(3px 3px 0 var(--c-offBlack));
+  width: 76px;
+  height: 76px;
+  filter: drop-shadow(0 6px 14px rgba(0, 0, 0, 0.55));
 }
 
 .speech {
-  position: relative;
-  max-width: 380px;
-  margin-bottom: var(--space-3);
-  padding: var(--space-3) var(--space-4);
-}
-
-.speech::before {
-  content: '';
-  position: absolute;
-  left: -9px;
-  bottom: 18px;
-  width: 14px;
-  height: 14px;
-  background: var(--c-cream);
-  border-left: 2px solid var(--c-offBlack);
-  border-bottom: 2px solid var(--c-offBlack);
-  transform: rotate(45deg);
+  max-width: 400px;
+  margin-bottom: var(--space-2);
+  padding: 12px 16px 12px;
 }
 
 .speech .speaker {
   margin: 0;
-  color: var(--c-rust);
-  font: 600 13px/1.3 var(--font-display);
+  color: var(--lamp);
+  font: 600 12.5px/1.3 var(--font-text);
+  letter-spacing: 0.02em;
 }
 
 .speech .line {
-  margin: var(--space-1) 0 0;
+  margin: 6px 0 0;
+  padding-left: 12px;
+  border-left: 2px solid var(--brass);
+  font: italic 500 15px/1.45 var(--font-display);
 }
 
 .speech-actions {
@@ -1566,35 +2148,37 @@ h3 {
 
 .codex-list button {
   width: 100%;
-  min-height: 44px;
+  min-height: 40px;
   display: flex;
   justify-content: space-between;
   align-items: baseline;
   gap: var(--space-3);
   padding: var(--space-2) 0;
   border: 0;
-  border-bottom: 1px solid color-mix(in srgb, var(--c-offBlack) 18%, transparent);
+  border-bottom: 1px solid var(--faint);
   background: transparent;
-  font-family: var(--font-display);
-  font-weight: 500;
+  font: 500 15px/1.3 var(--font-display);
   text-align: left;
 }
 
+.codex-list button:hover {
+  color: var(--lamp);
+}
+
 .codex-list button[aria-pressed='true'] {
-  color: var(--c-burntOrange);
+  color: var(--lamp);
 }
 
 .codex-entry {
   scroll-margin-top: var(--space-4);
   margin-bottom: var(--space-4);
   padding-bottom: var(--space-3);
-  border-bottom: 2px solid var(--c-offBlack);
+  border-bottom: 1px solid var(--hair);
 }
 
 .codex-entry > .meta {
   margin: 0;
-  color: var(--c-rust);
-  font-family: var(--font-display);
+  color: var(--brass);
 }
 
 .codex-entry h3 {
@@ -1608,14 +2192,14 @@ h3 {
 .codex-entry .real-world {
   margin-bottom: var(--space-3);
   padding-left: var(--space-3);
-  border-left: 4px solid var(--c-teal);
+  border-left: 2px solid var(--verdant);
 }
 
 /* Settings */
 .settings-tab section + section {
   margin-top: var(--space-4);
   padding-top: var(--space-3);
-  border-top: 2px solid var(--c-offBlack);
+  border-top: 1px solid var(--hair);
 }
 
 .settings-tab h3 {
@@ -1637,7 +2221,7 @@ h3 {
   justify-content: space-between;
   gap: var(--space-2);
   padding: var(--space-2) 0;
-  border-bottom: 1px solid color-mix(in srgb, var(--c-offBlack) 18%, transparent);
+  border-bottom: 1px solid var(--faint);
 }
 
 .save-slot > p {
@@ -1645,8 +2229,7 @@ h3 {
 }
 
 .slot-name {
-  font-family: var(--font-display);
-  font-weight: 600;
+  font: 600 15px/1.3 var(--font-display);
 }
 
 .slot-actions {
@@ -1674,25 +2257,24 @@ h3 {
 
 .import-save label,
 .export-save label {
-  font-family: var(--font-display);
-  font-weight: 500;
+  color: var(--dust);
 }
 
-/* While you were away: the front page of a company newspaper. */
+/* While you were away: the shift report waiting on the desk. */
 .away-backdrop {
   position: absolute;
   inset: 0;
   z-index: 8;
   display: grid;
-  /* A bounded row, so the card's max-height holds and a long page scrolls inside it. */
+  /* A bounded row, so the sheet's max-height holds and a long page scrolls inside it. */
   grid-template-rows: minmax(0, 1fr);
   place-items: center;
   padding: var(--space-4);
-  background: color-mix(in srgb, var(--c-navy) 80%, transparent);
+  background: color-mix(in srgb, var(--night) 72%, transparent);
 }
 
 .away {
-  width: min(640px, 100%);
+  width: min(620px, 100%);
   max-height: 100%;
   display: flex;
   flex-direction: column;
@@ -1701,7 +2283,7 @@ h3 {
 .away .body {
   min-height: 0;
   overflow: auto;
-  padding: var(--space-5) var(--space-6);
+  padding: 26px 32px;
 }
 
 .masthead {
@@ -1711,38 +2293,39 @@ h3 {
   align-items: baseline;
   gap: var(--space-2);
   padding-bottom: var(--space-2);
-  border-bottom: 6px double var(--c-offBlack);
+  border-bottom: 1px solid var(--rule);
 }
 
 .masthead h1 {
-  font-size: 22px;
+  color: var(--dust);
+  font: 600 13px/1.3 var(--font-text);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
 .dateline {
   margin: 0;
-  font: 13px/1.3 var(--font-mono);
+  color: var(--dust);
+  font-size: 12.5px;
 }
 
 .away .headline {
   margin: var(--space-4) 0;
-  font-size: clamp(30px, 6.5vw, 46px);
-  font-weight: 700;
-  line-height: 1;
-  letter-spacing: -0.01em;
-  text-transform: uppercase;
+  font: 600 clamp(28px, 5vw, 40px) / 1.05 var(--font-display);
+  letter-spacing: -0.015em;
 }
 
 .away-stats {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  column-gap: var(--space-4);
+  column-gap: var(--space-5);
   margin: 0;
-  border-top: 2px solid var(--c-offBlack);
+  border-top: 1px solid var(--hair);
 }
 
 .away-stats div {
   padding: var(--space-2) 0;
-  border-bottom: 1px solid color-mix(in srgb, var(--c-offBlack) 25%, transparent);
+  border-bottom: 1px solid var(--faint);
 }
 
 .away-stats .wide {
@@ -1750,13 +2333,14 @@ h3 {
 }
 
 .away-stats dt {
-  color: var(--c-rust);
-  font: 500 13px/1.3 var(--font-display);
+  color: var(--dust);
+  font-size: 12.5px;
 }
 
 .away-stats dd {
   margin: 0;
-  font-size: 17px;
+  font-size: 19px;
+  font-weight: 600;
 }
 
 .away .meta {
@@ -1777,7 +2361,7 @@ h3 {
   margin-top: var(--space-5);
 }
 
-/* Catch-up: a progress card over the map while the worker runs the time away. */
+/* Catch-up: a progress sheet over the map while the worker runs the time away. */
 .catch-up {
   position: absolute;
   top: 50%;
@@ -1790,14 +2374,13 @@ h3 {
 
 .catch-up p {
   margin: 0;
-  font-family: var(--font-display);
-  font-weight: 600;
+  font: 600 16px/1.3 var(--font-display);
 }
 
-/* A problem in the game worker: a slip of paper over everything, until dismissed. */
+/* A problem in the game worker: a sheet over everything, until dismissed. */
 .error-banner {
   position: absolute;
-  top: 60px;
+  top: 84px;
   left: 50%;
   z-index: 11;
   width: min(520px, calc(100% - 32px));
@@ -1806,7 +2389,7 @@ h3 {
   gap: var(--space-3);
   padding: var(--space-3) var(--space-4);
   transform: translateX(-50%);
-  border-color: var(--c-rust);
+  border-color: var(--hazard);
 }
 
 .error-banner p {
@@ -1825,44 +2408,21 @@ h3 {
 
 .finance-tab h3 {
   margin: 0 0 var(--space-2);
+  font-size: 17px;
 }
 
 .finance-tab h4 {
   margin: var(--space-3) 0 var(--space-1);
-  font-family: var(--font-display);
-  font-size: 15px;
-}
-
-.finance-tab .facts,
-.auction .facts {
-  margin: var(--space-2) 0;
-}
-
-.finance-tab .facts div,
-.auction .facts div {
-  display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  gap: var(--space-3);
-  padding: var(--space-1) 0;
-  border-bottom: 1px solid color-mix(in srgb, var(--c-offBlack) 18%, transparent);
-}
-
-.finance-tab .facts dt,
-.auction .facts dt {
-  font-family: var(--font-display);
-  font-weight: 500;
-}
-
-.finance-tab .facts dd,
-.auction .facts dd {
-  margin: 0;
+  color: var(--dust);
+  font: 500 13px/1.3 var(--font-text);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
 }
 
 .finance-tab .warning {
   padding: var(--space-2) var(--space-3);
-  border: 2px solid var(--c-rust);
-  color: var(--c-rust);
+  border-left: 2px solid var(--hazard);
+  color: var(--hazard);
   font-weight: 600;
 }
 
@@ -1877,38 +2437,17 @@ h3 {
   margin: 0 0 var(--space-2);
 }
 
-.statement tbody th {
-  font-family: var(--font-text);
-  font-weight: 400;
-}
-
-.statement tr.strong th,
-.statement tr.strong td {
-  font-weight: 700;
-  border-bottom-color: var(--c-offBlack);
-}
-
+/* Tooltips: a small tag under the pointer. */
 .tooltip {
   position: fixed;
   z-index: 50;
-  padding: var(--space-1) var(--space-2);
-  border: 2px solid var(--c-offBlack);
-  background: var(--c-cream);
-  color: var(--c-offBlack);
+  padding: 4px 8px;
+  border: 1px solid color-mix(in srgb, var(--brass) 40%, transparent);
+  border-radius: var(--radius-control);
+  background: color-mix(in srgb, var(--pit) 92%, transparent);
+  color: var(--chalk);
   font-size: calc(13px * var(--ui-scale, 1));
   pointer-events: none;
   transform: translateX(-50%);
   white-space: nowrap;
-}
-
-/* Every panel and control, scaled by the interface size; the map stays outside it. */
-.hud {
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
-  zoom: var(--ui-scale, 1);
-}
-
-.hud > * {
-  pointer-events: auto;
 }
