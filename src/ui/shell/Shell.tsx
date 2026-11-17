@@ -18,9 +18,11 @@ import { AlertsList, alertsOpen } from './Alerts';
 import { ErrorBanner } from './ErrorBanner';
 import { Compass } from './Compass';
 import { ContextPanel } from './ContextPanel';
+import { DepthGauge } from './DepthGauge';
 import { NewsTicker } from './NewsTicker';
 import { MapCanvas } from './MapCanvas';
 import { MapFilters } from './MapFilters';
+import { SceneMarks } from './SceneMarks';
 import { TabRail } from './TabRail';
 import { activeTab, TABS, toggleTab, type TabId } from './tabs';
 import { TopBar } from './TopBar';
@@ -110,10 +112,12 @@ export function Shell({ flags }: { flags: DebugFlags }) {
       <div class="hud">
         {snap?.company && (
           <>
+            <SceneMarks />
             <Compass />
             <MapFilters />
             <TopBar />
             <TabRail />
+            <DepthGauge />
             <TabPanel />
             <ContextPanel />
             <AlertsList />

@@ -1,7 +1,9 @@
 import {
-  AmbientLight,
+  Color,
   DirectionalLight,
-  MeshToonMaterial,
+  HemisphereLight,
+  NeutralToneMapping,
+  PCFShadowMap,
   PerspectiveCamera,
   Raycaster,
   Scene,
@@ -13,10 +15,10 @@ import {
 import { industrialEase } from '../shared/ease';
 import { LUNA_RADIUS } from '../shared/scale';
 import { createTerrain } from '../shared/terrain';
-import { normalize, type Vec3 } from '../shared/vec3';
+import { dot, latLon, normalize, type Vec3 } from '../shared/vec3';
 import type { MotionView, UiSnapshot, WorldView } from '../sim/views';
 import { sectionAt } from '../sim/world/sections';
-import { palette } from '../ui/tokens';
+import { ink } from '../ui/tokens';
 import { createCameraController } from './camera/controller';
 import {
   cameraPose,
@@ -27,19 +29,22 @@ import {
 } from './camera/globeCamera';
 import { clipPlanes, createDprController, gameTimeAt } from './frame';
 import { ChunkStreamer } from './globe/chunkStreamer';
-import { bandsTexture } from './materials';
+import { terrainMaterial } from './materials';
 import type { MapFilter } from './overlays/filters';
 import { SectionOverlay } from './overlays/sectionOverlay';
-import { createPosterComposer } from './post/posterPass';
+import { createComposer, type Quality } from './post/composer';
+import { createSky } from './sky';
+import { localHour, sunDirection, windowsLit } from './sun';
 import { BeltLayer } from './world/beltLayer';
 import { BuildingLayer } from './world/buildingLayer';
+import { createSceneUniforms, glowTexture } from './world/kit';
+import { LightLayer } from './world/lightLayer';
 import { PlotPicker } from './world/picking';
 import { PlotLayer } from './world/plotLayer';
 import { RoadLayer } from './world/roadLayer';
 import { RoverLayer } from './world/roverLayer';
 import { TrafficLayer } from './world/trafficLayer';
 import { WalkerLayer } from './world/walkerLayer';
-import { createSky } from './sky';
 
 export interface RenderStats {
   drawCalls: number;
@@ -65,6 +70,8 @@ export interface GameRenderer {
   freezeAt(gameTime: number | null): void;
   project(dir: Vec3, lift?: number): { x: number; y: number } | null;
   pick(x: number, y: number): MapPick | null;
+  /** Where a picked thing shows, in CSS pixels, and how large: for the corner marks round it. */
+  screenBox(pick: MapPick): { x: number; y: number; size: number } | null;
   stats(): RenderStats;
   camera(): GlobeCameraState;
   setCamera(s: GlobeCameraState): void;
@@ -81,6 +88,8 @@ export interface GameRenderer {
 export interface RendererOptions {
   seed: number;
   reducedMotion: boolean;
+  /** High: bloom, MSAA and shadows. Low: none of them, for software rendering and old machines. */
+  quality: Quality;
   /** Keeps the pixel ratio still, so frozen screenshots do not depend on frame speed. */
   fixedPixelRatio?: boolean;
   /** A click on the map, with what it hit. */
@@ -107,54 +116,75 @@ const SPIN_RADIANS_PER_MS = (2 * Math.PI) / 240_000;
 /** A bus is small: a tap this close to one, in CSS pixels, picks it. */
 const BUS_REACH_PX = 22;
 
+const SUN_STRENGTH = 1.25;
+/** Sky light on an airless world: a little grey by day, a little cold light by night. */
+const DAY_AMBIENT = new Color(0.09, 0.09, 0.095);
+const NIGHT_AMBIENT = new Color(0.06, 0.068, 0.1);
+const SHADOW_MAP = 2048;
+/** Shadows are drawn up to this altitude; above it the globe shades itself. */
+const SHADOW_ALTITUDE = 30;
+
+const smoothstep = (a: number, b: number, x: number): number => {
+  const t = Math.min(1, Math.max(0, (x - a) / (b - a)));
+  return t * t * (3 - 2 * t);
+};
+const wrap = (a: number): number => Math.atan2(Math.sin(a), Math.cos(a));
+
 export function createRenderer(canvas: HTMLCanvasElement, opts: RendererOptions): GameRenderer {
   const radius = LUNA_RADIUS;
   const terrain = createTerrain(opts.seed);
-  const gl = new WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
+  const high = opts.quality === 'high';
+  const gl = new WebGLRenderer({ canvas, antialias: !high, powerPreference: 'high-performance' });
   gl.info.autoReset = false;
-  gl.autoClear = false;
-  gl.setClearColor(palette.navy);
-  const dpr = createDprController(Math.min(window.devicePixelRatio || 1, 2));
+  gl.toneMapping = NeutralToneMapping;
+  gl.shadowMap.enabled = high;
+  gl.shadowMap.type = PCFShadowMap;
+  gl.setClearColor(ink.night);
+  const dpr = createDprController(Math.min(window.devicePixelRatio || 1, high ? 2 : 1));
   gl.setPixelRatio(dpr.value);
 
   const scene = new Scene();
   const camera = new PerspectiveCamera(FOV, 1, 0.1, 1000);
   scene.add(camera);
-  // The key light rides with the camera, so the side you look at is always lit.
-  const key = new DirectionalLight(palette.cream, 1.6);
-  key.position.set(-0.5, 0.8, 0.3);
-  camera.add(key, key.target);
-  scene.add(new AmbientLight(palette.cream, 0.35));
-  const sky = createSky(opts.seed, FOV);
-  const composer = createPosterComposer(gl, scene, camera, (r) => sky.render(r, camera));
+  const u = createSceneUniforms(opts.seed);
+  const sky = createSky(gl, opts.seed, opts.reducedMotion);
+  scene.add(sky.group);
+  // The sun, with soft shadows round the camera target, and a dim light from the sky.
+  const sun = new DirectionalLight(0xffffff, 0);
+  sun.shadow.mapSize.set(SHADOW_MAP, SHADOW_MAP);
+  sun.shadow.bias = -0.0004;
+  const hemi = new HemisphereLight(0xffffff, 0xffffff, Math.PI);
+  scene.add(sun, sun.target, hemi);
+  const composer = createComposer(gl, scene, camera, opts.quality);
+  const glow = glowTexture();
   const layers: Layer[] = [];
 
-  const bands = bandsTexture();
-  const terrainMaterial = new MeshToonMaterial({ vertexColors: true, gradientMap: bands });
+  const terrainMat = terrainMaterial(u, !high);
   const globe = new ChunkStreamer(scene, {
     seed: opts.seed,
     radius,
     workers: Math.min(4, Math.max(1, (navigator.hardwareConcurrency || 4) - 2)),
     cacheSize: 512,
-    material: terrainMaterial,
+    material: terrainMat,
   });
   layers.push({
     update: (_time, cam) => globe.update(cam),
     dispose: () => {
       globe.dispose();
-      terrainMaterial.dispose();
+      terrainMat.dispose();
     },
   });
 
   const overlay = new SectionOverlay(scene, terrain, radius);
-  const buildings = new BuildingLayer(scene, terrain, radius, bands, opts.reducedMotion);
-  const plots = new PlotLayer(scene, terrain, radius);
+  const buildings = new BuildingLayer(scene, terrain, radius, u, opts.reducedMotion);
+  const plots = new PlotLayer(scene, terrain, radius, u);
   const picker = new PlotPicker(terrain, radius);
-  const roads = new RoadLayer(scene, terrain, radius, bands);
-  const belts = new BeltLayer(scene, terrain, radius, bands, opts.reducedMotion);
-  const rovers = new RoverLayer(scene, terrain, radius, bands);
-  const walkers = new WalkerLayer(scene, terrain, radius, bands);
+  const roads = new RoadLayer(scene, terrain, radius);
+  const belts = new BeltLayer(scene, terrain, radius, u, opts.reducedMotion);
+  const rovers = new RoverLayer(scene, terrain, radius, u, glow);
+  const walkers = new WalkerLayer(scene, terrain, radius, u, opts.reducedMotion);
   const traffic = new TrafficLayer(scene, terrain, radius);
+  const lights = new LightLayer(scene, terrain, radius, u, glow, opts.reducedMotion);
   layers.push(
     { update: (time, _cam, view) => rovers.update(time, view), dispose: () => rovers.dispose() },
     { update: (time, _cam, view) => walkers.update(time, view), dispose: () => walkers.dispose() },
@@ -164,8 +194,60 @@ export function createRenderer(canvas: HTMLCanvasElement, opts: RendererOptions)
     { update: (_time, _cam, view) => overlay.update(view), dispose: () => overlay.dispose() },
     { update: (_time, _cam, view) => buildings.update(view), dispose: () => buildings.dispose() },
     { update: (_time, _cam, view) => plots.update(view), dispose: () => plots.dispose() },
+    { update: (_time, _cam, view) => lights.update(view), dispose: () => lights.dispose() },
     { update: () => undefined, dispose: () => picker.dispose() },
   );
+
+  // The clock is local solar time at the player's hub; before founding, at longitude 0.
+  let refLon = 0;
+  let refTarget: number | null = null;
+  const T = new Vector3();
+  const S = new Vector3();
+  const X = new Vector3();
+  const Y = new Vector3();
+  const UP = new Vector3(0, 1, 0);
+
+  /** Sun, sky light, shadows and exposure for this frame. */
+  function light(time: number, dtMs: number): void {
+    if (refTarget !== null) refLon += wrap(refTarget - refLon) * (1 - Math.exp(-dtMs / 900));
+    const s = sunDirection(time, refLon);
+    S.set(...s);
+    u.uSunDir.value.copy(S);
+    const view = controller.state;
+    const e = dot(view.pos, s);
+    // From high up the globe shows day and night at once; low down the light is the target's.
+    const far = smoothstep(10, 40, view.altitude);
+    sun.intensity = Math.PI * SUN_STRENGTH * (far + (1 - far) * smoothstep(-0.02, 0.1, e));
+    hemi.color.lerpColors(NIGHT_AMBIENT, DAY_AMBIENT, smoothstep(-0.15, 0.2, e));
+    hemi.groundColor.copy(hemi.color).multiplyScalar(0.7);
+    hemi.position.set(...view.pos);
+    const night = 1 - smoothstep(-0.1, 0.12, e);
+    gl.toneMappingExposure = 1 + 0.45 * night * (1 - smoothstep(20, 60, view.altitude));
+    composer.setBloom(0.3 + 0.12 * night);
+    u.uLit.value = windowsLit(localHour(latLon(view.pos).lon, time, refLon));
+
+    // Shadows round the target, snapped to whole texels so they hold still as the camera moves.
+    const shadows = high && view.altitude < SHADOW_ALTITUDE && e > 0.02;
+    sun.castShadow = shadows;
+    const half = Math.min(SHADOW_ALTITUDE * 1.4, Math.max(2.5, view.altitude * 1.4));
+    const texel = (2 * half) / SHADOW_MAP;
+    T.set(...view.pos).multiplyScalar(radius + terrain.height(view.pos));
+    X.crossVectors(UP, S).normalize();
+    Y.crossVectors(S, X);
+    const tx = Math.round(T.dot(X) / texel) * texel;
+    const ty = Math.round(T.dot(Y) / texel) * texel;
+    T.copy(X).multiplyScalar(tx).addScaledVector(Y, ty).addScaledVector(S, T.dot(S));
+    const reach = half * 2 + 10;
+    sun.target.position.copy(T);
+    sun.position.copy(T).addScaledVector(S, reach);
+    const cam = sun.shadow.camera;
+    cam.left = cam.bottom = -half;
+    cam.right = cam.top = half;
+    cam.near = 0.1;
+    cam.far = reach * 2;
+    cam.updateProjectionMatrix();
+    sun.shadow.normalBias = texel * 1.5;
+  }
 
   const controller = createCameraController(canvas, createCameraState(START_DIR, START_ALTITUDE), {
     radius,
@@ -192,7 +274,6 @@ export function createRenderer(canvas: HTMLCanvasElement, opts: RendererOptions)
     gl.setSize(w, h, false);
     composer.setSize(w, h, gl.getPixelRatio());
     camera.aspect = w / Math.max(1, h);
-    sky.setAspect(camera.aspect);
   }
 
   function updateCamera(): void {
@@ -209,6 +290,8 @@ export function createRenderer(canvas: HTMLCanvasElement, opts: RendererOptions)
   }
 
   let world: WorldView | null = null;
+  /** True while the founding screen shows: the sun then swings to the new charter. */
+  let founding = false;
   let motion: { view: MotionView; anchorRealMs: number; timescale: number } | null = null;
   let frozenAt: number | null = null;
   const gameTime = (): number =>
@@ -233,11 +316,16 @@ export function createRenderer(canvas: HTMLCanvasElement, opts: RendererOptions)
     } else if (spinning && last > 0) {
       controller.set(spinAboutPole(controller.state, (t - last) * SPIN_RADIANS_PER_MS));
     }
-    if (controller.update(last > 0 ? t - last : 0)) opts.onCamera?.(controller.state);
+    const dt = last > 0 ? t - last : 0;
+    if (controller.update(dt)) opts.onCamera?.(controller.state);
     last = t;
     resize();
     updateCamera();
     const time = gameTime();
+    // Limbs and glints move while the clock runs.
+    if (frozenAt === null && !opts.reducedMotion) u.uTime.value += dt / 1000;
+    light(time, dt);
+    sky.update(t / 1000, gl.getPixelRatio());
     for (const layer of layers) layer.update(time, camera, controller.state);
     gl.info.reset();
     composer.render();
@@ -298,6 +386,7 @@ export function createRenderer(canvas: HTMLCanvasElement, opts: RendererOptions)
       roads.setWorld(w);
       belts.setWorld(w);
       traffic.setWorld(w);
+      lights.setWorld(w);
       const doors = new Map(w.plots.map((p) => [p.id, p.dir]));
       walkers.setDoors(
         new Map(
@@ -307,6 +396,15 @@ export function createRenderer(canvas: HTMLCanvasElement, opts: RendererOptions)
     },
     setUi(ui) {
       buildings.setUi(ui);
+      const home = ui.company ? ui.sections[0] : undefined;
+      const hub = home && world?.plots.find((p) => p.sectionId === home.id && p.kind === 'hub');
+      if (hub) {
+        const lon = latLon(hub.dir).lon;
+        // A game loaded with its company takes the hub's sun at once; a new charter swings to it.
+        if (refTarget === null && !founding) refLon = lon;
+        refTarget = lon;
+      }
+      founding = !ui.company;
     },
     setMotion(view, anchorRealMs, timescale) {
       motion = { view, anchorRealMs, timescale };
@@ -323,6 +421,34 @@ export function createRenderer(canvas: HTMLCanvasElement, opts: RendererOptions)
       return screenOf(spot.set(dir[0] * r, dir[1] * r, dir[2] * r));
     },
     pick,
+    screenBox(p) {
+      if (!world || p.kind === 'section') return null;
+      let base: Vector3;
+      let lift: number;
+      if (p.kind === 'rover') {
+        const at = rovers.positionOf(p.id);
+        if (!at) return null;
+        base = spot.copy(at);
+        lift = 0.12;
+      } else {
+        const plotId =
+          p.kind === 'plot' ? p.id : world.buildings.find((b) => b.id === p.id)?.plotId;
+        const plot = world.plots.find((x) => x.id === plotId);
+        if (!plot) return null;
+        const r = radius + terrain.height(plot.dir);
+        base = spot.set(plot.dir[0] * r, plot.dir[1] * r, plot.dir[2] * r);
+        lift = 0.5;
+      }
+      const a = screenOf(base);
+      const top = screenOf(base.clone().multiplyScalar((base.length() + lift) / base.length()));
+      if (!a || !top) return null;
+      const tall = Math.hypot(top.x - a.x, top.y - a.y);
+      return {
+        x: (a.x + top.x) / 2,
+        y: (a.y + top.y) / 2,
+        size: Math.min(320, Math.max(26, tall * (p.kind === 'rover' ? 2.4 : 1.6))),
+      };
+    },
     stats: () => ({
       drawCalls: gl.info.render.calls,
       triangles: gl.info.render.triangles,
@@ -362,7 +488,7 @@ export function createRenderer(canvas: HTMLCanvasElement, opts: RendererOptions)
       for (const layer of layers) layer.dispose();
       sky.dispose();
       composer.dispose();
-      bands.dispose();
+      glow.dispose();
       gl.dispose();
       gl.forceContextLoss();
     },

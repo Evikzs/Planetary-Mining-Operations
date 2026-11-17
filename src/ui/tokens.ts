@@ -34,6 +34,12 @@ export const kit = {
   panel: '#172338',
   bone: '#e8e2d6',
   growGlass: '#7fb8a2',
+  pad: '#2c2d31',
+  soot: '#2a1a12',
+  spoil: '#57525c',
+  coach: '#d8cdb4',
+  lid: '#8d877c',
+  rock: '#1d1b1e',
   glowWindow: ['#ffc56e', 1.25],
   glowWork: ['#ffab3d', 2.3],
   glowCool: ['#cfe6ff', 1.3],
@@ -74,20 +80,6 @@ export const motion = {
   slowMs: 420,
   industrial: 'cubic-bezier(0.65, 0, 0.25, 1)',
 } as const;
-
-// shortcut: the poster palette stays only until the 3D layers move to `ink` and `kit`; it goes
-// with them in the same change.
-export const palette = {
-  navy: '#1B2A41',
-  burntOrange: '#C8551F',
-  mustard: '#E1A730',
-  teal: '#2A7F7A',
-  cream: '#F2E8D5',
-  rust: '#9C3D23',
-  offBlack: '#1A1A1A',
-  dustyPink: '#D89A8E',
-} as const;
-export const bodyAccent = { luna: '#9A9A94' } as const;
 
 function rgb(hex: string): [number, number, number] {
   const h = hex.replace('#', '');

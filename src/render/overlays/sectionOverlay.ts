@@ -1,6 +1,8 @@
 import {
   BufferGeometry,
+  Color,
   ConeGeometry,
+  OctahedronGeometry,
   DoubleSide,
   Float32BufferAttribute,
   Group,
@@ -22,7 +24,8 @@ import { HEIGHT_MAX, type Terrain } from '../../shared/terrain';
 import { angleBetween, type Vec3 } from '../../shared/vec3';
 import type { CompanyId } from '../../sim/companies';
 import type { WorldView } from '../../sim/views';
-import { palette } from '../../ui/tokens';
+import { MINERALS } from '../../data/minerals';
+import { ink } from '../../ui/tokens';
 import type { GlobeCameraState } from '../camera/globeCamera';
 import { DEFAULT_FILTER, ownerColour, type MapFilter } from './filters';
 import { greatCircleArc, sectionFill } from './geometry';
@@ -48,10 +51,14 @@ function radial(dir: Vec3, r: number, s: number, out: Matrix4): Matrix4 {
   );
 }
 
-function lines(points: number[], color: string): LineSegments {
+/** Hairlines: brass for borders, lamp for a lot on auction. */
+function lines(points: number[], color: string, opacity = 0.6): LineSegments {
   const g = new BufferGeometry();
   g.setAttribute('position', new Float32BufferAttribute(points, 3));
-  return new LineSegments(g, new LineBasicMaterial({ color }));
+  return new LineSegments(
+    g,
+    new LineBasicMaterial({ color, transparent: true, opacity, depthWrite: false }),
+  );
 }
 
 /** Section borders, the ownership fill, deposit markers and contract pins. */
@@ -86,7 +93,7 @@ export class SectionOverlay {
     if (first) {
       this.borders = this.replace(
         this.borders,
-        lines(this.arcs(w.sections, ORBIT_LIFT), palette.cream),
+        lines(this.arcs(w.sections, ORBIT_LIFT), ink.brass, 0.55),
       );
       this.reach = new Map(
         w.sections.map((s) => [s.id, Math.max(...s.polygon.map((p) => angleBetween(s.center, p)))]),
@@ -99,7 +106,8 @@ export class SectionOverlay {
           w.sections.filter((s) => s.onAuction),
           ORBIT_LIFT + 0.01,
         ),
-        palette.cream,
+        ink.lamp,
+        0.95,
       ),
     );
     for (const f of this.fills) this.release(f);
@@ -108,7 +116,7 @@ export class SectionOverlay {
       if (s.owner !== null) byOwner.set(s.owner, [...(byOwner.get(s.owner) ?? []), s]);
     }
     this.fills = [...byOwner].map(([owner, owned]) => {
-      const mesh = this.ownedFill(owned, ownerColour(owner, w.companies) ?? palette.cream);
+      const mesh = this.ownedFill(owned, ownerColour(owner, w.companies) ?? ink.dust);
       this.orbit.add(mesh);
       return mesh;
     });
@@ -197,7 +205,7 @@ export class SectionOverlay {
     const material = new MeshBasicMaterial({
       color,
       transparent: true,
-      opacity: 0.35,
+      opacity: 0.12,
       depthWrite: false,
       side: DoubleSide,
     });
@@ -208,9 +216,12 @@ export class SectionOverlay {
     const p = this.filter.planetary;
     const goodId = typeof p === 'object' ? p.resource : null;
     const deposits = w.plots.filter((x) => x.deposit && x.deposit.goodId === goodId);
+    // A cut stone in the mineral's colour, brighter than white so it glints in the bloom.
     const mesh = new InstancedMesh(
-      new SphereGeometry(1, 12, 8),
-      new MeshBasicMaterial({ color: palette.burntOrange }),
+      new OctahedronGeometry(1, 0).scale(0.8, 1.3, 0.8),
+      new MeshBasicMaterial({
+        color: new Color(goodId ? MINERALS[goodId].color : ink.dust).multiplyScalar(1.6),
+      }),
       Math.max(1, deposits.length),
     );
     mesh.count = deposits.length;
@@ -236,7 +247,7 @@ export class SectionOverlay {
     head.dispose();
     const mesh = new InstancedMesh(
       pin,
-      new MeshBasicMaterial({ color: palette.mustard }),
+      new MeshBasicMaterial({ color: new Color(ink.lamp).multiplyScalar(1.4) }),
       Math.max(1, sites.length),
     );
     mesh.count = sites.length;
@@ -265,7 +276,7 @@ export class SectionOverlay {
       points.push(...cached);
     }
     if (this.draped) this.release(this.draped);
-    this.draped = lines(points, palette.cream);
+    this.draped = lines(points, ink.brass, 0.7);
     this.root.add(this.draped);
   }
 

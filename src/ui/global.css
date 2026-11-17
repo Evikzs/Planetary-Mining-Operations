@@ -468,9 +468,14 @@ h3 {
   }
 }
 
-@container topbar (max-width: 1500px) {
-  .crumbs,
+@container topbar (max-width: 1680px) {
   .dial {
+    display: none;
+  }
+}
+
+@container topbar (max-width: 1500px) {
+  .crumbs {
     display: none;
   }
 }
@@ -909,6 +914,14 @@ h3 {
   line-height: 1.5;
 }
 
+[data-graphics='low'] .context-panel,
+[data-graphics='low'] .alerts,
+[data-graphics='low'] .gauge {
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  background: var(--sheet);
+}
+
 /* Map compass: the lamp half of the needle points north. Pressed means north is locked. */
 .compass {
   position: absolute;
@@ -1123,11 +1136,17 @@ h3 {
   font-weight: 600;
 }
 
-.gauge .alt {
+.gauge .alt,
+.gauge .say {
   grid-column: 1 / -1;
-  margin-top: 8px;
+  margin: 8px 0 0;
   color: var(--dust);
   font-size: 12.5px;
+}
+
+.gauge .say {
+  max-width: 19ch;
+  margin-top: 4px;
 }
 
 .gauge .alt b {
@@ -1237,18 +1256,6 @@ button.label:hover b {
 .reticle[data-kind='deposit'] {
   --lamp: var(--ore);
   filter: drop-shadow(0 0 5px var(--ore));
-}
-
-.hint {
-  position: absolute;
-  left: 84px;
-  bottom: 16px;
-  max-width: 30ch;
-  margin: 0;
-  color: var(--dust);
-  font-size: 13px;
-  pointer-events: none;
-  z-index: 1;
 }
 
 /* Build tab */
@@ -2079,8 +2086,7 @@ select option {
   pointer-events: auto;
 }
 
-.shell[data-panel='open'] .companion,
-.shell[data-panel='open'] .hint {
+.shell[data-panel='open'] .companion {
   left: 480px;
 }
 

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { Group, type Vector3 } from 'three';
+import { Group, Texture, type Vector3 } from 'three';
 import { createCameraState } from '../../src/render/camera/globeCamera';
-import { bandsTexture } from '../../src/render/materials';
+import { createSceneUniforms } from '../../src/render/world/kit';
 import { RoverLayer } from '../../src/render/world/roverLayer';
 import { LUNA_RADIUS } from '../../src/shared/scale';
 import { createTerrain } from '../../src/shared/terrain';
@@ -27,7 +27,13 @@ const distanceTo = (dir: Vec3) => (at: Vector3) =>
   angleBetween(normalize([at.x, at.y, at.z]), dir) * LUNA_RADIUS;
 
 describe('rover picking', () => {
-  const layer = new RoverLayer(new Group(), createTerrain(42), LUNA_RADIUS, bandsTexture());
+  const layer = new RoverLayer(
+    new Group(),
+    createTerrain(42),
+    LUNA_RADIUS,
+    createSceneUniforms(42),
+    new Texture(),
+  );
   const a = run(1, 0);
   const b = run(2, 0.05);
   layer.setTrips([a, b]);

@@ -4,10 +4,10 @@ import {
   Group,
   InstancedMesh,
   Matrix4,
-  MeshToonMaterial,
   Sprite,
   SpriteMaterial,
   type BufferGeometry,
+  type Material,
   type Object3D,
   type Texture,
 } from 'three';
@@ -16,9 +16,10 @@ import type { Terrain } from '../../shared/terrain';
 import type { Vec3 } from '../../shared/vec3';
 import type { BuildingStatus } from '../../sim/state';
 import type { UiSnapshot, WorldView } from '../../sim/views';
-import { palette } from '../../ui/tokens';
+import { ink } from '../../ui/tokens';
 import type { GlobeCameraState } from '../camera/globeCamera';
 import { DEFAULT_FILTER, filterTint, type MapFilter } from '../overlays/filters';
+import { kitMaterial, type SceneUniforms } from './kit';
 import { visibleLayers } from './lod';
 import { buildModel, craneGeometry, levelHeight, scaffoldGeometry, type ModelKey } from './models';
 import { plotYaw, standAt } from './placement';
@@ -40,19 +41,23 @@ interface Placed {
   progress: number;
 }
 
-/** A round badge with a simple glyph, drawn once per stamp. */
+/** A lamp-lit diamond (hazard red for a strike) with a simple glyph, drawn once per stamp. */
 function stampTexture(stamp: Stamp): Texture {
   const c = document.createElement('canvas');
   c.width = c.height = 64;
   const g = c.getContext('2d')!;
-  g.fillStyle = stamp === 'striking' ? palette.rust : palette.mustard;
-  g.strokeStyle = palette.offBlack;
-  g.lineWidth = 5;
+  g.fillStyle = stamp === 'striking' ? ink.hazard : ink.lamp;
+  g.strokeStyle = ink.pit;
+  g.lineWidth = 3;
   g.beginPath();
-  g.arc(32, 32, 28, 0, Math.PI * 2);
+  g.moveTo(32, 2);
+  g.lineTo(62, 32);
+  g.lineTo(32, 62);
+  g.lineTo(2, 32);
+  g.closePath();
   g.fill();
   g.stroke();
-  g.fillStyle = palette.offBlack;
+  g.fillStyle = ink.pit;
   g.beginPath();
   if (stamp === 'unpowered') {
     for (const [x, y] of [
@@ -81,7 +86,7 @@ function stampTexture(stamp: Stamp): Texture {
 /** Building models, construction scaffolds with turning cranes, and status badges. */
 export class BuildingLayer {
   private readonly group = new Group();
-  private readonly material: MeshToonMaterial;
+  private readonly material: Material;
   private readonly geometries = new Map<ModelKey, BufferGeometry>();
   private readonly heights = new Map<ModelKey, number>();
   private readonly meshes = new Map<ModelKey, InstancedMesh>();
@@ -102,10 +107,10 @@ export class BuildingLayer {
     parent: Object3D,
     private readonly terrain: Terrain,
     private readonly radius: number,
-    gradientMap: Texture,
+    u: SceneUniforms,
     private readonly reducedMotion: boolean,
   ) {
-    this.material = new MeshToonMaterial({ vertexColors: true, gradientMap });
+    this.material = kitMaterial(u);
     parent.add(this.group);
   }
 
@@ -250,6 +255,8 @@ export class BuildingLayer {
         mesh.setColorAt(i, WHITE);
       });
       mesh.userData.placed = list;
+      mesh.castShadow = true;
+      mesh.receiveShadow = true;
       this.meshes.set(key, mesh);
       this.group.add(mesh);
     }
@@ -257,6 +264,7 @@ export class BuildingLayer {
     if (this.sites.length > 0) {
       this.scaffolds = new InstancedMesh(this.scaffoldGeometry, this.material, this.sites.length);
       this.cranes = new InstancedMesh(this.craneGeometry, this.material, this.sites.length);
+      this.scaffolds.castShadow = this.cranes.castShadow = true;
       this.group.add(this.scaffolds, this.cranes);
       this.placeCranes();
     }

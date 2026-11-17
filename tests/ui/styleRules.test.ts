@@ -28,7 +28,9 @@ describe('style rules', () => {
   // frame of the map under it.
   it('blurs the backdrop of the sheet, the gauge and the alerts only', () => {
     const css = readFileSync('src/ui/global.css', 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
-    const blurred = [...css.matchAll(/([^{}]+)\{[^}]*backdrop-filter/g)].map((m) => m[1]!.trim());
+    const blurred = [...css.matchAll(/([^{}]+)\{[^}]*backdrop-filter: (?!none)/g)].map((m) =>
+      m[1]!.trim(),
+    );
     for (const selector of blurred) {
       expect(selector, `${selector} blurs its backdrop`).toMatch(
         /^\.(context-panel|gauge|alerts)\b/,

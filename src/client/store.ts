@@ -30,6 +30,8 @@ export const compass = signal({ heading: 0, lockNorth: true });
 export const mapFilter = signal<MapFilter>(DEFAULT_FILTER);
 /** Planetary filters show from altitude 30 up; local filters below. */
 export const mapLevel = signal<'planetary' | 'local'>('planetary');
+/** The camera's altitude in world units, for the depth gauge and the scene labels. */
+export const cameraAltitude = signal(200);
 /** What the player last tapped on the map. */
 export const selection = signal<MapPick | null>(null);
 /** Goods whose stock the top bar shows, for the selected section or else the founding one. */
@@ -48,6 +50,14 @@ export const flyHome = signal(false);
 export const codexFocus = signal<string | null>(null);
 
 export type MotionPref = 'system' | 'on' | 'off';
+/** Graphics: 'auto' is high on a graphics card and low on a software renderer. */
+export type GraphicsPref = 'auto' | 'high' | 'low';
+export const graphicsPref = signal<GraphicsPref>('auto');
+/** Whether WebGL runs in software (SwiftShader and the like): set once at start. */
+export const softwareRenderer = signal(false);
+export const graphicsQuality = computed<'high' | 'low'>(() =>
+  graphicsPref.value === 'auto' ? (softwareRenderer.value ? 'low' : 'high') : graphicsPref.value,
+);
 /** The player's reduced-motion choice; 'system' follows the browser. */
 export const motionPref = signal<MotionPref>('system');
 /** Whether the browser asks for reduced motion. */

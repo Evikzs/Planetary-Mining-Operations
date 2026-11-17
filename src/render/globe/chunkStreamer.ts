@@ -155,6 +155,8 @@ export class ChunkStreamer {
     geometry.setAttribute('color', new BufferAttribute(c.colors, 3));
     geometry.setIndex(new BufferAttribute(c.indices, 1));
     const mesh = new Mesh(geometry, this.o.material);
+    // Crater rims throw long shadows when the sun is low.
+    mesh.castShadow = mesh.receiveShadow = true;
     mesh.position.set(c.center[0], c.center[1], c.center[2]);
     mesh.matrixAutoUpdate = false;
     mesh.updateMatrix();

@@ -77,6 +77,14 @@ export const BUILDING_ROLE: Record<BuildingTypeId, string> = {
   contractSite: 'Work for a client. The job board says what it needs.',
 };
 
+/** Names of what you build for clients. */
+export const ASSET_NAMES: Record<Asset, string> = {
+  landingPad: 'Landing pad',
+  commMast: 'Signal mast',
+  roadDepot: 'Road depot',
+  publicSolar: 'Public solar',
+};
+
 /** The same for what you build for clients. */
 export const ASSET_ROLE: Record<Asset, string> = {
   landingPad: 'Landers set down here. Built for a client.',

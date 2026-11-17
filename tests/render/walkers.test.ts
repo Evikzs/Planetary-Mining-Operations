@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { Box3 } from 'three';
-import { busGeometry } from '../../src/render/world/roverLayer';
+import { busGeometry } from '../../src/render/world/models';
 import { trafficWidth } from '../../src/render/world/trafficLayer';
 import { walkerPositions } from '../../src/render/world/walkerLayer';
 import { LUNA_RADIUS, WALK_SPEED } from '../../src/shared/scale';
@@ -46,9 +46,10 @@ describe('walkers', () => {
 });
 
 describe('buses and traffic', () => {
-  it('the bus is 0.22 long, nose along +x, on the ground', () => {
+  it('the bus is 9 m long (with its lights), nose along +x, on the ground', () => {
     const box = new Box3().setFromBufferAttribute(busGeometry().getAttribute('position') as never);
-    expect(box.max.x - box.min.x).toBeCloseTo(0.222, 3);
+    expect(box.max.x - box.min.x).toBeCloseTo(9.14 / 40, 4);
+    expect(box.max.z - box.min.z).toBeLessThan(box.max.x - box.min.x);
     expect(box.min.y).toBeGreaterThanOrEqual(-1e-6);
   });
 

@@ -1,28 +1,22 @@
-import { NearestFilter } from 'three';
+import { Color } from 'three';
 import { describe, expect, it } from 'vitest';
-import { bandsTexture, TERRAIN_COLORS } from '../../src/render/materials';
-import { bodyAccent, mix, palette } from '../../src/ui/tokens';
+import { TERRAIN_COLORS } from '../../src/render/materials';
+
+const lum = (hex: string): number => {
+  const c = new Color(hex);
+  return 0.2126 * c.r + 0.7152 * c.g + 0.0722 * c.b;
+};
 
 describe('materials', () => {
-  it('terrain colours are the pinned token mixes', () => {
-    const { cream, navy, teal } = palette;
-    const luna = bodyAccent.luna;
-    expect(TERRAIN_COLORS).toEqual({
-      0: mix(cream, luna, 0.45),
-      1: mix(navy, luna, 0.35),
-      2: mix(luna, navy, 0.25),
-      3: mix(cream, luna, 0.15),
-      4: mix(cream, teal, 0.2),
-    });
+  it('the maria are the darkest ground; rims stand out from crater floors', () => {
+    const l = Object.values(TERRAIN_COLORS).map(lum);
+    expect(Math.min(...l)).toBe(lum(TERRAIN_COLORS[1]));
+    expect(lum(TERRAIN_COLORS[0])).toBeGreaterThan(lum(TERRAIN_COLORS[1]));
+    expect(lum(TERRAIN_COLORS[3])).toBeGreaterThan(lum(TERRAIN_COLORS[2]));
   });
 
-  it('bands texture has 3 nearest-filtered steps', () => {
-    const tex = bandsTexture();
-    expect(tex.image.width).toBe(3);
-    expect(tex.image.height).toBe(1);
-    expect(Array.from(tex.image.data as Uint8Array)).toEqual([107, 179, 255]);
-    expect(tex.minFilter).toBe(NearestFilter);
-    expect(tex.magFilter).toBe(NearestFilter);
-    expect(tex.generateMipmaps).toBe(false);
+  it('polar frost reads colder than the highlands', () => {
+    const blueness = (hex: string) => new Color(hex).b - new Color(hex).r;
+    expect(blueness(TERRAIN_COLORS[4])).toBeGreaterThan(blueness(TERRAIN_COLORS[0]));
   });
 });

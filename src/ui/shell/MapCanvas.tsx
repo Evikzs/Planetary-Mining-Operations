@@ -1,9 +1,11 @@
 import { effect } from '@preact/signals';
 import { useEffect, useRef } from 'preact/hooks';
 import {
+  cameraAltitude,
   compass,
   flyHome,
   gameRenderer,
+  graphicsQuality,
   mapFilter,
   mapLevel,
   motion,
@@ -26,12 +28,13 @@ let kept: { seed: number; camera: GlobeCameraState } | null = null;
 
 /**
  * The map. Its renderer starts once the world's seed is known. A new seed, or a new reduced-motion
- * choice, gets a fresh canvas: a disposed renderer leaves its canvas without a context.
+ * or graphics choice, gets a fresh canvas: a disposed renderer leaves its canvas without a context.
  */
 export function MapCanvas({ flags }: { flags: DebugFlags }) {
   const canvas = useRef<HTMLCanvasElement>(null);
   const seed = world.value?.seed;
   const reduced = reducedMotion.value;
+  const quality = graphicsQuality.value;
   useEffect(() => {
     if (!canvas.current || seed === undefined) return;
     // The camera beat of the tutorial ends once the player has panned and zoomed.
@@ -39,6 +42,7 @@ export function MapCanvas({ flags }: { flags: DebugFlags }) {
     const r = createRenderer(canvas.current, {
       seed,
       reducedMotion: reduced,
+      quality,
       fixedPixelRatio: flags.freeze,
       onPick: (pick) => (selection.value = pick),
       // Right-click lets go of the selection; later, it also leaves an editing tool.
@@ -50,6 +54,9 @@ export function MapCanvas({ flags }: { flags: DebugFlags }) {
           compass.value = { heading: h, lockNorth: s.lockNorth };
         }
         mapLevel.value = s.altitude >= LOCAL_MAX_ALT ? 'planetary' : 'local';
+        // Three figures are enough for the gauge; finer steps would only re-render it.
+        const alt = Number(s.altitude.toPrecision(3));
+        if (alt !== cameraAltitude.value) cameraAltitude.value = alt;
       },
       onGesture(kind) {
         if (taught[kind] || !ui.value?.company || !simClient.value) return;
@@ -98,10 +105,10 @@ export function MapCanvas({ flags }: { flags: DebugFlags }) {
       r.dispose();
       gameRenderer.value = null;
     };
-  }, [seed, flags, reduced]);
+  }, [seed, flags, reduced, quality]);
   return (
     <canvas
-      key={`${seed ?? 'none'}-${reduced}`}
+      key={`${seed ?? 'none'}-${reduced}-${quality}`}
       ref={canvas}
       class="map"
       data-testid="map-canvas"

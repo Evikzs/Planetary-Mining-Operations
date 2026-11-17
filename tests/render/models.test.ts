@@ -1,30 +1,35 @@
-import { Box3, Color } from 'three';
+import { Box3, Color, type BufferGeometry } from 'three';
 import { describe, expect, it } from 'vitest';
 import {
   ALL_MODEL_KEYS,
   buildModel,
+  craneGeometry,
   MODEL_FOOTPRINT,
   scaffoldGeometry,
 } from '../../src/render/world/models';
-import { bodyAccent, palette } from '../../src/ui/tokens';
-import type { BufferGeometry } from 'three';
+import { kit } from '../../src/ui/tokens';
 
-const TOKENS = [...Object.values(palette), ...Object.values(bodyAccent)].map((hex) =>
-  new Color(hex)
-    .toArray()
-    .map((x) => x.toFixed(4))
-    .join(','),
-);
+// Every paint on a model comes from the kit (glow colours are light, not paint).
+const PAINT = Object.values(kit)
+  .flatMap((v) => (typeof v === 'string' ? [v] : []))
+  .map((hex) =>
+    new Color(hex)
+      .toArray()
+      .map((x) => x.toFixed(4))
+      .join(','),
+  );
 
 function check(g: BufferGeometry) {
   const pos = g.getAttribute('position');
   const color = g.getAttribute('color');
-  expect((g.index ? g.index.count : pos.count) / 3).toBeLessThanOrEqual(600);
+  expect(g.getAttribute('glow')).toBeDefined();
+  expect(g.getAttribute('gid')).toBeDefined();
+  expect(pos.count / 3).toBeLessThanOrEqual(1200);
   for (let i = 0; i < pos.count; i++) {
     expect(Math.hypot(pos.getX(i), pos.getZ(i))).toBeLessThanOrEqual(MODEL_FOOTPRINT + 1e-6);
     expect(pos.getY(i)).toBeGreaterThanOrEqual(-1e-6);
     const c = [color.getX(i), color.getY(i), color.getZ(i)].map((x) => x.toFixed(4)).join(',');
-    expect(TOKENS).toContain(c);
+    expect(PAINT).toContain(c);
   }
 }
 
@@ -36,12 +41,19 @@ describe('models', () => {
     expect(ALL_MODEL_KEYS).toHaveLength(23);
   });
 
-  it.each(ALL_MODEL_KEYS)('%s: ≤ 600 triangles, footprint ≤ 0.45, y ≥ 0', (key) => {
+  it.each(ALL_MODEL_KEYS)('%s: ≤ 1200 triangles, kit paint, footprint ≤ 18 m, y ≥ 0', (key) => {
     check(buildModel(key, 1));
   });
 
-  it('the scaffold keeps to the same rules', () => {
+  it('the scaffold and the crane keep to the same rules', () => {
     check(scaffoldGeometry());
+    check(craneGeometry());
+  });
+
+  it('some windows of the homes can be dark', () => {
+    const gid = buildModel('crewQuarters', 1).getAttribute('gid');
+    const ids = new Set(Array.from({ length: gid.count }, (_, i) => gid.getX(i)));
+    expect(ids.size).toBeGreaterThan(10);
   });
 
   it('level 10 is ≤ 1.45× the level-1 height', () => {
