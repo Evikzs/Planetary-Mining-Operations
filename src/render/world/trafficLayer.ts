@@ -1,4 +1,5 @@
 import {
+  AdditiveBlending,
   BufferGeometry,
   Float32BufferAttribute,
   Mesh,
@@ -10,7 +11,7 @@ import type { Terrain } from '../../shared/terrain';
 import type { Trip } from '../../shared/trips';
 import { scale, type Vec3 } from '../../shared/vec3';
 import type { WorldView } from '../../sim/views';
-import { palette } from '../../ui/tokens';
+import { ink } from '../../ui/tokens';
 import type { GlobeCameraState } from '../camera/globeCamera';
 import { visibleLayers } from './lod';
 import { ribbonGeometry } from './ribbon';
@@ -21,10 +22,14 @@ const HOUR = 60;
 /** Line width for a section's roads: wider the more buses left in the last game hour. */
 export const trafficWidth = (trips: number): number => Math.min(0.8, 0.15 + 0.05 * trips);
 
-/** From orbit, roads as mustard lines that swell with rush hour. */
+/** From orbit, roads as lines of lamp light that swell with rush hour. */
 export class TrafficLayer {
   private readonly material = new MeshBasicMaterial({
-    color: palette.mustard,
+    color: ink.lamp,
+    transparent: true,
+    opacity: 0.75,
+    blending: AdditiveBlending,
+    depthWrite: false,
     polygonOffset: true,
     polygonOffsetFactor: -4,
     polygonOffsetUnits: -4,

@@ -20,6 +20,11 @@ export interface Terrain {
   height(dir: Vec3): number;
   mariaMask(dir: Vec3): number;
   surfaceClass(dir: Vec3): SurfaceClass;
+  /**
+   * The class shares at a point, soft over `soft` world units: crater floor, rim and polar frost
+   * (0 to 1 each). A mesh with cells of that size draws them without steps.
+   */
+  surfaceShares(dir: Vec3, soft: number): { floor: number; rim: number; frost: number };
   slopeAt(dir: Vec3, step?: number): number;
 }
 
@@ -64,11 +69,12 @@ export function createTerrain(seed: number, radius = LUNA_RADIUS): Terrain {
     grid.set(key, [...(grid.get(key) ?? []), crater]);
   }
 
-  function sample(dir: Vec3): { h: number; m: number; x: number } {
+  function sample(dir: Vec3): { h: number; m: number; x: number; r: number } {
     let h = 0.55 * fbm(base, scale(dir, 1.6), 5);
     const m = smoothstep(0.05, 0.25, fbm(maria, scale(dir, 0.9), 3));
     h -= 0.35 * m;
     let nearest = Infinity;
+    let nearestRadius = 1;
     const cx = cellIndex(dir[0]);
     const cy = cellIndex(dir[1]);
     const cz = cellIndex(dir[2]);
@@ -81,14 +87,14 @@ export function createTerrain(seed: number, radius = LUNA_RADIUS): Terrain {
             const cos = dot(dir, c.center);
             if (cos < c.cosReach) continue;
             const x = (Math.acos(Math.min(1, cos)) * radius) / c.radius;
-            nearest = Math.min(nearest, x);
+            if (x < nearest) [nearest, nearestRadius] = [x, c.radius];
             if (x < 1) h += c.depth * (x * x - 1);
             if (x > 0.6 && x < 1.8) h += 0.35 * c.depth * Math.exp(-(((x - 1) / 0.22) ** 2));
           }
         }
       }
     }
-    return { h: Math.min(HEIGHT_MAX, Math.max(HEIGHT_MIN, h)), m, x: nearest };
+    return { h: Math.min(HEIGHT_MAX, Math.max(HEIGHT_MIN, h)), m, x: nearest, r: nearestRadius };
   }
 
   const height = (dir: Vec3) => sample(dir).h;
@@ -102,6 +108,22 @@ export function createTerrain(seed: number, radius = LUNA_RADIUS): Terrain {
       if (x < 0.7) return 2;
       if (x > 0.85 && x < 1.25) return 3;
       return m > 0.5 ? 1 : 0;
+    },
+    surfaceShares(dir, soft) {
+      const { h, x, r } = sample(dir);
+      // The same edges as surfaceClass, each widened to at least `soft` (in crater radii here).
+      const w = Math.max(0.05, soft / r) / 2;
+      // A crater much smaller than the cells would land on single vertices: fade it out instead.
+      const seen = smoothstep(0.5, 1.5, r / soft);
+      const frostLat = (80 * Math.PI) / 180;
+      const lat = Math.abs(latLon(dir).lat);
+      return {
+        floor: seen * (1 - smoothstep(0.7 - w, 0.7 + w, x)),
+        rim: seen * smoothstep(0.85 - w, 0.85 + w, x) * (1 - smoothstep(1.25 - w, 1.25 + w, x)),
+        frost:
+          smoothstep(frostLat - soft / radius, frostLat + soft / radius, lat) *
+          (1 - smoothstep(-soft * 0.2, soft * 0.2, h)),
+      };
     },
     slopeAt(dir, step = 0.05) {
       const { east, north } = tangentBasis(dir);

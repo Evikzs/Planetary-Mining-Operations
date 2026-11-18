@@ -6,7 +6,8 @@ import type { BuildingStatus, Priority } from '../sim/state';
 import type { NewsItem } from '../sim/news';
 import type { PlotKind } from '../sim/world/types';
 import { formatMoney } from '../ui/format';
-import type { Skill } from './buildings';
+import type { BuildingTypeId, Skill } from './buildings';
+import type { Asset } from '../sim/contracts/contracts';
 import { GOODS } from './goods';
 
 export const ERROR_COPY: Record<CommandError, string> = {
@@ -51,6 +52,45 @@ export const BUILDING_STATUS: Record<BuildingStatus, string> = {
   unpowered: 'Short of power',
   unstaffed: 'No workers on shift',
   striking: 'On strike',
+};
+
+/** What each building is for, in one line, under its name on the selection sheet. */
+export const BUILDING_ROLE: Record<BuildingTypeId, string> = {
+  depot: 'The heart of a section. Goods come in, goods go out, buses start here.',
+  regolithScoop: 'Scrapes the loose top of the ground into the hopper.',
+  mine: 'Winds the cage down the shaft and brings the ore up.',
+  iceDrill: 'Bores into the frozen floor of a dark crater.',
+  he3Harvester: 'Heats the dust and keeps the gas the solar wind left in it.',
+  smelter: 'Melts the ore into metal. Its furnace never cools.',
+  waferFab: 'Clean rooms that grow silicon into wafers.',
+  chemicalRefinery: 'Pulls the rare earths and the salts out of the rock.',
+  electrolysisPlant: 'Splits water into the air you breathe and the fuel you burn.',
+  airPlant: 'Bakes oxygen out of the rock. Every breath in the section starts here.',
+  waterPlant: 'Melts and cleans the ice. Water for the homes and the farms.',
+  hydroponicsFarm: 'Food under glass, in water, under lamps.',
+  assemblyWorks: 'Puts panels, frames and machines together.',
+  solarArray: 'Power by day. Nothing at night.',
+  crewQuarters: 'Bunks for the crews and their families.',
+  habitatDome: 'Homes under a dome, with air enough for a garden.',
+  warehouse: 'Racks and bays for what the depot has no room for.',
+  roverGarage: 'Keeps the buses running and sends them out at each shift.',
+  contractSite: 'Work for a client. The job board says what it needs.',
+};
+
+/** Names of what you build for clients. */
+export const ASSET_NAMES: Record<Asset, string> = {
+  landingPad: 'Landing pad',
+  commMast: 'Signal mast',
+  roadDepot: 'Road depot',
+  publicSolar: 'Public solar',
+};
+
+/** The same for what you build for clients. */
+export const ASSET_ROLE: Record<Asset, string> = {
+  landingPad: 'Landers set down here. Built for a client.',
+  commMast: 'Talks to orbit and to Earth. Built for a client.',
+  roadDepot: 'Graders and rollers for the public roads. Built for a client.',
+  publicSolar: 'Power for anyone on the grid. Built for a client.',
 };
 
 export const PLOT_KIND_NAMES: Record<PlotKind, string> = {

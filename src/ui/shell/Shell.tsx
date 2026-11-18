@@ -1,6 +1,6 @@
 import type { ComponentChildren } from 'preact';
 import { useEffect } from 'preact/hooks';
-import { selection, ui, uiScale } from '../../client/store';
+import { selection, ui, uiScale, viewMode } from '../../client/store';
 import type { DebugFlags } from '../../worker/protocol';
 import { CompanionBubble } from '../companion/CompanionBubble';
 import { Icon } from '../icons';
@@ -18,9 +18,11 @@ import { AlertsList, alertsOpen } from './Alerts';
 import { ErrorBanner } from './ErrorBanner';
 import { Compass } from './Compass';
 import { ContextPanel } from './ContextPanel';
+import { DepthGauge } from './DepthGauge';
 import { NewsTicker } from './NewsTicker';
 import { MapCanvas } from './MapCanvas';
 import { MapFilters } from './MapFilters';
+import { SceneMarks } from './SceneMarks';
 import { TabRail } from './TabRail';
 import { activeTab, TABS, toggleTab, type TabId } from './tabs';
 import { TopBar } from './TopBar';
@@ -116,10 +118,16 @@ export function Shell({ flags }: { flags: DebugFlags }) {
       <div class="hud">
         {snap?.company && (
           <>
-            <Compass />
-            <MapFilters />
+            <SceneMarks />
+            {viewMode.value === 'moon' && (
+              <>
+                <Compass />
+                <MapFilters />
+              </>
+            )}
             <TopBar />
             <TabRail />
+            <DepthGauge />
             <TabPanel />
             <ContextPanel />
             <AlertsList />

@@ -115,6 +115,8 @@ Keys do nothing while a text field has focus. Settings lists every key.
 
 ## 5. Graphics as placeholder
 
+> **Superseded on 2026-11-17** by the [A1 art redo](2026-11-17-a1-art-redo-design.md): the graphics are redone in Fable's design language.
+
 - The parent spec's art direction (section 9.6) and the README say that all current graphics are placeholder.
 - The pixel-snapshot tests (`e2e/visual.spec.ts` and its snapshots) go. Render smoke tests (WebGL starts, frames draw, picking works) and motion tests (rovers and crates move) stay.
 - No art work until the redo: no new models, shaders, palettes or icons in D1. New UI keeps the current tokens.

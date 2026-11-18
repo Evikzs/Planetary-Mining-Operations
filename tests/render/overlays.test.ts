@@ -11,7 +11,7 @@ import {
   scale,
   type Vec3,
 } from '../../src/shared/vec3';
-import { palette } from '../../src/ui/tokens';
+import { ink, livery } from '../../src/ui/tokens';
 
 describe('overlay geometry', () => {
   it('arc endpoints match and points are unit length', () => {
@@ -59,22 +59,22 @@ describe('map filters', () => {
       { id: 1, name: 'Tycho Deepworks', colour: 'teal', status: 'active' },
       { id: 4, name: 'Blackrim Salvage', colour: 'rust', status: 'bankrupt' },
     ] as const;
-    expect(ownerColour(0, [...companies])).toBe(palette.burntOrange);
-    expect(ownerColour(1, [...companies])).toBe(palette.teal);
-    expect(ownerColour(4, [...companies])).toBe(palette.rust);
+    expect(ownerColour(0, [...companies])).toBe(livery.burntOrange);
+    expect(ownerColour(1, [...companies])).toBe(livery.teal);
+    expect(ownerColour(4, [...companies])).toBe(livery.rust);
     expect(ownerColour(null, [...companies])).toBeNull();
     expect(ownerColour(9, [...companies])).toBeNull();
   });
 
-  it('tints teal when fine, mustard when strained, rust when failing', () => {
+  it('tints verdant when fine, lamp when strained, hazard when failing', () => {
     // Power: full supply is fine, half or more is strained.
-    expect(filterTint(1, 1, 0.5)).toBe(palette.teal);
-    expect(filterTint(0.75, 1, 0.5)).toBe(palette.mustard);
-    expect(filterTint(0.5, 1, 0.5)).toBe(palette.mustard);
-    expect(filterTint(0.49, 1, 0.5)).toBe(palette.rust);
+    expect(filterTint(1, 1, 0.5)).toBe(ink.verdant);
+    expect(filterTint(0.75, 1, 0.5)).toBe(ink.lamp);
+    expect(filterTint(0.5, 1, 0.5)).toBe(ink.lamp);
+    expect(filterTint(0.49, 1, 0.5)).toBe(ink.hazard);
     // Morale: migrants come at 50, strikes start below 25.
-    expect(filterTint(0.9, 0.5, 0.25)).toBe(palette.teal);
-    expect(filterTint(0.3, 0.5, 0.25)).toBe(palette.mustard);
-    expect(filterTint(0.2, 0.5, 0.25)).toBe(palette.rust);
+    expect(filterTint(0.9, 0.5, 0.25)).toBe(ink.verdant);
+    expect(filterTint(0.3, 0.5, 0.25)).toBe(ink.lamp);
+    expect(filterTint(0.2, 0.5, 0.25)).toBe(ink.hazard);
   });
 });

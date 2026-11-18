@@ -1,4 +1,4 @@
-import type { MotionPref } from './store';
+import type { GraphicsPref, MotionPref } from './store';
 
 const MOTION_KEY = 'pmo.reducedMotion';
 
@@ -58,6 +58,26 @@ export function loadUiScale(windowWidth: number): UiScale {
 export function saveUiScale(scale: UiScale): void {
   try {
     localStorage.setItem(SCALE_KEY, String(scale));
+  } catch {
+    // Storage is blocked (private mode): the choice lasts until the page closes.
+  }
+}
+
+const GRAPHICS_KEY = 'pmo.graphics';
+
+/** The saved graphics choice; 'auto' when none was saved or storage is blocked. */
+export function loadGraphicsPref(): GraphicsPref {
+  try {
+    const v = localStorage.getItem(GRAPHICS_KEY);
+    return v === 'high' || v === 'low' ? v : 'auto';
+  } catch {
+    return 'auto';
+  }
+}
+
+export function saveGraphicsPref(pref: GraphicsPref): void {
+  try {
+    localStorage.setItem(GRAPHICS_KEY, pref);
   } catch {
     // Storage is blocked (private mode): the choice lasts until the page closes.
   }

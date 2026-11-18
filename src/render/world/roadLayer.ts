@@ -2,15 +2,14 @@ import {
   BufferGeometry,
   Float32BufferAttribute,
   Mesh,
-  MeshToonMaterial,
+  MeshLambertMaterial,
   Uint32BufferAttribute,
   type Object3D,
-  type Texture,
 } from 'three';
 import type { Terrain } from '../../shared/terrain';
 import { normalize, scale, type Vec3 } from '../../shared/vec3';
 import type { WorldView } from '../../sim/views';
-import { bodyAccent, mix, palette } from '../../ui/tokens';
+import { kit } from '../../ui/tokens';
 import type { GlobeCameraState } from '../camera/globeCamera';
 import { visibleLayers } from './lod';
 import { ribbonGeometry } from './ribbon';
@@ -18,9 +17,14 @@ import { ribbonGeometry } from './ribbon';
 const WIDTH = 0.18;
 const LIFT = 0.02;
 
-/** Roads as ribbons draped over the ground; from altitude 30 the traffic lines take over. */
+/** Dark asphalt ribbons draped over the ground; from altitude 30 the traffic lines take over. */
 export class RoadLayer {
-  private readonly material: MeshToonMaterial;
+  private readonly material = new MeshLambertMaterial({
+    color: kit.road,
+    polygonOffset: true,
+    polygonOffsetFactor: -2,
+    polygonOffsetUnits: -2,
+  });
   private readonly built = new Map<number, ReturnType<typeof ribbonGeometry>>();
   private mesh: Mesh | null = null;
 
@@ -28,16 +32,7 @@ export class RoadLayer {
     private readonly parent: Object3D,
     private readonly terrain: Terrain,
     private readonly radius: number,
-    gradientMap: Texture,
-  ) {
-    this.material = new MeshToonMaterial({
-      color: mix(bodyAccent.luna, palette.offBlack, 0.35),
-      gradientMap,
-      polygonOffset: true,
-      polygonOffsetFactor: -2,
-      polygonOffsetUnits: -2,
-    });
-  }
+  ) {}
 
   setWorld(w: WorldView): void {
     const parts = w.roads.map((road) => {
@@ -69,6 +64,7 @@ export class RoadLayer {
     this.mesh?.removeFromParent();
     this.mesh?.geometry.dispose();
     this.mesh = new Mesh(g, this.material);
+    this.mesh.receiveShadow = true;
     this.parent.add(this.mesh);
   }
 

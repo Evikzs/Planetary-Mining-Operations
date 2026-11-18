@@ -11,7 +11,8 @@ export interface ChunkKey {
 
 export const keyOf = (k: ChunkKey): string => `${k.face}/${k.level}/${k.x}/${k.y}`;
 
-export const LOD = { maxLevel: 8, splitFactor: 2.2 } as const;
+// minLevel: from orbit the coarse levels' cells would show as facets; level 2 keeps them small.
+export const LOD = { minLevel: 2, maxLevel: 8, splitFactor: 2.2 } as const;
 
 /** A node's u or v span on its face. */
 export function nodeSpan(k: ChunkKey): { u0: number; u1: number; v0: number; v1: number } {
@@ -81,7 +82,8 @@ export function selectChunks(
     const c = scale(center, radius);
     if (visible && !visible(c, boundingRadius(angle, radius))) return;
     const split =
-      k.level < LOD.maxLevel && len(sub(camPos, c)) < LOD.splitFactor * nodeSize(k.level, radius);
+      k.level < LOD.minLevel ||
+      (k.level < LOD.maxLevel && len(sub(camPos, c)) < LOD.splitFactor * nodeSize(k.level, radius));
     if (split) children(k).forEach(visit);
     else out.push(k);
   };

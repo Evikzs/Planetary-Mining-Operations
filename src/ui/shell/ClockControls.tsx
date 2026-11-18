@@ -10,10 +10,9 @@ export function setClock(paused: boolean, speed: Speed = clock.value.speed): voi
 
 export const togglePause = (): void => setClock(!clock.value.paused);
 
-/** Pause, the four speeds and, when the machine falls behind, the speed it really keeps. */
+/** Pause and the four speeds; the top bar's clock shows the "Paused" stamp and the real speed. */
 export function ClockControls() {
   const c = clock.value;
-  const slow = !c.paused && c.actualSpeed < 0.9 * c.speed;
   return (
     <span class="clock-controls">
       <button
@@ -37,16 +36,6 @@ export function ClockControls() {
           {s}×
         </button>
       ))}
-      {c.paused && (
-        <span class="stamp" data-testid="paused">
-          Paused
-        </span>
-      )}
-      {slow && (
-        <span class="meta" data-testid="real-speed">
-          Running at {c.actualSpeed.toFixed(1)}×
-        </span>
-      )}
     </span>
   );
 }

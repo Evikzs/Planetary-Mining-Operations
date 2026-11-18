@@ -1,18 +1,33 @@
 import { useState } from 'preact/hooks';
 import {
   loadOfflinePref,
+  saveGraphicsPref,
   saveMotionPref,
   saveOfflinePref,
   saveUiScale,
   UI_SCALES,
 } from '../../client/preferences';
-import { motionPref, simClient, ui, uiScale, type MotionPref } from '../../client/store';
+import {
+  graphicsPref,
+  motionPref,
+  simClient,
+  ui,
+  uiScale,
+  type GraphicsPref,
+  type MotionPref,
+} from '../../client/store';
 import { ERROR_COPY } from '../../data/copy';
 import type { HintCategory } from '../../sim/story/beats';
 import { Choices } from '../components/Choices';
 import { ErrorText, useCommand } from '../components/command';
 import { ImportSave, SaveSlots } from '../components/SaveControls';
 import { activeTab, OTHER_KEYS, TABS } from '../shell/tabs';
+
+const GRAPHICS: { id: GraphicsPref; label: string }[] = [
+  { id: 'auto', label: 'Auto' },
+  { id: 'high', label: 'High' },
+  { id: 'low', label: 'Low' },
+];
 
 const MOTION: { id: MotionPref; label: string }[] = [
   { id: 'system', label: 'System' },
@@ -191,6 +206,22 @@ export function SettingsTab() {
             saveUiScale(scale);
           }}
         />
+      </section>
+      <section>
+        <Choices
+          legend="Graphics"
+          name="graphics"
+          options={GRAPHICS}
+          value={graphicsPref.value}
+          onChange={(pref) => {
+            graphicsPref.value = pref;
+            saveGraphicsPref(pref);
+          }}
+        />
+        <p class="meta">
+          High adds glow, soft shadows and smoother edges. Auto picks Low when the browser draws
+          without a graphics card.
+        </p>
       </section>
       <OfflineChoice />
       <KeyList />

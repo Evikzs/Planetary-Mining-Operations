@@ -18,11 +18,16 @@ export interface GlobeCameraState {
   lockNorth: boolean;
 }
 
-export const MIN_ALTITUDE = 1.5;
+/** Street level: 10 m over the ground (one unit is 40 m). */
+export const MIN_ALTITUDE = 0.25;
 export const MAX_ALTITUDE = 400;
-const MAX_TILT = (55 * Math.PI) / 180;
+/** Below this the camera leaves the bird's-eye view and tilts on towards the horizon. */
+export const BIRD_EYE_ALTITUDE = 1.5;
+const BIRD_TILT = (55 * Math.PI) / 180;
+const STREET_TILT = (80 * Math.PI) / 180;
 const FLAT_ALTITUDE = 60;
-const MIN_CLEARANCE = 0.5;
+/** The camera keeps 2 m over the ground under its target. */
+const MIN_CLEARANCE = 0.05;
 
 const north = (pos: Vec3): Vec3 => tangentBasis(pos).north;
 
@@ -110,13 +115,22 @@ export function heading(s: GlobeCameraState): number {
   return (Math.atan2(dot(s.fwd, east), dot(s.fwd, n)) + turn) % turn;
 }
 
-/** 55° from straight down at the lowest altitude, easing to 0° by altitude 60 (smoothstep in log altitude). */
+const smooth = (x: number): number => {
+  const t = Math.min(1, Math.max(0, x));
+  return t * t * (3 - 2 * t);
+};
+
+/**
+ * 55° from straight down at bird's-eye altitude (1.5), easing to 0° by altitude 60; below 1.5 it
+ * tilts on to 80° at street level, near the horizon. Both eases are smoothsteps in log altitude.
+ */
 export function tiltForAltitude(alt: number): number {
-  const x = Math.min(
-    1,
-    Math.max(0, Math.log(alt / MIN_ALTITUDE) / Math.log(FLAT_ALTITUDE / MIN_ALTITUDE)),
-  );
-  return MAX_TILT * (1 - x * x * (3 - 2 * x));
+  if (alt < BIRD_EYE_ALTITUDE) {
+    const x = Math.log(BIRD_EYE_ALTITUDE / alt) / Math.log(BIRD_EYE_ALTITUDE / MIN_ALTITUDE);
+    return BIRD_TILT + (STREET_TILT - BIRD_TILT) * smooth(x);
+  }
+  const x = Math.log(alt / BIRD_EYE_ALTITUDE) / Math.log(FLAT_ALTITUDE / BIRD_EYE_ALTITUDE);
+  return BIRD_TILT * (1 - smooth(x));
 }
 
 /** The camera sits `altitude` back from the ground target, tilted towards the heading. */

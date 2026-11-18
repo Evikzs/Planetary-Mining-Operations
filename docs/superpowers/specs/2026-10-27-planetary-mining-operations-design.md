@@ -4,7 +4,8 @@
 - **Status:** Draft for owner review
 - **Working title:** Planetary Mining Operations
 - **Scope of this document:** the whole game. Each milestone in section 15 gets its own implementation plan.
-- **Platform change (2026-11-12):** the game is now a desktop game, with a Steam release as the end goal. The [D1 design](2026-11-12-d1-desktop-conversion-design.md) holds the details. All current graphics are placeholder.
+- **Platform change (2026-11-12):** the game is now a desktop game, with a Steam release as the end goal. The [D1 design](2026-11-12-d1-desktop-conversion-design.md) holds the details.
+- **Art redo (2026-11-17):** the graphics are no longer placeholder. The [A1 design](2026-11-17-a1-art-redo-design.md) holds the details.
 
 ---
 
@@ -21,7 +22,7 @@ This is a personal project. The owner plays it with friends. The end goal is a r
 3. **Expansion through contracts.** You grow by winning rights at auction and by completing contracts. You grow from one Moon section to a galactic conglomerate.
 4. **A companion, not a manual.** A story character teaches the game, stays with you and becomes the in-game wiki (the Codex).
 5. **Play at your pace, long arc.** Pause and four speeds. A run lasts 1–2 weeks of real time at 1×. Each new run starts stronger than the one before.
-6. **Crafted, not generic.** Deliberate motion, and an art style of its own (section 9.6: the current graphics are placeholder). Nothing may look like a default template.
+6. **Crafted, not generic.** Deliberate motion, and an art style of its own (section 9.6). Nothing may look like a default template.
 
 ### 1.3 Non-goals
 
@@ -65,6 +66,7 @@ This is a personal project. The owner plays it with friends. The end goal is a r
 | Rivals (2026-11-05) | Fully simulated, workers and buses included, under the same rules as the player. |
 | M2b design (2026-11-12) | Research and patents get the most depth. Patents: licence or wait, at a formula price the holder cannot refuse. 50 nodes, then repeatable efficiency research. Haulers: rovers on haul roads and drones on arcs. Pilots drive haulers; crew has no jobs until M4. Roads and belts can be edited. Rivals research, license and haul too. Details: [M2b design](2026-11-12-m2b-research-people-logistics-design.md). |
 | Desktop (2026-11-12) | The mobile version is dropped. A desktop game in Electron, with the web build kept as a playtest link. Mouse and keyboard, minimum window 1280×720, UI scale. Hybrid time: pause and speeds 1×–8×, offline catch-up as a setting. All graphics are placeholder until a later redo. Steam is the end goal. Details: [D1 design](2026-11-12-d1-desktop-conversion-design.md). |
+| Art (2026-11-17) | The art redo comes now, in Fable's design language (the reference is on the branch `design/fable-shell`). The sun follows the game clock; the camera reaches street level; a first view of Sol sits above orbit. Details: [A1 design](2026-11-17-a1-art-redo-design.md). |
 
 ---
 
@@ -458,16 +460,17 @@ One desktop layout, designed at 1920×1080. It works down to a 1280×720 window.
 - **Controls:** click a crew member, then click a room. Drag power bars. Space pauses combat.
 - **Bridge inbox:** lists all live voyages that wait for a decision.
 
-### 9.6 Art direction: retro-futurist poster
+### 9.6 Art direction: the survey sheet (Fable's design)
 
-> **Placeholder (2026-11-12).** All current graphics are placeholder. The art is redone later, and this section is rewritten then. Until the redo, add no new art: no models, shaders, palettes or icons.
+> **Art redo (2026-11-17).** The retro-futurist poster look is retired. The game now uses Fable's design language, kept as reference on the branch `design/fable-shell`. Details: [A1 design](2026-11-17-a1-art-redo-design.md).
 
-- **Palette:** 8 core colours: deep navy, burnt orange, mustard, teal, cream paper, rust, off-black, dusty pink. Each body has an accent: Luna grey, Mars rust, Europa ice-teal, Titan amber haze.
-- **3D rendering:** banded lighting in 3–4 steps, halftone in shadow areas, paper grain, a very small print-offset (colour misregistration), soft outlines from an edge-detection pass.
-- **UI:** printed cards on cream paper. Bold geometric headers. Thin rules. Stamps and badges.
-- **Type:** Jost (geometric display), IBM Plex Sans (text), IBM Plex Mono with tabular figures (numbers). Fonts are self-hosted so the game works offline.
-- **Icons:** one custom SVG set, 2 px stroke.
-- **Forbidden:** glassmorphism, purple gradients, emoji icons, default UI kits.
+- **Light:** mostly dark. Three kinds of light: amber for what people built, green for what keeps them alive, and the ore colour of a mineral for what they came to find. An ore colour marks a find only (deposits, seams, ore on belts, the gem of a raw good), never ordinary UI.
+- **Palette:** pit, slate, chalk, dust, lamp (amber), brass (hairlines), verdant (gains, life support), hazard (losses, alerts). Each raw good has a mineral colour; Luna's seams glint in KREEP rose. Company liveries keep their old ids for the saves.
+- **3D rendering:** a sun that turns with the game clock, soft shadows, a sky of stars and a dust band, neutral tone mapping and bloom. Buildings, vehicles and workers come from one low-poly kit with vertex paint and night glow: windows, lamps, light pools and beacons light the settlements at their own dusk.
+- **UI:** notes in the margins of a survey sheet. Type sits on the map; frames only round what you work in. The selection is a specimen sheet; the zoom is a borehole log.
+- **Type:** Besley (names and titles) and Barlow (all other text, tabular figures), self-hosted so the game works offline.
+- **Icons:** one custom SVG set, 1.6 px stroke.
+- **Forbidden:** ore colours on plain UI, purple gradients, emoji icons, default UI kits, a blur behind the large panels.
 - A **colour-blind-safe** palette option is available.
 
 ### 9.7 Audio
@@ -611,7 +614,7 @@ Exact versions are pinned in `package.json`.
 - **Terrain:** height, biome and deposits come from seeded 3D noise sampled on the sphere. No seams. The poles work like any other area.
 - **Streaming:** chunk workers build geometry and transfer the buffers to the main thread. Level of detail follows the camera altitude. Chunks out of range are disposed.
 - **Instancing:** crates, rovers, workers and repeated buildings use instanced meshes.
-- **Post-processing:** the poster pass (banding, halftone, grain, print offset, outlines).
+- **Post-processing:** bloom and neutral tone mapping, with soft shadows from the sun (Graphics: High). Graphics: Low draws without them, for software rendering.
 - **Map levels:** Solar, Regional and Galactic are separate scenes on the same renderer.
 - **Moving things:** each has a schedule (start time, path, speed). The renderer computes position from time. GSAP drives bezier path progress for ships and UI tokens.
 
@@ -642,7 +645,7 @@ Exact versions are pinned in `package.json`.
 src/
   sim/          pure simulation core (section 13.3)
   sim.worker.ts simulation worker shell
-  render/       Three.js: globe, chunks, camera, maps, poster pass, instancing
+  render/       Three.js: globe, chunks, camera, sky, sun, the colony kit, the view of Sol, instancing
   ui/           Preact: shell, tabs, panels, companion, Codex
   data/         goods, buildings, recipes, contracts, research, companions, balance constants
   save/         save stores (files, IndexedDB), migrations, export and import
@@ -713,7 +716,8 @@ Each milestone gets its own implementation plan.
 | M4 | Voyage mode | Ship cut-away, operating parameters, legs and events, real-time combat with pause, autopilot, voyage contracts, the pirate rescue arc. |
 | M5 | Outer Sol | Belt, Jovian moons, Titan and Enceladus, Mercury and Venus. All 105 goods. Futures, short selling, bonds, insurance, transfer pricing. All 19 contract types. Achievements. |
 | M6 | Beyond Sol | Regional and Galactic maps, procedural star systems, information lag, FTL tiers, more rivals. |
-| M7 | Meta and polish | Founder Legacy perks, full arcs for all 4 companions, full audio, share card, the art redo, accessibility pass. |
+| A1 | The art redo | Fable's design language over the whole game: tokens and fonts, the HUD, light and sky, the colony kit, night lights, the depth gauge, street level and a first view of Sol. Pulled forward from M7 on 2026-11-17. |
+| M7 | Meta and polish | Founder Legacy perks, full arcs for all 4 companions, full audio, share card, accessibility pass. |
 | S1 | Steam release | Windows, macOS and Linux builds, Steamworks (achievements, cloud saves), signing, store page. Gamepad and Steam Deck controls if wanted. |
 
 ---

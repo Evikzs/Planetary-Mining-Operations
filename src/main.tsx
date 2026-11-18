@@ -1,25 +1,33 @@
-import '@fontsource-variable/jost';
-import '@fontsource/ibm-plex-sans/400.css';
-import '@fontsource/ibm-plex-sans/500.css';
-import '@fontsource/ibm-plex-sans/600.css';
-import '@fontsource/ibm-plex-mono/400.css';
-import '@fontsource/ibm-plex-mono/500.css';
+import '@fontsource/besley/500.css';
+import '@fontsource/besley/600.css';
+import '@fontsource/besley/500-italic.css';
+import '@fontsource/barlow/400.css';
+import '@fontsource/barlow/500.css';
+import '@fontsource/barlow/600.css';
 import './ui/global.css';
 import { effect } from '@preact/signals';
 import { render } from 'preact';
 import { debugEnabled, parseDebugFlags } from './client/debugFlags';
-import { loadMotionPref, loadOfflinePref, loadUiScale } from './client/preferences';
+import {
+  loadGraphicsPref,
+  loadMotionPref,
+  loadOfflinePref,
+  loadUiScale,
+} from './client/preferences';
 import { createSimClient, type SimClient } from './client/simClient';
 import {
   away,
   catchUpProgress,
   clock,
   gameRenderer,
+  graphicsPref,
+  graphicsQuality,
   motion,
   motionPref,
   recentFills,
   reducedMotion,
   simClient,
+  softwareRenderer,
   systemReducedMotion,
   ui,
   uiScale,
@@ -27,7 +35,7 @@ import {
   world,
 } from './client/store';
 import { installTestApi } from './client/testApi';
-import { isWebGL2Available } from './render/webgl';
+import { isSoftwareRenderer, isWebGL2Available } from './render/webgl';
 import type { SimEvent } from './sim/events';
 import { App, APP_TITLE } from './ui/App';
 import { OtherTab } from './ui/screens/OtherTab';
@@ -44,8 +52,16 @@ systemReducedMotion.value = reduced.matches;
 reduced.addEventListener('change', (e) => (systemReducedMotion.value = e.matches));
 motionPref.value = loadMotionPref();
 uiScale.value = loadUiScale(window.innerWidth);
+graphicsPref.value = loadGraphicsPref();
+// Dev and e2e builds can force the graphics: ?graphics=high or ?graphics=low.
+const forced = new URLSearchParams(location.search).get('graphics');
+if (debugEnabled() && (forced === 'high' || forced === 'low')) graphicsPref.value = forced;
 effect(() => {
   html.dataset.motion = reducedMotion.value ? 'reduced' : 'full';
+});
+// Low graphics also drops the blur behind the sheets: in software it costs every frame.
+effect(() => {
+  html.dataset.graphics = graphicsQuality.value;
 });
 
 /** Starts the game worker and the interface; only the tab that holds the game lock does this. */
@@ -83,6 +99,7 @@ function start(root: HTMLElement): void {
     if (document.visibilityState === 'hidden') client.saveNow();
   });
   const webgl = !flags.noWebgl && isWebGL2Available();
+  softwareRenderer.value = webgl && isSoftwareRenderer();
   render(<App flags={flags} webgl={webgl} />, root);
 }
 

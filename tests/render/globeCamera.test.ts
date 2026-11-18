@@ -64,25 +64,26 @@ describe('globe camera', () => {
     expect(heading(locked)).toBeCloseTo(0, 9);
   });
 
-  it('zoom clamps to [1.5, 400]; tilt is 55° at 1.5 and 0° at 60', () => {
+  it('zoom clamps to [0.25, 400]; tilt is 80° at the street, 55° at 1.5 and 0° at 60', () => {
     const s = createCameraState([1, 0, 0], 10);
-    expect(zoom(s, 0.01).altitude).toBe(1.5);
+    expect(zoom(s, 0.001).altitude).toBe(0.25);
     expect(zoom(s, 1000).altitude).toBe(400);
     expect(zoom(s, 2).altitude).toBe(20);
+    expect(tiltForAltitude(0.25)).toBeCloseTo(deg(80), 9);
+    expect(tiltForAltitude(Math.sqrt(0.25 * 1.5))).toBeCloseTo(deg(67.5), 9);
     expect(tiltForAltitude(1.5)).toBeCloseTo(deg(55), 9);
-    expect(tiltForAltitude(1)).toBeCloseTo(deg(55), 9);
     expect(tiltForAltitude(60)).toBe(0);
     expect(tiltForAltitude(200)).toBe(0);
     const mid = tiltForAltitude(Math.sqrt(1.5 * 60));
     expect(mid).toBeCloseTo(deg(27.5), 9);
   });
 
-  it('pose never goes below ground + 0.5', () => {
+  it('pose never goes below ground + 0.05 (2 m)', () => {
     for (const ground of [-1.2, 0, 1.6, 30]) {
-      for (const alt of [1.5, 3, 20, 400]) {
+      for (const alt of [0.25, 1.5, 3, 20, 400]) {
         const s = createCameraState(fromLatLon(deg(-75), deg(40)), alt);
         const pose = cameraPose(s, R, ground);
-        expect(len(pose.position)).toBeGreaterThanOrEqual(R + ground + 0.5 - 1e-9);
+        expect(len(pose.position)).toBeGreaterThanOrEqual(R + ground + 0.05 - 1e-9);
         expect(Math.abs(len(pose.target) - (R + ground))).toBeLessThan(1e-9);
         expect(Math.abs(dot(pose.up, sub(pose.target, pose.position)))).toBeLessThan(1e-6);
       }

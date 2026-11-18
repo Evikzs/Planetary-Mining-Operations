@@ -1,64 +1,39 @@
 import {
-  BoxGeometry,
-  BufferGeometry,
   Color,
-  CylinderGeometry,
-  Float32BufferAttribute,
   InstancedMesh,
   Matrix4,
-  MeshToonMaterial,
+  PlaneGeometry,
   Vector3,
+  type Material,
   type Object3D,
   type Texture,
 } from 'three';
-import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import type { Terrain } from '../../shared/terrain';
 import { pointAt, tripState, type Trip } from '../../shared/trips';
-import { palette } from '../../ui/tokens';
 import type { GlobeCameraState } from '../camera/globeCamera';
+import { poolMaterial } from '../materials';
+import { kitMaterial, METRES_PER_UNIT, type SceneUniforms } from './kit';
 import { visibleLayers } from './lod';
+import { busGeometry } from './models';
 
-const LENGTH = 0.22;
+const M = 1 / METRES_PER_UNIT;
+const HEADLIGHT = new Color('#fff1cf').multiplyScalar(0.16);
 
-/** A flat-coloured part for the bus model. */
-function colored(g: BufferGeometry, color: string): BufferGeometry {
-  const flat = g.index ? g.toNonIndexed() : g;
-  flat.deleteAttribute('uv');
-  const c = new Color(color);
-  const n = flat.getAttribute('position').count;
-  const rgb = new Float32Array(n * 3);
-  for (let i = 0; i < n; i++) rgb.set([c.r, c.g, c.b], i * 3);
-  flat.setAttribute('color', new Float32BufferAttribute(rgb, 3));
-  return flat;
-}
-
-/** The commuter bus: a mustard body with a teal stripe on six wheels, nose along +x. */
-export function busGeometry(): BufferGeometry {
-  const wheels = [-0.075, 0, 0.075].flatMap((x) =>
-    [-0.05, 0.05].map((z) =>
-      colored(
-        new CylinderGeometry(0.022, 0.022, 0.02, 8).rotateX(Math.PI / 2).translate(x, 0.022, z),
-        palette.offBlack,
-      ),
-    ),
-  );
-  return mergeGeometries([
-    colored(new BoxGeometry(LENGTH, 0.07, 0.1).translate(0, 0.065, 0), palette.mustard),
-    colored(new BoxGeometry(LENGTH + 0.002, 0.015, 0.102).translate(0, 0.075, 0), palette.teal),
-    ...wheels,
-  ]);
-}
-
-/** Buses on their trips, placed from the trip plan at the current game time. */
+/** Buses on their trips, placed from the trip plan at the current game time, lights on at night. */
 export class RoverLayer {
   private readonly geometry = busGeometry();
-  private readonly material: MeshToonMaterial;
+  private readonly material: Material;
+  private readonly poolGeometry = new PlaneGeometry(1, 1).rotateX(-Math.PI / 2);
+  private readonly poolMat: Material;
   private mesh: InstancedMesh;
+  private pools: InstancedMesh;
   private trips: Trip[] = [];
   private readonly m = new Matrix4();
   private readonly fwd = new Vector3();
   private readonly up = new Vector3();
   private readonly side = new Vector3();
+  private readonly ahead = new Vector3();
+  private readonly size = new Vector3(8 * M, 1, 17 * M);
   /** The trip and world position of each bus drawn last frame, by instance. */
   private readonly drawn: { tripId: number; at: Vector3 }[] = [];
   shown = 0;
@@ -67,24 +42,28 @@ export class RoverLayer {
     private readonly parent: Object3D,
     private readonly terrain: Terrain,
     private readonly radius: number,
-    gradientMap: Texture,
+    u: SceneUniforms,
+    glow: Texture,
   ) {
-    this.material = new MeshToonMaterial({ vertexColors: true, gradientMap });
-    this.mesh = this.make(32);
+    this.material = kitMaterial(u);
+    this.poolMat = poolMaterial(u, glow);
+    [this.mesh, this.pools] = this.make(32);
   }
 
   setTrips(trips: Trip[]): void {
     this.trips = trips;
     if (trips.length > this.mesh.instanceMatrix.count) {
-      this.mesh.removeFromParent();
-      this.mesh.dispose();
-      this.mesh = this.make(trips.length * 2);
+      for (const m of [this.mesh, this.pools]) {
+        m.removeFromParent();
+        m.dispose();
+      }
+      [this.mesh, this.pools] = this.make(trips.length * 2);
     }
   }
 
   update(gameTime: number, view: GlobeCameraState): void {
     const on = visibleLayers(view.altitude).rovers;
-    this.mesh.visible = on;
+    this.mesh.visible = this.pools.visible = on;
     let k = 0;
     if (on) {
       for (const trip of this.trips) {
@@ -101,12 +80,29 @@ export class RoverLayer {
         bus.tripId = trip.id;
         bus.at.set(pos[0] * r, pos[1] * r, pos[2] * r);
         this.m.makeBasis(this.fwd, this.up, this.side).setPosition(bus.at);
-        this.mesh.setMatrixAt(k++, this.m);
+        this.mesh.setMatrixAt(k, this.m);
+        // A pool of headlight on the road ahead: the pool's long side runs along the bus.
+        this.ahead
+          .copy(bus.at)
+          .addScaledVector(this.fwd, 11 * M)
+          .addScaledVector(this.up, 0.12 * M);
+        this.m.makeBasis(this.side, this.up, this.fwd).scale(this.size).setPosition(this.ahead);
+        this.pools.setMatrixAt(k, this.m);
+        this.pools.setColorAt(k, HEADLIGHT);
+        k++;
       }
     }
-    this.mesh.count = k;
-    this.mesh.instanceMatrix.needsUpdate = true;
+    this.mesh.count = this.pools.count = k;
+    this.mesh.instanceMatrix.needsUpdate = this.pools.instanceMatrix.needsUpdate = true;
+    if (this.pools.instanceColor) this.pools.instanceColor.needsUpdate = true;
     this.shown = k;
+  }
+
+  /** Where the bus of a trip was drawn last frame; null when it is not on the road or not shown. */
+  positionOf(tripId: number): Vector3 | null {
+    for (let k = 0; k < this.shown; k++)
+      if (this.drawn[k]!.tripId === tripId) return this.drawn[k]!.at;
+    return null;
   }
 
   /** The trip of the drawn bus nearest a click, when one lies within reach. */
@@ -125,17 +121,26 @@ export class RoverLayer {
   }
 
   dispose(): void {
-    this.mesh.removeFromParent();
-    this.mesh.dispose();
+    for (const m of [this.mesh, this.pools]) {
+      m.removeFromParent();
+      m.dispose();
+    }
     this.geometry.dispose();
+    this.poolGeometry.dispose();
     this.material.dispose();
+    this.poolMat.dispose();
   }
 
-  private make(capacity: number): InstancedMesh {
+  private make(capacity: number): [InstancedMesh, InstancedMesh] {
     const mesh = new InstancedMesh(this.geometry, this.material, capacity);
-    mesh.count = 0;
-    mesh.frustumCulled = false;
-    this.parent.add(mesh);
-    return mesh;
+    const pools = new InstancedMesh(this.poolGeometry, this.poolMat, capacity);
+    for (const m of [mesh, pools]) {
+      m.count = 0;
+      m.frustumCulled = false;
+      this.parent.add(m);
+    }
+    mesh.castShadow = true;
+    pools.renderOrder = 2;
+    return [mesh, pools];
   }
 }
