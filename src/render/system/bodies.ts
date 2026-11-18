@@ -51,7 +51,9 @@ vec3 surfaceAlbedo(vec3 p, float px, out float vein, out float hgt) {
   vec3 c = mix(uLow, uHigh, smoothstep(.38, .62, cont + (mid - .5) * .45));
   c = mix(c, uAccent, smoothstep(.52, .75, fbm(n * 5. - uSeed)) * .6);
   float r = 1. - abs(2. * fbm(n * 6. + uSeed * 3.1) - 1.);
-  vein = smoothstep(.972, .996, r) * smoothstep(.42, .62, fbm(n * 3. + uSeed * 5.3)) * uVeins;
+  float rw = fwidth(r);
+  vein = smoothstep(.972 - rw, .996 + rw, r) * smoothstep(.42, .62, fbm(n * 3. + uSeed * 5.3)) * uVeins
+    * .024 / (.024 + rw);
   c = mix(c, uOre * (.45 + .6 * mid), vein * .55);
   hgt = cont + mid * .3;
   return c;
@@ -85,9 +87,9 @@ void main(){
   vec3 col = alb * (sun * max(dot(N, uSunL), 0.) + mix(uAmbNight, uAmbDay, smoothstep(-.15, .2, geo)));
   // Mineral glitter near the reflection of the sun.
   vec3 V = normalize(uCamL - vLocal);
-  float cell = exp2(ceil(log2(max(px * 5., 2.))));
+  float cell = exp2(ceil(log2(max(px * 16., 2.))));
   vec3 gp = vLocal / cell;
-  float gl = step(.975, hash13(floor(gp))) * smoothstep(.3, .05, length(fract(gp) - .5))
+  float gl = step(.975, hash13(floor(gp))) * smoothstep(.3, 0., length(fract(gp) - .5))
     * pow(max(dot(N, normalize(V + uSunL)), 0.), 18.) * smoothstep(0., .15, geo);
   col += mix(vec3(1.), uOre, .6) * gl * (.8 + 6. * vein) * (1. - uGas) * uVeins;
   // Lamp light of the settlements on the night side.
@@ -97,7 +99,8 @@ void main(){
     lit += f * f * step(1e-4, uSites[i].w);
   }
   float lc = exp2(ceil(log2(max(px * 1.5, 12.))));
-  float lh = hash13(floor(vLocal / lc) + 7.);
+  // Smooth noise, not hashed cells: blocks of light read as pixels.
+  float lh = vnoise(vLocal / lc + 7.);
   col += uLamp * lit * (1. - smoothstep(-.14, .06, geo)) * (.25 + 2.4 * step(.45, lh) * lh);
   // Air: a rim of haze from space.
   col += uRim * pow(1. - max(dot(nL, V), 0.), 3.) * smoothstep(-.2, .3, geo) * uHaze;

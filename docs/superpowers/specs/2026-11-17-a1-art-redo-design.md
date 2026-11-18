@@ -103,6 +103,7 @@ The game plays well and looks like a placeholder. Fable's shell shows the look t
 - The light, belt and plot layers rebuild only when their inputs change: the world view is resent on every structural change.
 - The clock stays in the top bar (section 3.7). Below 1680 px of bar the sun dial hides; below 1100 px the goods and rates hide. The crumbs always show: they sit above the company name and take no width of their own.
 - Ownership washes are faint (12%): at night a strong wash drowned the lamps.
+- No pixels on the ground (owner check, 2026-11-18). Every class edge (crater floor, rim, polar frost, maria) blends over two grid cells, and a crater smaller than the cells fades out instead of landing on single vertices. Normals are sampled at least one cell apart. The chunks never go coarser than level 2, so from orbit no cell is wider than a few pixels. In the shader, each grain layer fades before its cells come down to a few pixels, seams are antialiased with `fwidth`, glints are soft spots about 6 px across, and the sun's shadow edge is blurred over a few texels. The Sol view's lamp lights use smooth noise, not hashed cells.
 
 ## 4. Constraints
 

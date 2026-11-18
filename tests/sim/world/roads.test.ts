@@ -81,6 +81,7 @@ describe('roads', () => {
       },
       mariaMask: () => 0,
       surfaceClass: () => 0,
+      surfaceShares: () => ({ floor: 0, rim: 0, frost: 0 }),
       slopeAt: () => 0,
     };
     const fake: WorldLike = { radius: 100, terrain: wall, sections: [{ center }], plots: [] };

@@ -7,7 +7,8 @@ export const CHUNK_RES = 32;
 const SIDE = CHUNK_RES + 1;
 const GRID_VERTS = SIDE * SIDE;
 const VERTS = GRID_VERTS + 4 * SIDE;
-// Normals come from terrain samples this far either side, so both chunks at a seam agree.
+// Normals come from terrain samples at least this far either side (one grid cell on coarse
+// chunks, so a ridge between vertices does not flip them), so both chunks at a seam agree.
 const NORMAL_STEP = 0.02;
 
 export interface ChunkMeshData {
@@ -54,31 +55,39 @@ const INDICES = (() => {
   return Uint16Array.from(out);
 })();
 
-function surfaceNormal(terrain: Terrain, dir: Vec3, radius: number): Vec3 {
+function surfaceNormal(terrain: Terrain, dir: Vec3, radius: number, step: number): Vec3 {
   const { east, north } = tangentBasis(dir);
   const at = (axis: Vec3, sign: number): Vec3 => {
-    const d = normalize(add(dir, scale(axis, (sign * NORMAL_STEP) / radius)));
+    const d = normalize(add(dir, scale(axis, (sign * step) / radius)));
     return scale(d, radius + terrain.height(d));
   };
   return normalize(cross(sub(at(east, 1), at(east, -1)), sub(at(north, 1), at(north, -1))));
 }
 
+type Rgb = readonly [number, number, number];
+const mix = (a: Rgb, b: Rgb, t: number): Rgb => [
+  a[0] + (b[0] - a[0]) * t,
+  a[1] + (b[1] - a[1]) * t,
+  a[2] + (b[2] - a[2]) * t,
+];
+
 /**
- * The class colour; between highland and maria it blends on the maria mask over about
- * two grid cells, so the shoreline neither steps along the cells far away nor blurs up close.
+ * The class colours, blended over about two grid cells at every class edge, so edges neither
+ * step along the cells far away nor blur up close.
  */
 function surfaceColor(
   terrain: Terrain,
   dir: Vec3,
-  colors: Record<SurfaceClass, readonly [number, number, number]>,
+  colors: Record<SurfaceClass, Rgb>,
   band: number,
-): readonly [number, number, number] {
-  const cls = terrain.surfaceClass(dir);
-  if (cls > 1) return colors[cls];
+  soft: number,
+): Rgb {
   const x = Math.min(1, Math.max(0, (terrain.mariaMask(dir) - 0.5) / band + 0.5));
-  const t = x * x * (3 - 2 * x);
-  const [a, b] = [colors[0], colors[1]];
-  return [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t];
+  const s = terrain.surfaceShares(dir, soft);
+  let c = mix(colors[0], colors[1], x * x * (3 - 2 * x));
+  c = mix(c, colors[3], s.rim);
+  c = mix(c, colors[2], s.floor);
+  return mix(c, colors[4], s.frost);
 }
 
 /** A 33 × 33 terrain grid plus a skirt ring that hides cracks between detail levels. */
@@ -97,6 +106,9 @@ export function buildChunk(
   // The mask changes by about 15 per radian at a shoreline: 30 × the cell angle spans two cells.
   const cellAngle = Math.PI / 2 / 2 ** key.level / CHUNK_RES;
   const band = Math.min(0.5, Math.max(0.004, 30 * cellAngle));
+  // One grid cell in world units: class edges and normals are smoothed over two of them.
+  const cell = cellAngle * radius;
+  const normalStep = Math.max(NORMAL_STEP, cell);
   for (let j = 0; j < SIDE; j++) {
     for (let i = 0; i < SIDE; i++) {
       const at = (j * SIDE + i) * 3;
@@ -106,8 +118,8 @@ export function buildChunk(
       const p = scale(dir, radius + terrain.height(dir));
       dirs.push(dir);
       positions.set(sub(p, center), at);
-      normals.set(surfaceNormal(terrain, dir, radius), at);
-      rgb.set(surfaceColor(terrain, dir, colors, band), at);
+      normals.set(surfaceNormal(terrain, dir, radius, normalStep), at);
+      rgb.set(surfaceColor(terrain, dir, colors, band, 2 * cell), at);
     }
   }
   const depth = Math.max(0.05, 0.5 * nodeSize(key.level, radius));

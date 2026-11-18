@@ -58,14 +58,18 @@ float px_ = max(length(dFdx(pm_)), length(dFdy(pm_)));
 vec3 n_ = normalize(vWorld);
 float mid_ = fbm(n_ * 11. + uSeed * 1.7);
 float g_ = .82 + .36 * mid_;
-g_ *= mix(1., .8 + .4 * vnoise(pm_ * .02), 1. - smoothstep(12., 50., px_));
-g_ *= mix(1., .86 + .28 * vnoise(pm_ * .23), 1. - smoothstep(1., 4.5, px_));
-g_ *= mix(1., .9 + .2 * vnoise(pm_ * 1.9), 1. - smoothstep(.12, .6, px_));
+// Each layer fades out before its cells shrink to a few pixels, so no pixel-sized speckle shows.
+g_ *= mix(1., .8 + .4 * vnoise(pm_ * .02), 1. - smoothstep(4., 10., px_));
+g_ *= mix(1., .86 + .28 * vnoise(pm_ * .23), 1. - smoothstep(.35, .9, px_));
+g_ *= mix(1., .9 + .2 * vnoise(pm_ * 1.9), 1. - smoothstep(.04, .1, px_));
 diffuseColor.rgb *= g_;
 // Seams: thin lines from orbit. Close to the ground they give way to glints only, so the
 // plain under the buildings stays readable.
 float r_ = 1. - abs(2. * fbm(n_ * 6. + uSeed * 3.1) - 1.);
-float vein_ = smoothstep(.972, .996, r_) * smoothstep(.42, .62, fbm(n_ * 3. + uSeed * 5.3));
+// Widened by the pixel footprint so the line stays smooth, and faded as it grows thinner than that.
+float rw_ = fwidth(r_);
+float vein_ = smoothstep(.972 - rw_, .996 + rw_, r_) * smoothstep(.42, .62, fbm(n_ * 3. + uSeed * 5.3))
+  * .024 / (.024 + rw_);
 float far_ = smoothstep(1.5, 12., px_);
 diffuseColor.rgb = mix(diffuseColor.rgb, uOre * (.45 + .6 * mid_), vein_ * .55 * far_);`,
       )
@@ -74,9 +78,10 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uOre * (.45 + .6 * mid_), vein_ * .55 *
         `#include <emissivemap_fragment>
 vec3 nw_ = normalize(cross(dFdx(vWorld), dFdy(vWorld)));
 if (dot(nw_, n_) < 0.) nw_ = -nw_;
-float cell_ = exp2(ceil(log2(max(px_ * 5., 2.))));
+// Glints are soft spots some 6 px across, never single pixels.
+float cell_ = exp2(ceil(log2(max(px_ * 16., 2.))));
 vec3 gp_ = pm_ / cell_;
-float glit_ = step(.985, hash13(floor(gp_))) * smoothstep(.3, .05, length(fract(gp_) - .5))
+float glit_ = step(.985, hash13(floor(gp_))) * smoothstep(.3, 0., length(fract(gp_) - .5))
   * pow(max(dot(nw_, normalize(normalize(cameraPosition - vWorld) + uSunDir)), 0.), 18.)
   * smoothstep(0., .15, dot(n_, uSunDir));
 totalEmissiveRadiance += mix(vec3(1.), uOre, .6) * glit_ * (.6 + 5. * vein_) + uOre * vein_ * far_ * .015;`,

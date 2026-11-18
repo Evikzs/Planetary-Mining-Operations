@@ -171,6 +171,8 @@ export function createRenderer(canvas: HTMLCanvasElement, opts: RendererOptions)
   const sun = new DirectionalLight(0xffffff, 0);
   sun.shadow.mapSize.set(SHADOW_MAP, SHADOW_MAP);
   sun.shadow.bias = -0.0004;
+  // Blur the shadow edge over a few map texels so it never shows the texel steps.
+  sun.shadow.radius = 3;
   const hemi = new HemisphereLight(0xffffff, 0xffffff, Math.PI);
   scene.add(sun, sun.target, hemi);
   const composer = createComposer(gl, scene, camera, opts.quality);
